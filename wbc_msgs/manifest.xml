@@ -1,0 +1,14 @@
+<package>
+  <description brief="Messages and services for the Stanford Whole-Body Controller.">
+  </description>
+  <author>Roland Philippsen</author>
+  <license>LGPLv3</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://stanford-wbc.sourceforge.net/</url>
+  <export>
+    <cpp cflags="-I${prefix}/msg/cpp"/>
+  </export>
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+</package>
