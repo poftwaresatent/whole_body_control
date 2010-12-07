@@ -62,3 +62,9 @@ rosbuild_add_library (wbc_core
 
 #rosbuild_add_executable (bin/jspace_servo src/jspace_servo.cpp)
 #target_link_libraries (bin/jspace_servo wbc_core)
+
+add_executable (bin/sai2lotus src/jspace/applications/sai2lotus.cpp)
+target_link_libraries (bin/sai2lotus wbc_core)
+
+add_executable (bin/trjsim src/jspace/applications/trjsim.cpp)
+target_link_libraries (bin/trjsim wbc_core)
