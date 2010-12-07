@@ -1,0 +1,15 @@
+<package>
+  <description brief="URDF to TAO conversion for Stanford_WBC">
+  </description>
+  <author>Roland Philippsen</author>
+  <license>LGPLv3</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://stanford-wbc.sourceforge.net/</url>
+  <depend package="wbc_core"/>
+  <depend package="urdf"/>
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+</package>
+
+
