@@ -11,6 +11,16 @@ rosbuild_init ()
 #rosbuild_genmsg ()
 #rosbuild_gensrv ()
 
+# The wbc_tinyxml includes can be quite problematic in case the
+# compiler first finds a system-installed or ROS-3rdparty TinyXML
+# header. This causes headaches especially when when some other
+# package depends on us but the TinyXML that was found instead of ours
+# was compiled with different flags. The propoer solution would be to
+# completely hide our TinyXML snapshot, it is only used for the legacy
+# SAI XML parser anyway and could thus be stashed into a
+# self-contained subdirectory.
+add_definitions (-DTIXML_USE_STL)
+
 include_directories (
   src/jspace
   src/tao

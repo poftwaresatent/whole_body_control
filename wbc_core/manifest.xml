@@ -8,10 +8,11 @@
   <review status="3rdparty" notes=""/>
   <url>http://stanford-wbc.sourceforge.net/</url>
   <depend package="eigen"/>
-  <depend package="urdf"/>
   <export>
+    <!-- See comments in CMakeLists.txt for further comments on
+	 wbc_tinyxml weirdness -->
     <cpp cflags="-I${prefix}/src/jspace -I${prefix}/src/tao
-		 -I${prefix}/src/wbc_tinyxml" />
+		 -DTIXML_USE_STL -I${prefix}/src/wbc_tinyxml" />
     <!--
        lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_core"
       -->
