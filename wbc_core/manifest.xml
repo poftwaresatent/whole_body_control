@@ -1,0 +1,22 @@
+<package>
+  <description brief="A ROS wrapper for stanford-wbc.sourceforge.net">
+    This is a ROS wrapper for the Stanford Whole-Body Control
+    framework from http://stanford-wbc.sourceforge.net/.
+  </description>
+  <author>Roland Philippsen</author>
+  <license>LGPLv3</license>
+  <review status="3rdparty" notes=""/>
+  <url>http://stanford-wbc.sourceforge.net/</url>
+  <depend package="eigen"/>
+  <depend package="urdf"/>
+  <export>
+    <cpp cflags="-I${prefix}/src/jspace -I${prefix}/src/tao
+		 -I${prefix}/src/wbc_tinyxml" />
+    <!--
+       lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_core"
+      -->
+  </export>
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+</package>
