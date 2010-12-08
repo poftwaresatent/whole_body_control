@@ -23,7 +23,7 @@
    \author Roland Philippsen
 */
 
-#include "urdf_to_tao.hpp"
+#include <wbc_urdf/urdf_to_tao.hpp>
 #include <jspace/tao_dump.hpp>
 #include <jspace/inertia_util.hpp>
 #include <tao/dynamics/taoDynamics.h>
@@ -79,7 +79,7 @@ namespace jspace {
 }
 
 
-#include "urdf_dump.hpp"
+#include <wbc_urdf/urdf_dump.hpp>
 #include <jspace/tao_dump.hpp>
 #include <tao/utility/TaoDeMassProp.h>
 #include <tao/dynamics/taoNode.h>

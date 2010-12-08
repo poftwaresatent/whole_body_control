@@ -23,9 +23,9 @@
    \author Roland Philippsen
 */
 
-#include "Model.hpp"
-#include "urdf_to_tao.hpp"
-#include "urdf_dump.hpp"
+#include <wbc_urdf/Model.hpp>
+#include <wbc_urdf/urdf_to_tao.hpp>
+#include <wbc_urdf/urdf_dump.hpp>
 #include <urdf/model.h>
 #include <jspace/tao_dump.hpp>
 #include <tao/dynamics/taoNode.h>

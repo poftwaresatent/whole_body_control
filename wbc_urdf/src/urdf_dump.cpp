@@ -23,7 +23,7 @@
    \author Roland Philippsen
 */
 
-#include "urdf_dump.hpp"
+#include <wbc_urdf/urdf_dump.hpp>
 #include <urdf/model.h>
 #include <iostream>
 
