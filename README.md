@@ -4,7 +4,7 @@ ROS stack for Stanford Whole-Body Controller
 Installation
 ------------
 
-1. install [ROS][http://www.ros.org/wiki/ROS/Installation]
+1. install [ROS](http://www.ros.org/wiki/ROS/Installation)
 
 2. clone the stack repos into your `ROS_PACKAGE_PATH`, e.g. in `~/ros/stacks`
 
