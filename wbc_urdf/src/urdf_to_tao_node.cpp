@@ -17,7 +17,7 @@
  */
 
 /**
-   \file dump_tao_node.cpp Converts the contents of the
+   \file urdf_to_tao_node.cpp Converts the contents of the
    robot_description ROS parameter to a TAO tree and then dumps that
    in XML format to a temporary file.
    
@@ -26,7 +26,7 @@
 
 #include <ros/ros.h>
 #include <jspace/tao_dump.hpp>
-#include <stanford_wbc/ros/Model.hpp>
+#include <wbc_urdf/Model.hpp>
 #include <string.h>
 #include <errno.h>
 #include <stdlib.h>
@@ -36,7 +36,7 @@ using namespace std;
 
 int main(int argc, char*argv[])
 {
-  ros::init(argc, argv, "dump_tao");
+  ros::init(argc, argv, "urdf_to_tao");
   ros::NodeHandle nn("~");
   
   std::string format("SAI");

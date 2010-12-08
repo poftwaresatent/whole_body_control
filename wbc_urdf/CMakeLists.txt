@@ -13,3 +13,6 @@ rosbuild_add_library (wbc_urdf
   src/urdf_dump.cpp
   src/urdf_to_tao.cpp
   )
+
+add_executable (urdf_to_tao src/urdf_to_tao_node.cpp)
+target_link_libraries (urdf_to_tao wbc_urdf)
