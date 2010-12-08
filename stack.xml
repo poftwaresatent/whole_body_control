@@ -1,0 +1,21 @@
+<stack>
+  <description brief="ROS stack for Stanford_WBC">
+    This stack contains packages that make the Stanford Whole-Body
+    Control framework available within ROS. In particular, the
+    wbc_core package is a thin wrapper around the core Stanford_WBC
+    library, and the wbc_pr2_ctrl package contains a controller plugin
+    and other utilities to run the whole-body controller on PR2
+    (simulated or real).
+  </description>
+  <author>Maintained by Roland Philippsen</author>
+  <license>LGPLv3</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://stanford-wbc.sourceforge.net/</url>
+  <depend stack="common" /> <!-- pluginlib -->
+  <depend stack="common_msgs" /> <!-- sensor_msgs -->
+  <depend stack="geometry" /> <!-- eigen -->
+  <depend stack="pr2_mechanism" /> <!-- pr2_controller_interface -->
+  <depend stack="robot_model" /> <!-- urdf -->
+  <depend stack="ros" /> <!-- rosconsole -->
+
+</stack>
