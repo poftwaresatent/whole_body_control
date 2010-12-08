@@ -23,7 +23,7 @@
    \author Roland Philippsen
 */
 
-#include <pr2_stanford_wbc/mq_robot_api.h>
+#include <wbc_pr2_ctrl/mq_robot_api.h>
 #include <ros/ros.h>
 #include <sys/time.h>
 #include <err.h>
@@ -32,7 +32,7 @@
 using namespace std;
 
 
-namespace pr2_stanford_wbc {
+namespace wbc_pr2_ctrl {
   
   
   MQRobotAPI::
@@ -90,7 +90,7 @@ namespace pr2_stanford_wbc {
     jspace::Status status;
     
     if (0 > receiveState()) {
-      ROS_ERROR ("pr2_stanford_wbc::MQRobotAPI::readState(): receiveState() failed: %s", errstr());
+      ROS_ERROR ("wbc_pr2_ctrl::MQRobotAPI::readState(): receiveState() failed: %s", errstr());
       status.ok = false;
       status.errstr = "receiveState() failed";
       return status;
@@ -128,7 +128,7 @@ namespace pr2_stanford_wbc {
     jspace::Status status;
     
     if (static_cast<uint64_t>(command.size()) != ncom_) {
-      ROS_ERROR ("pr2_stanford_wbc::MQRobotAPI::writeCommand(): command.size() is %d but should be %llu",
+      ROS_ERROR ("wbc_pr2_ctrl::MQRobotAPI::writeCommand(): command.size() is %d but should be %llu",
 		 command.size(), ncom_);
       status.ok = false;
       status.errstr = "command.size() mismatch";
@@ -139,7 +139,7 @@ namespace pr2_stanford_wbc {
       com_[ii] = command[ii];
     
     if (0 > sendCom()) {
-      ROS_ERROR ("pr2_stanford_wbc::MQRobotAPI::writeCommand(): sendCom() failed: %s", errstr());
+      ROS_ERROR ("wbc_pr2_ctrl::MQRobotAPI::writeCommand(): sendCom() failed: %s", errstr());
       status.ok = false;
       status.errstr = "sendCom() failed";
       return status;

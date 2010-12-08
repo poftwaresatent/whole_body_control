@@ -22,16 +22,17 @@
 */
 
 #include <ros/ros.h>
-#include <pr2_stanford_wbc/mq_robot_api.h>
-#include <pr2_stanford_wbc/ControllerState.h>
-#include <pr2_stanford_wbc/SetGoal.h>
-#include <pr2_stanford_wbc/SetGains.h>
-#include <pr2_stanford_wbc/GetState.h>
-#include <pr2_stanford_wbc/GetInfo.h>
-#include <pr2_stanford_wbc/SelectController.h>
-#include <pr2_stanford_wbc/ControllerInfo.h>
+#include <wbc_pr2_ctrl/mq_robot_api.h>
+#include <wbc_pr2_ctrl/opspace_planar_controller.h>
+#include <wbc_pr2_ctrl/ControllerState.h>
+#include <wbc_pr2_ctrl/SetGoal.h>
+#include <wbc_pr2_ctrl/SetGains.h>
+#include <wbc_pr2_ctrl/GetState.h>
+#include <wbc_pr2_ctrl/GetInfo.h>
+#include <wbc_pr2_ctrl/SelectController.h>
+#include <wbc_pr2_ctrl/ControllerInfo.h>
 #include <jspace/tao_util.hpp>
-#include <stanford_wbc/ros/Model.hpp>
+#include <wbc_urdf/Model.hpp>
 #include <jspace/Model.hpp>
 #include <jspace/controller_library.hpp>
 #include <jspace/test/sai_brep_parser.hpp>
@@ -45,10 +46,7 @@
 #include <XmlRpcValue.h>
 #include <XmlRpcException.h>
 
-// To be moved into ../include/pr2_stanford_wbc once it works.
-#include "opspace_planar_controller.h"
-
-using namespace pr2_stanford_wbc;
+using namespace wbc_pr2_ctrl;
 using namespace boost;
 using namespace std;
 
@@ -80,7 +78,7 @@ int main(int argc, char*argv[])
   
   static bool const unlink_mqueue(true);
   MQRobotAPI robot(unlink_mqueue);
-  jspace::ros::Model jspace_ros_model("/pr2_stanford_wbc/");
+  jspace::ros::Model jspace_ros_model("/wbc_pr2_ctrl/");
   
   try {
     
@@ -104,7 +102,7 @@ int main(int argc, char*argv[])
       ROS_INFO ("gravity compensation thinggie...");
       vector<string> gc_links;
       jspace::ros::Model::
-	parseGravityCompensatedLinks(nn, "/pr2_stanford_wbc/gravity_compensated_links", gc_links, 0);
+	parseGravityCompensatedLinks(nn, "/wbc_pr2_ctrl/gravity_compensated_links", gc_links, 0);
       for (size_t ii(0); ii < gc_links.size(); ++ii) {
 	taoDNode const * node(jspace_model->getNodeByName(gc_links[ii]));
 	if ( ! node) {
@@ -150,7 +148,7 @@ int main(int argc, char*argv[])
     jspace_state.init(ndof, ndof, 0);
     
     ROS_INFO ("initializing MQRobotAPI with %zu degrees of freedom", ndof);
-    robot.init(true, "pr2_stanford_wbc_s2r", "pr2_stanford_wbc_r2s", ndof, ndof, ndof, ndof);
+    robot.init(true, "wbc_pr2_ctrl_s2r", "wbc_pr2_ctrl_r2s", ndof, ndof, ndof, ndof);
   }
   catch (std::exception const & ee) {
     ROS_ERROR ("EXCEPTION %s", ee.what());
@@ -496,8 +494,8 @@ static void load_initial_gains(jspace::Vector & initial_kp, jspace::Vector & ini
   
   ros::NodeHandle nn("~");
   XmlRpc::XmlRpcValue gains;
-  if ( ! nn.getParam("/pr2_stanford_wbc/gains", gains)) {
-    ROS_WARN ("no /pr2_stanford_wbc/gains -- using fallback kp = %f and kd = %f",
+  if ( ! nn.getParam("/wbc_pr2_ctrl/gains", gains)) {
+    ROS_WARN ("no /wbc_pr2_ctrl/gains -- using fallback kp = %f and kd = %f",
 	      fallback_kp, fallback_kd);
     return;
   }

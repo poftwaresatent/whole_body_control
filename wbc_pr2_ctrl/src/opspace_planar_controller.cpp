@@ -23,7 +23,7 @@
    \author Roland Philippsen
 */
 
-#include "opspace_planar_controller.h"
+#include <wbc_pr2_ctrl/opspace_planar_controller.h>
 
 #include <ros/ros.h>
 #include <jspace/Model.hpp>
@@ -135,7 +135,7 @@ namespace {
 }
 
 
-namespace pr2_stanford_wbc {
+namespace wbc_pr2_ctrl {
   
   OpspacePlanarController::
   OpspacePlanarController(std::string const & q1_name,

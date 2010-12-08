@@ -23,13 +23,16 @@
    \author Roland Philippsen
 */
 
+#ifndef WBC_PR2_CTRL_MQ_ROBOT_API_H
+#define WBC_PR2_CTRL_MQ_ROBOT_API_H
+
 #include <jspace/RobotAPI.hpp>
 #include <stdexcept>
 #include <sstream>
 #include <mqueue.h>
 #include <stdint.h>
 
-namespace pr2_stanford_wbc {
+namespace wbc_pr2_ctrl {
   
   class MQRobotAPI
     : public jspace::RobotAPI
@@ -95,3 +98,5 @@ namespace pr2_stanford_wbc {
   };
   
 }
+
+#endif // WBC_PR2_CTRL_MQ_ROBOT_API_H

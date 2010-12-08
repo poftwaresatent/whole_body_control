@@ -22,11 +22,11 @@
 */
 
 #include <ros/ros.h>
-#include <stanford_wbc_msgs/DynamicModel.h>
+#include <wbc_msgs/DynamicModel.h>
 #include <boost/shared_ptr.hpp>
 #include <stdio.h>
 
-using namespace stanford_wbc_msgs;
+using namespace wbc_msgs;
 using namespace boost;
 using namespace std;
 

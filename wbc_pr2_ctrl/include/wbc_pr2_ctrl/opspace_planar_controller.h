@@ -28,13 +28,13 @@
    \author Roland Philippsen
 */
 
-#ifndef PR2_STANFORD_WBC_OPSPACE_PLANAR_CONTROLLER_H
-#define PR2_STANFORD_WBC_OPSPACE_PLANAR_CONTROLLER_H
+#ifndef WBC_PR2_CTRL_OPSPACE_PLANAR_CONTROLLER_H
+#define WBC_PR2_CTRL_OPSPACE_PLANAR_CONTROLLER_H
 
 #include <jspace/Model.hpp>
 #include <jspace/controller_library.hpp>
 
-namespace pr2_stanford_wbc {
+namespace wbc_pr2_ctrl {
 
   class OpspacePlanarController
     : public jspace::Controller
@@ -112,4 +112,4 @@ namespace pr2_stanford_wbc {
   
 }
 
-#endif // PR2_STANFORD_WBC_OPSPACE_PLANAR_CONTROLLER_H
+#endif // WBC_PR2_CTRL_OPSPACE_PLANAR_CONTROLLER_H

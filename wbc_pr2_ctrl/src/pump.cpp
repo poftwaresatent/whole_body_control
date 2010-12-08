@@ -24,13 +24,13 @@
    \author Roland Philippsen
 */
 
-#include <pr2_stanford_wbc/mq_robot_api.h>
+#include <wbc_pr2_ctrl/mq_robot_api.h>
 #include <pr2_controller_interface/controller.h>
-#include <pr2_stanford_wbc/PumpDebugState.h>
-#include <pr2_stanford_wbc/PumpDebugCommand.h>
+#include <wbc_pr2_ctrl/PumpDebugState.h>
+#include <wbc_pr2_ctrl/PumpDebugCommand.h>
 #include <pluginlib/class_list_macros.h>
 #include <jspace/tao_util.hpp>
-#include <stanford_wbc/ros/Model.hpp>
+#include <wbc_urdf/Model.hpp>
 #include <ros/console.h>
 
 using namespace std;
@@ -64,7 +64,7 @@ public:
   std::vector<pr2_mechanism_model::JointState *> controlled_joint_;
   jspace::ros::Model model_;
   size_t ndof_;
-  pr2_stanford_wbc::MQRobotAPI * mq_robot_api_;
+  wbc_pr2_ctrl::MQRobotAPI * mq_robot_api_;
   bool ready_to_send_;
   bool com_enabled_;
   bool mq_blocking_;
@@ -75,8 +75,8 @@ public:
   
   ros::Publisher debug_state_pub_;
   ros::Publisher debug_command_pub_;
-  pr2_stanford_wbc::PumpDebugState debug_state_msg_;
-  pr2_stanford_wbc::PumpDebugCommand debug_command_msg_;
+  wbc_pr2_ctrl::PumpDebugState debug_state_msg_;
+  wbc_pr2_ctrl::PumpDebugCommand debug_command_msg_;
   ros::WallTime debug_publish_time_;
   ros::WallDuration debug_publish_delay_;
 };
@@ -84,7 +84,7 @@ public:
 
 StanfordWBCPump::
 StanfordWBCPump()
-  : model_("/pr2_stanford_wbc/"),
+  : model_("/wbc_pr2_ctrl/"),
     ndof_(0),
     mq_robot_api_(0),
     ready_to_send_(true),
@@ -260,17 +260,17 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
 {
   try {
     string com_enabled_val;
-    if ( ! nn.getParam("/pr2_stanford_wbc_pump/com_enabled", com_enabled_val)) {
+    if ( ! nn.getParam("/wbc_pr2_ctrl_pump/com_enabled", com_enabled_val)) {
       com_enabled_ = false;
     }
-    com_enabled_ = str_to_bool("StanfordWBCPump::init(): /pr2_stanford_wbc_pump/com_enabled ", com_enabled_val, false);
+    com_enabled_ = str_to_bool("StanfordWBCPump::init(): /wbc_pr2_ctrl_pump/com_enabled ", com_enabled_val, false);
     ROS_INFO ("com_enabled set to %s", com_enabled_ ? "TRUE" : "FALSE");
     
     string mq_blocking_val;
-    if ( ! nn.getParam("/pr2_stanford_wbc_pump/mq_blocking", mq_blocking_val)) {
+    if ( ! nn.getParam("/wbc_pr2_ctrl_pump/mq_blocking", mq_blocking_val)) {
       mq_blocking_ = false;
     }
-    mq_blocking_ = str_to_bool("StanfordWBCPump::init(): /pr2_stanford_wbc_pump/mq_blocking ", mq_blocking_val, false);
+    mq_blocking_ = str_to_bool("StanfordWBCPump::init(): /wbc_pr2_ctrl_pump/mq_blocking ", mq_blocking_val, false);
     ROS_INFO ("mq_blocking set to %s", mq_blocking_ ? "TRUE" : "FALSE");
     
     static size_t const n_tao_roots(1);
@@ -288,8 +288,8 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     
     static bool const unlink_mqueue(true);
     ndof_ = controlled_joint_.size();
-    mq_robot_api_ = new pr2_stanford_wbc::MQRobotAPI(unlink_mqueue);
-    mq_robot_api_->init(mq_blocking_, "pr2_stanford_wbc_r2s", "pr2_stanford_wbc_s2r", ndof_, ndof_, ndof_, ndof_);
+    mq_robot_api_ = new wbc_pr2_ctrl::MQRobotAPI(unlink_mqueue);
+    mq_robot_api_->init(mq_blocking_, "wbc_pr2_ctrl_r2s", "wbc_pr2_ctrl_s2r", ndof_, ndof_, ndof_, ndof_);
     ready_to_send_ = true;
     
     command_history_ = new double[N_COMMAND_HISTORY * ndof_];
@@ -304,8 +304,8 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     return false;
   }
   
-  debug_state_pub_ = nn.advertise<pr2_stanford_wbc::PumpDebugState>("debug_state", 100);
-  debug_command_pub_ = nn.advertise<pr2_stanford_wbc::PumpDebugCommand>("debug_command", 100);
+  debug_state_pub_ = nn.advertise<wbc_pr2_ctrl::PumpDebugState>("debug_state", 100);
+  debug_command_pub_ = nn.advertise<wbc_pr2_ctrl::PumpDebugCommand>("debug_command", 100);
   debug_publish_time_ = ros::WallTime::now() + debug_publish_delay_;
   
   return true;

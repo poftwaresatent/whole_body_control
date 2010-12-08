@@ -22,16 +22,16 @@
 */
 
 #include <ros/ros.h>
-#include <stanford_wbc_msgs/DynamicModel.h>
+#include <wbc_msgs/DynamicModel.h>
 #include <jspace/tao_util.hpp>
-#include <stanford_wbc/ros/Model.hpp>
+#include <wbc_urdf/Model.hpp>
 #include <jspace/Model.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <sensor_msgs/JointState.h>
 #include <tao/dynamics/taoNode.h>
 
-using namespace stanford_wbc_msgs;
+using namespace wbc_msgs;
 using namespace boost;
 using namespace std;
 
