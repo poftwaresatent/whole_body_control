@@ -1,0 +1,6 @@
+<library path="lib/libpump">
+  <class
+      name="StanfordWBCPump"
+      type="StanfordWBCPump"
+      base_class_type="pr2_controller_interface::Controller" />
+</library>

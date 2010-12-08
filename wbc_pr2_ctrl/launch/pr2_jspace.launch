@@ -1,0 +1,10 @@
+<launch>
+  <rosparam command="load" file="$(find pr2_stanford_wbc)/config/pr2_wbc.yaml" />
+  <node
+      pkg="pr2_stanford_wbc"
+      type="jspace_servo"
+      name="jspace_servo"
+      args=""
+      output="screen">
+  </node>
+</launch>

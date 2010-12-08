@@ -1,0 +1,10 @@
+<launch>
+  <rosparam command="load" file="$(find pr2_stanford_wbc)/config/pr2_left_arm_wbc.yaml" />
+  <node
+      pkg="pr2_stanford_wbc"
+      type="dynamic_model"
+      name="dynamic_model"
+      args=""
+      output="screen">
+  </node>
+</launch>

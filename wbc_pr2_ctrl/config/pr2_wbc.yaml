@@ -1,0 +1,36 @@
+pr2_stanford_wbc:
+  tao_root_name: torso_lift_link
+  active_links:
+   - l_shoulder_pan_link
+   - l_shoulder_lift_link
+   - l_upper_arm_roll_link
+   - l_elbow_flex_link
+   - l_forearm_roll_link
+   - l_wrist_flex_link
+   - l_wrist_roll_link
+   - r_shoulder_pan_link
+   - r_shoulder_lift_link
+   - r_upper_arm_roll_link
+   - r_elbow_flex_link
+   - r_forearm_roll_link
+   - r_wrist_flex_link
+   - r_wrist_roll_link
+  gravity_compensated_links:
+   - l_shoulder_pan_link
+   - l_shoulder_lift_link
+   - l_upper_arm_roll_link
+   - l_upper_arm_link
+   - l_elbow_flex_link
+   - l_forearm_roll_link
+   - l_forearm_link
+   - l_wrist_flex_link
+   - l_wrist_roll_link
+   - r_shoulder_pan_link
+   - r_shoulder_lift_link
+   - r_upper_arm_roll_link
+   - r_upper_arm_link
+   - r_elbow_flex_link
+   - r_forearm_roll_link
+   - r_forearm_link
+   - r_wrist_flex_link
+   - r_wrist_roll_link

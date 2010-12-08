@@ -1,0 +1,5 @@
+float64[] kp
+float64[] kd
+---
+bool ok
+string errstr

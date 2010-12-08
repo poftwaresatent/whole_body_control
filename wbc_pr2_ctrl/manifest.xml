@@ -1,0 +1,28 @@
+<package>
+  <description brief="Integration of Stanford WBC as PR2 controller plugin.">
+    This package contains an adaptation of the Stanford Whole-Body
+    Control Framework (WBC) for PR2. It relies mainly on the
+    joint-space dynamic model which is part of WBC. For the moment,
+    this does not run as a real-time process --- instead, there is a
+    "pump" controller plugin which sends robot state from real-time to
+    user-space and the torque commands back from user-space into the
+    real-time controller.
+  </description>
+  <author>Roland Philippsen</author>
+  <license>LGPLv3</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://stanford-wbc.sourceforge.net/</url>
+  <depend package="stanford_wbc"/>
+  <depend package="rosconsole"/>
+  <depend package="pr2_controller_interface"/>
+  <depend package="pluginlib"/>
+  <depend package="sensor_msgs"/>
+  <depend package="stanford_wbc_msgs"/>
+  <export>
+    <pr2_controller_interface plugin="${prefix}/config/controller_plugins.xml" />
+    <cpp cflags="-I${prefix}/include" lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lpr2_stanford_wbc"/>
+  </export>
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+</package>

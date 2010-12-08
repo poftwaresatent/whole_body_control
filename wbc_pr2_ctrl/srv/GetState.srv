@@ -1,0 +1,6 @@
+---
+bool ok
+string errstr
+ControllerInfo active_controller
+float64[] goal
+float64[] actual
