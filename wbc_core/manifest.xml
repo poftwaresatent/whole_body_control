@@ -12,10 +12,8 @@
     <!-- See comments in CMakeLists.txt for further comments on
 	 wbc_tinyxml weirdness -->
     <cpp cflags="-I${prefix}/src/jspace -I${prefix}/src/tao
-		 -DTIXML_USE_STL -I${prefix}/src/wbc_tinyxml" />
-    <!--
-       lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_core"
-      -->
+		 -DTIXML_USE_STL -I${prefix}/src/wbc_tinyxml"
+	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_core" />
   </export>
   <platform os="ubuntu" version="9.04"/>
   <platform os="ubuntu" version="9.10"/>
