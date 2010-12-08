@@ -1,4 +1,4 @@
-pr2_stanford_wbc:
+wbc_pr2_ctrl:
   tao_root_name: torso_lift_link
   active_links:
    - l_shoulder_pan_link

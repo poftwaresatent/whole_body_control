@@ -56,7 +56,7 @@ int main(int argc, char*argv[])
   ros::init(argc, argv, "dynamic_model");
   ros::NodeHandle nn("~");
   
-  jspace::ros::Model jspace_ros_model("/pr2_stanford_wbc/");
+  jspace::ros::Model jspace_ros_model("/wbc_pr2_ctrl/");
   
   try {
     

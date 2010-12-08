@@ -2,11 +2,11 @@
 
 import sys
 import roslib
-roslib.load_manifest('pr2_stanford_wbc')
+roslib.load_manifest('wbc_pr2_ctrl')
 
 import rospy
-from pr2_stanford_wbc import srv
-from pr2_stanford_wbc import msg
+from wbc_pr2_ctrl import srv
+from wbc_pr2_ctrl import msg
 
 import Tix
 import math

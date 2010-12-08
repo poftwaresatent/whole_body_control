@@ -1,9 +1,9 @@
 <launch>
-  <rosparam command="load" file="$(find pr2_stanford_wbc)/config/pr2_left_arm_wbc.yaml" />
+  <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/pr2_left_arm_wbc.yaml" />
   
-  <!--      args="-s $(find pr2_stanford_wbc)/config/pr2_left_arm_wbc.sai.xml" -->
+  <!--      args="-s $(find wbc_pr2_ctrl)/config/pr2_left_arm_wbc.sai.xml" -->
   <node
-      pkg="pr2_stanford_wbc"
+      pkg="wbc_pr2_ctrl"
       type="jspace_servo"
       name="jspace_servo"
       args=""
