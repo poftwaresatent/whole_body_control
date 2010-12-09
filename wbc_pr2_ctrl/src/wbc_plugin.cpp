@@ -31,8 +31,21 @@
 #include <wbc_urdf/Model.hpp>
 #include <ros/console.h>
 #include <tao/dynamics/taoDNode.h>
+#include <Eigen/SVD>
 
 using namespace std;
+
+
+static bool stepTaskPosture(jspace::Model const & model,
+			    taoDNode const * end_effector,
+			    jspace::Vector const & local_control_point,
+			    jspace::Vector const & task_goal,
+			    jspace::Vector const & task_kp,
+			    jspace::Vector const & task_kd,
+			    jspace::Vector const & posture_goal,
+			    jspace::Vector const & posture_kp,
+			    jspace::Vector const & posture_kd,
+			    jspace::Vector & tau);
 
 
 class WBCPlugin
@@ -49,6 +62,7 @@ public:
   jspace::ros::Model ros_model_;
   size_t ndof_;
   jspace::Model model_;
+  taoDNode const * end_effector_;
   jspace::State state_;
   jspace::Vector tau_;
   int tick_;
@@ -90,8 +104,26 @@ update(void)
   //////////////////////////////////////////////////
   // compute control torques
   
-  bool ok(true);
-  tau_ = jspace::Vector::Zero(ndof_);
+  jspace::Vector local_control_point(3);
+  local_control_point << 0.0 , 0.1 , 0.0;
+  jspace::Vector task_goal(3);
+  task_goal << 0.2 , 0.2 , 0.2;
+  jspace::Vector task_kp(3);
+  task_kp = 20.0 * jspace::Vector::Ones(3);
+  jspace::Vector task_kd(3);
+  task_kd = 1.0 * jspace::Vector::Ones(3);
+  jspace::Vector posture_goal;
+  posture_goal = 20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+  jspace::Vector posture_kp;
+  posture_kp = 20.0 * jspace::Vector::Ones(ndof_);
+  jspace::Vector posture_kd;
+  posture_kd = 1.0 * jspace::Vector::Ones(ndof_);
+
+  bool const ok(stepTaskPosture(model_,
+				end_effector_, local_control_point,
+				task_goal, task_kp, task_kd,
+				posture_goal, posture_kp, posture_kd,
+				tau_));
   
   //////////////////////////////////////////////////
   // send torques to motors
@@ -145,6 +177,10 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
 	  << model_.getNDOF() << " but we have " << ndof_ << "DOF";
       throw std::runtime_error(msg.str());
     }
+    end_effector_ = model_.getNodeByName("l_wrist_roll_link");
+    if ( ! end_effector_) {
+      throw std::runtime_error("no l_wrist_roll_link in model (MAKE THIS RUNTIME CONFIGURABLE)");
+    }
     
     ROS_INFO ("marking gravity-compensated joints");
     std::vector<std::string>::const_iterator
@@ -172,6 +208,126 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
   }
   
   return true;
+}
+
+
+static void pseudoInverse(jspace::Matrix const & matrix,
+			  double sigmaThreshold,
+			  jspace::Matrix & invMatrix)
+{
+  Eigen::SVD<jspace::Matrix> svd(matrix);
+  // not sure if we need to svd.sort()... probably not
+  int const nrows(svd.singularValues().rows());
+  jspace::Matrix invS;
+  invS = jspace::Matrix::Zero(nrows, nrows);
+  for (int ii(0); ii < nrows; ++ii) {
+    if (svd.singularValues().coeff(ii) > sigmaThreshold) {
+      invS.coeffRef(ii, ii) = 1.0 / svd.singularValues().coeff(ii);
+    }
+  }
+  invMatrix = svd.matrixU() * invS * svd.matrixU().transpose();
+}
+
+
+bool stepTaskPosture(jspace::Model const & model,
+		     taoDNode const * end_effector,
+		     jspace::Vector const & local_control_point,
+		     jspace::Vector const & task_goal,
+		     jspace::Vector const & task_kp,
+		     jspace::Vector const & task_kd,
+		     jspace::Vector const & posture_goal,
+		     jspace::Vector const & posture_kp,
+		     jspace::Vector const & posture_kd,
+		     jspace::Vector & tau)
+{
+  //////////////////////////////////////////////////
+  // sanity checks
+  
+  if (local_control_point.rows() != 3) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid local_control_point dimension %d",
+	       local_control_point.rows());
+    return false;
+  }
+  if (task_goal.rows() != 3) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid task_goal dimension %d",
+	       task_goal.rows());
+    return false;
+  }
+  if (task_kp.rows() != 3) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid task_kp dimension %d",
+	       task_kp.rows());
+    return false;
+  }
+  if (task_kd.rows() != 3) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid task_kd dimension %d",
+	       task_kd.rows());
+    return false;
+  }
+  
+  size_t const ndof(model.getNDOF());
+  if (posture_goal.rows() != ndof) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid posture_goal dimension %d",
+	       posture_goal.rows());
+    return false;
+  }
+  if (posture_kp.rows() != ndof) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid posture_kp dimension %d",
+	       posture_kp.rows());
+    return false;
+  }
+  if (posture_kd.rows() != ndof) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid posture_kd dimension %d",
+	       posture_kd.rows());
+    return false;
+  }
+  
+  //////////////////////////////////////////////////
+  // task
+  
+  jspace::Transform eepos;
+  model.computeGlobalFrame(end_effector,
+			   local_control_point[0],
+			   local_control_point[1],
+			   local_control_point[2],
+			   eepos);
+  
+  jspace::Matrix Jfull;
+  model.computeJacobian(end_effector,
+			eepos.translation()[0],
+			eepos.translation()[1],
+			eepos.translation()[2],
+			Jfull);
+  jspace::Matrix Jx(Jfull.block(0, 0, 3, 7));
+  jspace::Matrix invA;
+  model.getInverseMassInertia(invA);
+  jspace::Matrix invLambda(Jx * invA * Jx.transpose());
+  jspace::Matrix Lambda;
+  pseudoInverse(invLambda, 1e-3, Lambda);
+  
+  jspace::Vector poserror(eepos.translation() - task_goal);
+  jspace::Vector tau_task(Jx.transpose() * (-Lambda)
+			  * (   task_kp.cwise() * poserror
+			      + task_kd.cwise() * Jx * model.getState().velocity_));
+  
+  //////////////////////////////////////////////////
+  // posture
+  
+  jspace::Matrix Jbar(invA * Jx.transpose() * Lambda);
+  jspace::Matrix nullspace(jspace::Matrix::Identity(7, 7) - Jbar * Jx);
+  jspace::Matrix invLambda_p(nullspace * invA);
+  jspace::Matrix Lambda_p;
+  pseudoInverse(invLambda_p, 1e-3, Lambda_p);
+  
+  jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
+			     * (  posture_kp.cwise() * (model.getState().position_ - posture_goal)
+				+ posture_kd.cwise() *  model.getState().velocity_));
+  
+  //////////////////////////////////////////////////
+  // sum it up...
+  
+  jspace::Vector gg;
+  model.getGravity(gg);
+  tau = tau_task + tau_posture + gg;
 }
 
 
