@@ -1,6 +1,10 @@
-<library path="lib/libpump">
+<library path="lib/libwbc_pr2_plugins">
   <class
       name="StanfordWBCPump"
       type="StanfordWBCPump"
+      base_class_type="pr2_controller_interface::Controller" />
+  <class
+      name="WBCPlugin"
+      type="WBCPlugin"
       base_class_type="pr2_controller_interface::Controller" />
 </library>

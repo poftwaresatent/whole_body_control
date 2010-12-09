@@ -26,5 +26,9 @@ target_link_libraries (bin/dynamic_model wbc_pr2_ctrl)
 rosbuild_add_executable (bin/dynamic_model_dump src/dynamic_model_dump_node.cpp)
 target_link_libraries (bin/dynamic_model_dump wbc_pr2_ctrl)
 
-rosbuild_add_library (pump src/pump.cpp)
-target_link_libraries (pump wbc_pr2_ctrl)
+rosbuild_add_library (wbc_pr2_plugins
+  src/pump.cpp
+  src/wbc_plugin.cpp
+  )
+
+target_link_libraries (wbc_pr2_plugins wbc_pr2_ctrl)
