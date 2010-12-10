@@ -86,7 +86,7 @@ WBCPlugin::
 
 void WBCPlugin::
 update(void)
-{  
+{
   //////////////////////////////////////////////////
   // update state
   
@@ -280,7 +280,7 @@ bool stepTaskPosture(jspace::Model const & model,
 	       posture_kd.rows());
     return false;
   }
-  
+
   //////////////////////////////////////////////////
   // task
   
@@ -297,7 +297,7 @@ bool stepTaskPosture(jspace::Model const & model,
 			eepos.translation()[1],
 			eepos.translation()[2],
 			Jfull);
-  jspace::Matrix Jx(Jfull.block(0, 0, 3, 7));
+  jspace::Matrix Jx(Jfull.block(0, 0, 3, ndof));
   jspace::Matrix invA;
   model.getInverseMassInertia(invA);
   jspace::Matrix invLambda(Jx * invA * Jx.transpose());
@@ -305,22 +305,46 @@ bool stepTaskPosture(jspace::Model const & model,
   pseudoInverse(invLambda, 1e-3, Lambda);
   
   jspace::Vector poserror(eepos.translation() - task_goal);
+  jspace::Vector velerror(Jx * model.getState().velocity_); // desired velocity == zero
+
+  cerr << "==================================================\n";
+  jspace::pretty_print(Jx, cerr, "Jx", "  ");
+  jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
+  jspace::pretty_print(poserror, cerr, "poserror", "  ");
+  jspace::pretty_print(velerror, cerr, "velerror", "  ");
+  jspace::pretty_print(task_kp, cerr, "task_kp", "  ");
+  jspace::pretty_print(task_kd, cerr, "task_kd", "  ");
+  
   jspace::Vector tau_task(Jx.transpose() * (-Lambda)
 			  * (   task_kp.cwise() * poserror
-			      + task_kd.cwise() * Jx * model.getState().velocity_));
+			      + task_kd.cwise() * velerror));
+  
+  cerr << "--------------------------------------------------\n";
+  jspace::pretty_print(tau_task, cerr, "tau_task", "  ");
   
   //////////////////////////////////////////////////
   // posture
   
   jspace::Matrix Jbar(invA * Jx.transpose() * Lambda);
-  jspace::Matrix nullspace(jspace::Matrix::Identity(7, 7) - Jbar * Jx);
+  jspace::Matrix nullspace(jspace::Matrix::Identity(ndof, ndof) - Jbar * Jx);
   jspace::Matrix invLambda_p(nullspace * invA);
   jspace::Matrix Lambda_p;
   pseudoInverse(invLambda_p, 1e-3, Lambda_p);
   
+  cerr << "--------------------------------------------------\n";
+  jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
+  jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
+  jspace::pretty_print(posture_goal, cerr, "posture_goal", "  ");
+  jspace::pretty_print(model.getState().position_, cerr, "position", "  ");
+  jspace::pretty_print(posture_kp, cerr, "posture_kp", "  ");
+  jspace::pretty_print(posture_kd, cerr, "posture_kd", "  ");
+
   jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
 			     * (  posture_kp.cwise() * (model.getState().position_ - posture_goal)
 				+ posture_kd.cwise() *  model.getState().velocity_));
+  
+  cerr << "--------------------------------------------------\n";
+  jspace::pretty_print(tau_posture, cerr, "tau_posture", "  ");
   
   //////////////////////////////////////////////////
   // sum it up...
@@ -328,6 +352,9 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Vector gg;
   model.getGravity(gg);
   tau = tau_task + tau_posture + gg;
+  
+  cerr << "--------------------------------------------------\n";
+  jspace::pretty_print(tau, cerr, "tau", "  ");
 }
 
 
