@@ -260,17 +260,17 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
 {
   try {
     string com_enabled_val;
-    if ( ! nn.getParam("/wbc_pr2_ctrl_pump/com_enabled", com_enabled_val)) {
+    if ( ! nn.getParam("/wbc_pr2_ctrl_pump_plugin/com_enabled", com_enabled_val)) {
       com_enabled_ = false;
     }
-    com_enabled_ = str_to_bool("PumpPlugin::init(): /wbc_pr2_ctrl_pump/com_enabled ", com_enabled_val, false);
+    com_enabled_ = str_to_bool("PumpPlugin::init(): /wbc_pr2_ctrl_pump_plugin/com_enabled ", com_enabled_val, false);
     ROS_INFO ("com_enabled set to %s", com_enabled_ ? "TRUE" : "FALSE");
     
     string mq_blocking_val;
-    if ( ! nn.getParam("/wbc_pr2_ctrl_pump/mq_blocking", mq_blocking_val)) {
+    if ( ! nn.getParam("/wbc_pr2_ctrl_pump_plugin/mq_blocking", mq_blocking_val)) {
       mq_blocking_ = false;
     }
-    mq_blocking_ = str_to_bool("PumpPlugin::init(): /wbc_pr2_ctrl_pump/mq_blocking ", mq_blocking_val, false);
+    mq_blocking_ = str_to_bool("PumpPlugin::init(): /wbc_pr2_ctrl_pump_plugin/mq_blocking ", mq_blocking_val, false);
     ROS_INFO ("mq_blocking set to %s", mq_blocking_ ? "TRUE" : "FALSE");
     
     static size_t const n_tao_roots(1);
