@@ -19,7 +19,7 @@
  */
 
 /**
-   \file pump.cpp
+   \file pump_plugin.cpp
    \brief Plugin that pumps data between PR2 (RT controllers) and WBC (non-RT servo).
    \author Roland Philippsen
 */
@@ -51,12 +51,12 @@ static size_t const N_DUTY_CYCLE(10);
 static size_t const N_COMMAND_HISTORY(10);
 
 
-class StanfordWBCPump
+class PumpPlugin
   : public pr2_controller_interface::Controller
 {
 public:
-  StanfordWBCPump();
-  virtual ~StanfordWBCPump();
+  PumpPlugin();
+  virtual ~PumpPlugin();
   
   virtual void update(void);
   virtual bool init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle &nn);
@@ -82,8 +82,8 @@ public:
 };
 
 
-StanfordWBCPump::
-StanfordWBCPump()
+PumpPlugin::
+PumpPlugin()
   : model_("/wbc_pr2_ctrl/"),
     ndof_(0),
     mq_robot_api_(0),
@@ -96,8 +96,8 @@ StanfordWBCPump()
 }
 
 
-StanfordWBCPump::
-~StanfordWBCPump()
+PumpPlugin::
+~PumpPlugin()
 {
   delete mq_robot_api_;
   delete[] command_history_;
@@ -116,7 +116,7 @@ static inline double compute_delta(double actual, double desired)
 }
 
 
-void StanfordWBCPump::
+void PumpPlugin::
 update(void)
 {
   bool ok(true);
@@ -255,7 +255,7 @@ static bool str_to_bool(char const * excprefix, string const & str, bool emptyva
 }
 
 
-bool StanfordWBCPump::
+bool PumpPlugin::
 init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
 {
   try {
@@ -263,14 +263,14 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     if ( ! nn.getParam("/wbc_pr2_ctrl_pump/com_enabled", com_enabled_val)) {
       com_enabled_ = false;
     }
-    com_enabled_ = str_to_bool("StanfordWBCPump::init(): /wbc_pr2_ctrl_pump/com_enabled ", com_enabled_val, false);
+    com_enabled_ = str_to_bool("PumpPlugin::init(): /wbc_pr2_ctrl_pump/com_enabled ", com_enabled_val, false);
     ROS_INFO ("com_enabled set to %s", com_enabled_ ? "TRUE" : "FALSE");
     
     string mq_blocking_val;
     if ( ! nn.getParam("/wbc_pr2_ctrl_pump/mq_blocking", mq_blocking_val)) {
       mq_blocking_ = false;
     }
-    mq_blocking_ = str_to_bool("StanfordWBCPump::init(): /wbc_pr2_ctrl_pump/mq_blocking ", mq_blocking_val, false);
+    mq_blocking_ = str_to_bool("PumpPlugin::init(): /wbc_pr2_ctrl_pump/mq_blocking ", mq_blocking_val, false);
     ROS_INFO ("mq_blocking set to %s", mq_blocking_ ? "TRUE" : "FALSE");
     
     static size_t const n_tao_roots(1);
@@ -300,7 +300,7 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
   }
   
   catch (std::exception const & ee) {
-    ROS_ERROR ("StanfordWBCPump::init(): EXCEPTION: %s", ee.what());
+    ROS_ERROR ("PumpPlugin::init(): EXCEPTION: %s", ee.what());
     return false;
   }
   
@@ -312,4 +312,4 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
 }
 
 
-PLUGINLIB_REGISTER_CLASS (StanfordWBCPump, StanfordWBCPump, pr2_controller_interface::Controller)
+PLUGINLIB_REGISTER_CLASS (PumpPlugin, PumpPlugin, pr2_controller_interface::Controller)

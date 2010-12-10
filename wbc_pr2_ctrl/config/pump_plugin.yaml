@@ -1,0 +1,3 @@
+wbc_pr2_ctrl_pump_plugin:
+  type: PumpPlugin
+  com_enabled: y

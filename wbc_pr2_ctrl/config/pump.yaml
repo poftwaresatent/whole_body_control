@@ -1,3 +1,0 @@
-wbc_pr2_ctrl_pump:
-  type: StanfordWBCPump
-  com_enabled: y

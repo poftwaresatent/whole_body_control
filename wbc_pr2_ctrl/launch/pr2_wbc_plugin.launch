@@ -1,11 +1,11 @@
 <launch>
   <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/pr2_wbc.yaml" />
-  <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/pump.yaml" />
+  <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/wbc_plugin.yaml" />
   <node
       pkg="pr2_controller_manager"
       type="spawner"
-      name="wbc_pr2_ctrl_pump_spawner"
-      args="wbc_pr2_ctrl_pump"
+      name="wbc_pr2_ctrl_wbc_spawner"
+      args="wbc_pr2_ctrl_wbc_plugin"
       output="screen">
   </node>
 </launch>
