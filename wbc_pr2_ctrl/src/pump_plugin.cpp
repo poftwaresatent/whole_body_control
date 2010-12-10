@@ -169,7 +169,7 @@ update(void)
 	// the commanded effort and when the measured motor current
 	// information makes its way back here as measured effort.
 	double const effort(controlled_joint_[ii]->measured_effort_);
-	double * cptr(command_history_ + ndof_ * ii);
+	double * cptr(command_history_ + N_COMMAND_HISTORY * ii);
 	double delta(compute_delta(effort, *cptr));
 	for (size_t jj(1); jj < N_COMMAND_HISTORY; ++jj, ++cptr) {
 	  double const dd(compute_delta(effort, *cptr));
@@ -185,7 +185,7 @@ update(void)
     
     ready_to_send_ = false;	// always reset to avoid swamping the mqueue
   }
-  
+
   //////////////////////////////////////////////////
   // Pump torque command from WBC to ROS.
   
@@ -225,14 +225,14 @@ update(void)
       // comLatch is the last received com, either from this tick or a
       // previous one.
       controlled_joint_[ii]->commanded_effort_ = mq_robot_api_->comLatch()[ii];
-      command_history_[ii * ndof_ + offset] = mq_robot_api_->comLatch()[ii];
+      command_history_[ii * N_COMMAND_HISTORY + offset] = mq_robot_api_->comLatch()[ii];
     }
   }
   else {
     size_t const offset(tick_ % N_COMMAND_HISTORY);
     for (size_t ii(0); ii < ndof_; ++ii) {
       controlled_joint_[ii]->commanded_effort_ = 0; // on PR2 it should be safe to send zero torques on error
-      command_history_[ii * ndof_ + offset] = 0;
+      command_history_[ii * N_COMMAND_HISTORY + offset] = 0;
     }
   }
   
