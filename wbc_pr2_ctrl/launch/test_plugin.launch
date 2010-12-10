@@ -1,0 +1,10 @@
+<launch>
+  <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/test_plugin.yaml" />
+  <node
+      pkg="pr2_controller_manager"
+      type="spawner"
+      name="wbc_pr2_ctrl_test_spawner"
+      args="wbc_pr2_ctrl_test_plugin"
+      output="screen">
+  </node>
+</launch>

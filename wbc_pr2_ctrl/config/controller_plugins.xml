@@ -1,5 +1,9 @@
 <library path="lib/libwbc_pr2_plugins">
   <class
+      name="TestPlugin"
+      type="TestPlugin"
+      base_class_type="pr2_controller_interface::Controller" />
+  <class
       name="PumpPlugin"
       type="PumpPlugin"
       base_class_type="pr2_controller_interface::Controller" />
