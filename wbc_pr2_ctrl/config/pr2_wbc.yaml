@@ -34,3 +34,28 @@ wbc_pr2_ctrl:
    - r_forearm_link
    - r_wrist_flex_link
    - r_wrist_roll_link
+  gains:
+   l_shoulder_pan_joint:   { kp: 800, kd: 10 }
+   l_shoulder_lift_joint:  { kp: 800, kd: 10 }
+   l_upper_arm_roll_joint: { kp: 200, kd:  3 }
+   l_elbow_flex_joint:     { kp: 100, kd:  3 }
+   l_forearm_roll_joint:   { kp: 500, kd:  6 }
+   l_wrist_flex_joint:     { kp: 400, kd:  4 }
+   l_wrist_roll_joint:     { kp: 400, kd:  4 }
+   r_shoulder_pan_joint:   { kp: 800, kd: 10 }
+   r_shoulder_lift_joint:  { kp: 800, kd: 10 }
+   r_upper_arm_roll_joint: { kp: 200, kd:  3 }
+   r_elbow_flex_joint:     { kp: 100, kd:  3 }
+   r_forearm_roll_joint:   { kp: 500, kd:  6 }
+   r_wrist_flex_joint:     { kp: 400, kd:  4 }
+   r_wrist_roll_joint:     { kp: 400, kd:  4 }
+opspace_planar_controller:
+  q1_name: l_shoulder_pan_link
+  q1_inverted: n
+  l1_length: 0.4
+  q2_name: l_elbow_flex_link
+  q2_inverted: n
+  l2_length: 0.321
+  op_kp: 25
+  op_kd: 10
+  op_vmax: 0.1
