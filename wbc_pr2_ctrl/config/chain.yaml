@@ -1,0 +1,24 @@
+wbc_pr2_ctrl:
+  tao_root_name: world
+  active_links:
+   - link_1
+   - link_2
+   - link_3
+   - link_4
+   - link_5
+  gains:
+   link_1:   { kp: 1000, kd: 63 }
+   link_2:   { kp: 1000, kd: 63 }
+   link_3:   { kp: 1000, kd: 63 }
+   link_4:   { kp: 1000, kd: 63 }
+   link_5:   { kp: 1000, kd: 63 }
+opspace_planar_controller:
+  q1_name: link_2
+  q1_inverted: n
+  l1_length: 1
+  q2_name: link_3
+  q2_inverted: n
+  l2_length: 1
+  op_kp: 25
+  op_kd: 10
+  op_vmax: 0.1

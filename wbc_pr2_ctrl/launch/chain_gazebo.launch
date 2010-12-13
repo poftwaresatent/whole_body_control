@@ -1,0 +1,27 @@
+<launch>
+  <!-- launch gazebo with empty world -->
+  <param name="/use_sim_time" value="true" />
+  <node name="gazebo"
+	pkg="gazebo" type="gazebo" args="$(find wbc_pr2_ctrl)/config/empty_gazebo.world"
+	respawn="false" output="screen">
+    <env name="LD_LIBRARY_PATH"
+	 value="$(find gazebo_plugins)/lib:$(find pr2_gazebo_plugins)/lib:$(find gazebo)/gazebo/lib:$(optenv LD_LIBRARY_PATH)" />
+    <env name="GAZEBO_RESOURCE_PATH"
+	 value="$(find pr2_ogre):$(find pr2_description):$(find gazebo_worlds):$(find gazebo)/gazebo/share/gazebo" />
+    <env name="OGRE_RESOURCE_PATH"
+	 value="$(find ogre)/ogre/lib/OGRE" />
+  </node>
+  
+  <!-- send urdf to param server -->
+  <param name="robot_description"
+	 command="$(find xacro)/xacro.py '$(find wbc_pr2_ctrl)/urdf/chain.urdf.xacro'" />
+
+  <!-- push robot_description to factory and spawn robot in gazebo -->
+  <node name="pr2_gazebo_model"
+	pkg="gazebo_tools" type="gazebo_model" args="-z 0.051 -p robot_description spawn"
+	respawn="false" output="screen" />
+  
+  <!-- Controller Manager -->
+  <include file="$(find pr2_controller_manager)/controller_manager.launch" />
+  
+</launch>
