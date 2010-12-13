@@ -1,0 +1,224 @@
+<?xml version="1.0"?>
+<robot name="continuous_chain"
+       xmlns:xi="http://www.w3.org/2001/XInclude"
+       xmlns:gazebo="http://playerstage.sourceforge.net/gazebo/xmlschema/#gz"
+       xmlns:model="http://playerstage.sourceforge.net/gazebo/xmlschema/#model"
+       xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+       xmlns:body="http://playerstage.sourceforge.net/gazebo/xmlschema/#body"
+       xmlns:geom="http://playerstage.sourceforge.net/gazebo/xmlschema/#geom"
+       xmlns:joint="http://playerstage.sourceforge.net/gazebo/xmlschema/#joint"
+       xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+       xmlns:rendering="http://playerstage.sourceforge.net/gazebo/xmlschema/#rendering"
+       xmlns:renderable="http://playerstage.sourceforge.net/gazebo/xmlschema/#renderable"
+       xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+       xmlns:physics="http://playerstage.sourceforge.net/gazebo/xmlschema/#physics">
+
+  <link name="world" />
+  
+  <joint name="joint_1" type="continuous" >
+    <axis xyz="0 0 1" />
+    <origin xyz="0 0 2" rpy="0 0 0" />
+    <parent link="world" />
+    <child link="link_1" />
+    <dynamics damping="0.0" />
+  </joint>
+  <link name="link_1">
+    <inertial>
+      <mass value="1" />
+      <origin xyz="1 0 0" /> 
+      <inertia  ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="link_1">
+    <material>Gazebo/GrassFloor</material>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
+  <transmission type="pr2_mechanism_model/SimpleTransmission" name="link_1_trans">
+    <actuator name="link_1_motor" />
+    <joint name="joint_1" />
+    <mechanicalReduction>1</mechanicalReduction>
+    <motorTorqueConstant>1</motorTorqueConstant>
+  </transmission>
+  
+  <joint name="joint_2" type="continuous" >
+    <axis xyz="0 0 1" />
+    <origin xyz="1 0 0" rpy="0 0 0" />
+    <parent link="link_1" />
+    <child link="link_2" />
+    <dynamics damping="0.0" />
+  </joint>
+  <link name="link_2">
+    <inertial>
+      <mass value="1" />
+      <origin xyz="1 0 0" /> 
+      <inertia  ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="link_2">
+    <material>Gazebo/GrassFloor</material>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
+  <transmission type="pr2_mechanism_model/SimpleTransmission" name="link_2_trans">
+    <actuator name="link_2_motor" />
+    <joint name="joint_2" />
+    <mechanicalReduction>1</mechanicalReduction>
+    <motorTorqueConstant>1</motorTorqueConstant>
+  </transmission>
+  
+  <joint name="joint_3" type="continuous" >
+    <axis xyz="0 0 1" />
+    <origin xyz="1 0 0" rpy="0 0 0" />
+    <parent link="link_2" />
+    <child link="link_3" />
+    <dynamics damping="0.0" />
+  </joint>
+  <link name="link_3">
+    <inertial>
+      <mass value="1" />
+      <origin xyz="1 0 0" /> 
+      <inertia  ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="link_3">
+    <material>Gazebo/GrassFloor</material>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
+  <transmission type="pr2_mechanism_model/SimpleTransmission" name="link_3_trans">
+    <actuator name="link_3_motor" />
+    <joint name="joint_3" />
+    <mechanicalReduction>1</mechanicalReduction>
+    <motorTorqueConstant>1</motorTorqueConstant>
+  </transmission>
+  
+  <joint name="joint_4" type="continuous" >
+    <axis xyz="0 0 1" />
+    <origin xyz="1 0 0" rpy="0 0 0" />
+    <parent link="link_3" />
+    <child link="link_4" />
+    <dynamics damping="0.0" />
+  </joint>
+  <link name="link_4">
+    <inertial>
+      <mass value="1" />
+      <origin xyz="1 0 0" /> 
+      <inertia  ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="link_4">
+    <material>Gazebo/GrassFloor</material>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
+  <transmission type="pr2_mechanism_model/SimpleTransmission" name="link_4_trans">
+    <actuator name="link_4_motor" />
+    <joint name="joint_4" />
+    <mechanicalReduction>1</mechanicalReduction>
+    <motorTorqueConstant>1</motorTorqueConstant>
+  </transmission>
+  
+  <joint name="joint_5" type="continuous" >
+    <axis xyz="0 0 1" />
+    <origin xyz="1 0 0" rpy="0 0 0" />
+    <parent link="link_4" />
+    <child link="link_5" />
+    <dynamics damping="0.0" />
+  </joint>
+  <link name="link_5">
+    <inertial>
+      <mass value="1" />
+      <origin xyz="1 0 0" /> 
+      <inertia  ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0" />
+    </inertial>
+    <visual>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.5 0 0" rpy="0 0 0" />
+      <geometry>
+        <box size="1.0 0.1 0.1" />
+      </geometry>
+    </collision>
+  </link>
+  <gazebo reference="link_5">
+    <material>Gazebo/GrassFloor</material>
+    <turnGravityOff>true</turnGravityOff>
+  </gazebo>
+  <transmission type="pr2_mechanism_model/SimpleTransmission" name="link_5_trans">
+    <actuator name="link_5_motor" />
+    <joint name="joint_5" />
+    <mechanicalReduction>1</mechanicalReduction>
+    <motorTorqueConstant>1</motorTorqueConstant>
+  </transmission>
+  
+  <!-- controller manager integration -->
+  
+  <gazebo>
+      <!-- PR2_ACTARRAY -->
+      <controller:gazebo_ros_controller_manager name="gazebo_ros_controller_manager" plugin="libgazebo_ros_controller_manager.so">
+        <alwaysOn>true</alwaysOn>
+        <updateRate>1000.0</updateRate>
+        <interface:audio name="gazebo_ros_controller_manager_dummy_iface" />
+      </controller:gazebo_ros_controller_manager>
+
+      <!-- gazebo_ros_p3d for position groundtruth -->
+      <controller:gazebo_ros_p3d name="p3d_link_controller" plugin="libgazebo_ros_p3d.so">
+          <alwaysOn>true</alwaysOn>
+          <updateRate>100.0</updateRate>
+          <bodyName>link_1</bodyName>
+          <topicName>link_1_pose</topicName>
+          <frameName>map</frameName>
+          <interface:position name="p3d_link_position"/>
+      </controller:gazebo_ros_p3d>
+  </gazebo>
+  
+</robot>
