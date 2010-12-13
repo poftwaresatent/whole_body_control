@@ -58,10 +58,10 @@
 #ifndef __TypeIOTG__
 #define __TypeIOTG__
 
-#include <TypeIOTGVector.h>
-#include <TypeIOTGInputParameters.h>
-#include <TypeIOTGOutputParameters.h>
-#include <TypeIOTGPolynomial.h>
+#include <reflexxes_otg/TypeIOTGVector.h>
+#include <reflexxes_otg/TypeIOTGInputParameters.h>
+#include <reflexxes_otg/TypeIOTGOutputParameters.h>
+#include <reflexxes_otg/TypeIOTGPolynomial.h>
 
 
 

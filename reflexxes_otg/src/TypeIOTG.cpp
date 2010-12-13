@@ -48,14 +48,14 @@
 //   please use a tab width of four characters.
 //  ----------------------------------------------------------
 
-#include <TypeIOTG.h>
-#include <TypeIOTGPolynomial.h>
-#include <TypeIOTGMath.h>
-#include <TypeIOTGVector.h>
-#include <TypeIOTGInputParameters.h>
-#include <TypeIOTGOutputParameters.h>
-#include <TypeIOTGDecision.h>
-#include <TypeIOTGProfiles.h>
+#include <reflexxes_otg/TypeIOTG.h>
+#include <reflexxes_otg/TypeIOTGPolynomial.h>
+#include <reflexxes_otg/TypeIOTGMath.h>
+#include <reflexxes_otg/TypeIOTGVector.h>
+#include <reflexxes_otg/TypeIOTGInputParameters.h>
+#include <reflexxes_otg/TypeIOTGOutputParameters.h>
+#include <reflexxes_otg/TypeIOTGDecision.h>
+#include <reflexxes_otg/TypeIOTGProfiles.h>
 #include <string.h>
 #include <math.h>
 

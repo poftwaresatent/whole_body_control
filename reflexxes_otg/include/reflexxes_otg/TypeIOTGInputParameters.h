@@ -54,7 +54,7 @@
 #ifndef __TypeIOTGInputParameters__
 #define __TypeIOTGInputParameters__
 
-#include <TypeIOTGVector.h>
+#include <reflexxes_otg/TypeIOTGVector.h>
 
 namespace TypeIOTGMath
 {

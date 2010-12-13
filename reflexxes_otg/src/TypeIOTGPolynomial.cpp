@@ -51,8 +51,8 @@
 
 
 
-#include <TypeIOTGPolynomial.h>
-#include <TypeIOTGMath.h>
+#include <reflexxes_otg/TypeIOTGPolynomial.h>
+#include <reflexxes_otg/TypeIOTGMath.h>
 
 
 //************************************************************************************

@@ -51,8 +51,8 @@
 
 
 
-#include <TypeIOTGDecision.h>
-#include <TypeIOTGMath.h>
+#include <reflexxes_otg/TypeIOTGDecision.h>
+#include <reflexxes_otg/TypeIOTGMath.h>
 
 
 //************************************************************************************

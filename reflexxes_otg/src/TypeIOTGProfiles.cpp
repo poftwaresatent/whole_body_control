@@ -51,8 +51,8 @@
 
 
 
-#include <TypeIOTGProfiles.h>
-#include <TypeIOTGMath.h>
+#include <reflexxes_otg/TypeIOTGProfiles.h>
+#include <reflexxes_otg/TypeIOTGMath.h>
 #include <math.h>
 
 

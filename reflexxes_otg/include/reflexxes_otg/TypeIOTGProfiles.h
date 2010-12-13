@@ -54,7 +54,7 @@
 #define __TypeIOTGProfiles__
 
 
-#include <TypeIOTGPolynomial.h>
+#include <reflexxes_otg/TypeIOTGPolynomial.h>
 
 
 namespace TypeIOTGMath

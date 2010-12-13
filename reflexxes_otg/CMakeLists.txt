@@ -11,8 +11,6 @@ set (LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_genmsg()
 #rosbuild_gensrv()
 
-include_directories (include/reflexxes_otg)
-
 rosbuild_add_library (reflexxes_otg
   src/TypeIOTG.cpp
   src/TypeIOTGDecision.cpp
