@@ -179,13 +179,14 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       throw std::runtime_error("no l_wrist_roll_link in model (MAKE THIS RUNTIME CONFIGURABLE)");
     }
     
+    local_control_point_ = jspace::Vector::Zero(3);
     local_control_point_ << 0.0 , 0.1 , 0.0;
     task_goal_ =     0.2 * jspace::Vector::Ones(3);
-    task_kp_ =      20.0 * jspace::Vector::Ones(3);
-    task_kd_ =       1.0 * jspace::Vector::Ones(3);
+    task_kp_ =     100.0 * jspace::Vector::Ones(3);
+    task_kd_ =      20.0 * jspace::Vector::Ones(3);
     posture_goal_ = 20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-    posture_kp_ =   20.0 * jspace::Vector::Ones(ndof_);
-    posture_kd_ =    1.0 * jspace::Vector::Ones(ndof_);
+    posture_kp_ =  100.0 * jspace::Vector::Ones(ndof_);
+    posture_kd_ =   20.0 * jspace::Vector::Ones(ndof_);
     
     ROS_INFO ("marking gravity-compensated joints");
     std::vector<std::string>::const_iterator
