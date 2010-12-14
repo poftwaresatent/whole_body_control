@@ -24,7 +24,6 @@
    \author Roland Philippsen
 */
 
-//#include <wbc_pr2_ctrl/TaskPostureUI.h>
 #include <pr2_controller_interface/controller.h>
 #include <pluginlib/class_list_macros.h>
 #include <jspace/tao_util.hpp>
@@ -33,8 +32,6 @@
 #include <ros/console.h>
 #include <tao/dynamics/taoDNode.h>
 #include <Eigen/SVD>
-
-#include <wbc_pr2_ctrl/Foo.h>
 
 using namespace std;
 
@@ -61,10 +58,6 @@ public:
   virtual void update(void);
   virtual bool init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle &nn);
   
-  // bool uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
-  // 		  wbc_pr2_ctrl::TaskPostureUI::Response & response);
-  void fooCallback(wbc_pr2_ctrl::Foo::ConstPtr const & foo);
-  
   std::vector<pr2_mechanism_model::JointState *> controlled_joint_;
   jspace::ros::Model ros_model_;
   size_t ndof_;
@@ -74,9 +67,6 @@ public:
   jspace::Vector tau_;
   int tick_;
   
-  //  ros::ServiceServer ui_server_;
-  ros::Subscriber foo_sub_;
-
   jspace::Vector local_control_point_;
   jspace::Vector task_goal_;
   jspace::Vector task_kp_;
@@ -222,107 +212,7 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     return false;
   }
   
-  //  ui_server_ = nn.advertiseService("ui", &WBCPlugin::uiCallback, this);
-  foo_sub_ = nn.subscribe("foo", 1, &WBCPlugin::fooCallback, this);
-  
   return true;
-}
-
-
-// bool WBCPlugin::
-// uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
-// 	   wbc_pr2_ctrl::TaskPostureUI::Response & response)
-// {
-//   response.ok = true;
-  
-//   switch (request.mode) {
-    
-//   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK:
-//     if ( ! request.goal.empty()) {
-//       if (3 != request.goal.size()) {
-// 	jspace::convert(request.goal, task_goal_);
-//       }
-//       else {
-// 	response.ok = false;
-// 	response.errstr = "invalid task goal dimension";
-//       }
-//     }
-//     if ( ! request.kp.empty()) {
-//       if (3 != request.kp.size()) {
-// 	jspace::convert(request.kp, task_kp_);
-//       }
-//       else {
-// 	response.ok = false;
-// 	response.errstr = "invalid task kp dimension";
-//       }
-//     }
-//     if ( ! request.kd.empty()) {
-//       if (3 != request.kd.size()) {
-// 	jspace::convert(request.kd, task_kd_);
-//       }
-//       else {
-// 	response.ok = false;
-// 	response.errstr = "invalid task kd dimension";
-//       }
-//     }
-//     break;
-    
-//   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE:
-//     if ( ! request.goal.empty()) {
-//       if (ndof_ != request.goal.size()) {
-// 	jspace::convert(request.goal, posture_goal_);
-//       }
-//       else {
-// 	response.ok = false;
-// 	response.errstr = "invalid posture goal dimension";
-//       }
-//     }
-//     if ( ! request.kp.empty()) {
-//       if (ndof_ != request.kp.size()) {
-// 	jspace::convert(request.kp, posture_kp_);
-//       }
-//       else {
-// 	response.ok = false;
-// 	response.errstr = "invalid posture kp dimension";
-//       }
-//     }
-//     if ( ! request.kd.empty()) {
-//       if (ndof_ != request.kd.size()) {
-// 	jspace::convert(request.kd, posture_kd_);
-//       }
-//       else {
-// 	response.ok = false;
-// 	response.errstr = "invalid posture kd dimension";
-//       }
-//     }
-//     break;
-    
-//   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK:
-//     jspace::convert(task_goal_, response.goal);
-//     jspace::convert(task_kp_, response.kp);
-//     jspace::convert(task_kd_, response.kd);
-//     break;
-    
-//   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE:
-//     jspace::convert(posture_goal_, response.goal);
-//     jspace::convert(posture_kp_, response.kp);
-//     jspace::convert(posture_kd_, response.kd);
-//     break;
-    
-//   default:
-//     response.ok = false;
-//     response.errstr = "invalid mode";
-//     break;
-//   }
-  
-//   return true;
-// }
-
-
-void WBCPlugin::
-fooCallback(wbc_pr2_ctrl::Foo::ConstPtr const & foo)
-{
-  cerr << "Foo callback: " << foo->bar << "\n";
 }
 
 
