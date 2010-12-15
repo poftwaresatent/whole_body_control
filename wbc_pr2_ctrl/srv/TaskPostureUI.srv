@@ -1,20 +1,22 @@
-int8 SET_TASK = 1
-int8 SET_POSTURE = 2
-int8 GET_TASK = 3
-int8 GET_POSTURE = 4
+int8 SET_TASK_GOAL    =  1
+int8 SET_TASK_KP      =  2
+int8 SET_TASK_KD      =  3
+int8 SET_POSTURE_GOAL =  4
+int8 SET_POSTURE_KP   =  5
+int8 SET_POSTURE_KD   =  6
+int8 GET_TASK_GOAL    =  7
+int8 GET_TASK_KP      =  8
+int8 GET_TASK_KD      =  9
+int8 GET_POSTURE_GOAL = 10
+int8 GET_POSTURE_KP   = 11
+int8 GET_POSTURE_KD   = 12
 int8 mode
-float64[] goal
-##float64[] amax
-##float64[] vmax
-float64[] kp
-float64[] kd
+float64[] value
 ---
 bool ok
 string errstr
-##float64[] pos
-##float64[] vel
-float64[] goal
-##float64[] amax
-##float64[] vmax
-float64[] kp
-float64[] kd
+float64[] value
+float64[] lower_bound
+float64[] upper_bound
+string[] name
+string[] unit

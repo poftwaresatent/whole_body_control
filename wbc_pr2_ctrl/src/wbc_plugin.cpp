@@ -279,30 +279,44 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   
   switch (request.mode) {
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK:
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_GOAL:
     {
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
-      if ( ! request.goal.empty()) {
-	if (3 != request.goal.size()) {
-	  jspace::convert(request.goal, out.task_goal);
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.task_goal);
 	}
 	else {
 	  response.ok = false;
 	  response.errstr = "invalid task goal dimension";
 	}
       }
-      if ( ! request.kp.empty()) {
-	if (3 != request.kp.size()) {
-	  jspace::convert(request.kp, out.task_kp);
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KP:
+    {
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.task_kp);
 	}
 	else {
 	  response.ok = false;
 	  response.errstr = "invalid task kp dimension";
 	}
       }
-      if ( ! request.kd.empty()) {
-	if (3 != request.kd.size()) {
-	  jspace::convert(request.kd, out.task_kd);
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KD:
+    {
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.task_kd);
 	}
 	else {
 	  response.ok = false;
@@ -313,30 +327,44 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       break;
     }
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE:
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_GOAL:
     {
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
-      if ( ! request.goal.empty()) {
-	if (ndof_ != request.goal.size()) {
-	  jspace::convert(request.goal, out.posture_goal);
+      if ( ! request.value.empty()) {
+	if (ndof_ == request.value.size()) {
+	  jspace::convert(request.value, out.posture_goal);
 	}
 	else {
 	  response.ok = false;
 	  response.errstr = "invalid posture goal dimension";
 	}
       }
-      if ( ! request.kp.empty()) {
-	if (ndof_ != request.kp.size()) {
-	  jspace::convert(request.kp, out.posture_kp);
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KP:
+    {
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      if ( ! request.value.empty()) {
+	if (ndof_ == request.value.size()) {
+	  jspace::convert(request.value, out.posture_kp);
 	}
 	else {
 	  response.ok = false;
 	  response.errstr = "invalid posture kp dimension";
 	}
       }
-      if ( ! request.kd.empty()) {
-	if (ndof_ != request.kd.size()) {
-	  jspace::convert(request.kd, out.posture_kd);
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KD:
+    {
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      if ( ! request.value.empty()) {
+	if (ndof_ == request.value.size()) {
+	  jspace::convert(request.value, out.posture_kd);
 	}
 	else {
 	  response.ok = false;
@@ -347,28 +375,100 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       break;
     }
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK:
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_GOAL:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.task_goal, response.goal);
-      jspace::convert(in.task_kp, response.kp);
-      jspace::convert(in.task_kd, response.kd);
+      jspace::convert(in.task_goal, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(-2); // should not hardcode this... ah well.
+	response.upper_bound.push_back(2);
+	response.unit.push_back("m");
+      }
+      response.name.push_back("EE pos x");
+      response.name.push_back("EE pos y");
+      response.name.push_back("EE pos z");
       break;
     }
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE:
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KP:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.posture_goal, response.goal);
-      jspace::convert(in.posture_kp, response.kp);
-      jspace::convert(in.posture_kd, response.kd);
+      jspace::convert(in.task_kp, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
+      }
+      response.name.push_back("kp x");
+      response.name.push_back("kp y");
+      response.name.push_back("kp z");
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KD:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.task_kd, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(63); // should not hardcode this... ah well.
+      }
+      response.name.push_back("kd x");
+      response.name.push_back("kd y");
+      response.name.push_back("kd z");
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_GOAL:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.posture_goal, response.value);
+      for (size_t ii(0); ii < ndof_; ++ii) {
+	response.lower_bound.push_back(-2 * M_PI); // should not hardcode this... ah well.
+	response.upper_bound.push_back(2 * M_PI);
+	response.unit.push_back("rad");
+	ostringstream msg;
+	msg << "joint pos " << ii;
+	response.name.push_back(msg.str());
+      }
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KP:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.posture_kp, response.value);
+      for (size_t ii(0); ii < ndof_; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
+	ostringstream msg;
+	msg << "joint kp " << ii;
+	response.name.push_back(msg.str());
+      }
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KD:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.posture_kd, response.value);
+      for (size_t ii(0); ii < ndof_; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(63); // should not hardcode this... ah well.
+	ostringstream msg;
+	msg << "joint kd " << ii;
+	response.name.push_back(msg.str());
+      }
       break;
     }
     
   default:
-    response.ok = false;
-    response.errstr = "invalid mode";
-    break;
+    {
+      ostringstream msg;
+      msg << "invalid mode: " << request.mode;
+      response.ok = false;
+      response.errstr = msg.str();
+      break;
+    }
   }
   
   return true;
