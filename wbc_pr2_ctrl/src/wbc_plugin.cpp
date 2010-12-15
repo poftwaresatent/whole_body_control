@@ -39,7 +39,7 @@ using namespace std;
 
 static bool stepTaskPosture(jspace::Model const & model,
 			    taoDNode const * end_effector,
-			    jspace::Vector const & local_control_point,
+			    jspace::Vector const & control_point,
 			    jspace::Vector const & task_goal,
 			    jspace::Vector const & task_kp,
 			    jspace::Vector const & task_kd,
@@ -58,7 +58,7 @@ struct ctrl_to_ui_s {
 struct ui_to_ctrl_s {
   ui_to_ctrl_s & operator = (ui_to_ctrl_s const & rhs) {
     if (&rhs != this) {
-      local_control_point = rhs.local_control_point;
+      control_point = rhs.control_point;
       task_goal = rhs.task_goal;
       task_kp = rhs.task_kp;
       task_kd = rhs.task_kd;
@@ -69,7 +69,7 @@ struct ui_to_ctrl_s {
     return *this;
   }
   
-  jspace::Vector local_control_point;
+  jspace::Vector control_point;
   jspace::Vector task_goal;
   jspace::Vector task_kp;
   jspace::Vector task_kd;
@@ -166,7 +166,7 @@ update(void)
   
   bool const ok(stepTaskPosture(model_,
 				end_effector_,
-				in.local_control_point,
+				in.control_point,
 				in.task_goal,
 				in.task_kp,
 				in.task_kd,
@@ -241,8 +241,7 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     }
     
     for (size_t ii(0); ii < NBUF; ++ii) {
-      ui_to_ctrl_data_[ii].local_control_point = jspace::Vector::Zero(3);
-      ui_to_ctrl_data_[ii].local_control_point << 0.0 , 0.1 , 0.0;
+      ui_to_ctrl_data_[ii].control_point = jspace::Vector::Zero(3);
       ui_to_ctrl_data_[ii].task_goal =     0.2 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].task_kp =     100.0 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].task_kd =      20.0 * jspace::Vector::Ones(3);
@@ -291,6 +290,24 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   response.ok = true;
   
   switch (request.mode) {
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_CONTROL_POINT:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.control_point);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid control point dimension";
+	}
+      }
+      ++ui_to_ctrl_tick_;
+      break;
+    }
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_GOAL:
     {
@@ -397,6 +414,21 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 	}
       }
       ++ui_to_ctrl_tick_;
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_CONTROL_POINT:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.control_point, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(-1); // should not hardcode this... ah well.
+	response.upper_bound.push_back(1);
+	response.unit.push_back("m");
+      }
+      response.name.push_back("ctrl pt x");
+      response.name.push_back("ctrl pt y");
+      response.name.push_back("ctrl pt z");
       break;
     }
     
@@ -520,7 +552,7 @@ static void pseudoInverse(jspace::Matrix const & matrix,
 
 bool stepTaskPosture(jspace::Model const & model,
 		     taoDNode const * end_effector,
-		     jspace::Vector const & local_control_point,
+		     jspace::Vector const & control_point,
 		     jspace::Vector const & task_goal,
 		     jspace::Vector const & task_kp,
 		     jspace::Vector const & task_kd,
@@ -532,9 +564,9 @@ bool stepTaskPosture(jspace::Model const & model,
   //////////////////////////////////////////////////
   // sanity checks
   
-  if (local_control_point.rows() != 3) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid local_control_point dimension %d",
-	       local_control_point.rows());
+  if (control_point.rows() != 3) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid control_point dimension %d",
+	       control_point.rows());
     return false;
   }
   if (task_goal.rows() != 3) {
@@ -575,9 +607,9 @@ bool stepTaskPosture(jspace::Model const & model,
   
   jspace::Transform eepos;
   model.computeGlobalFrame(end_effector,
-			   local_control_point[0],
-			   local_control_point[1],
-			   local_control_point[2],
+			   control_point[0],
+			   control_point[1],
+			   control_point[2],
 			   eepos);
   
   jspace::Matrix Jfull;
@@ -593,16 +625,19 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Matrix Lambda;
   pseudoInverse(invLambda, 1e-3, Lambda);
   
-  jspace::Vector poserror(eepos.translation() - task_goal);
+  jspace::Vector curpos(eepos.translation());
+  jspace::Vector poserror(curpos - task_goal);
   jspace::Vector velerror(Jx * model.getState().velocity_); // desired velocity == zero
 
   cerr << "==================================================\n";
-  jspace::pretty_print(Jx, cerr, "Jx", "  ");
-  jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
+  jspace::pretty_print(task_goal, cerr, "task_goal", "  ");
+  jspace::pretty_print(curpos, cerr, "curpos", "  ");
   jspace::pretty_print(poserror, cerr, "poserror", "  ");
   jspace::pretty_print(velerror, cerr, "velerror", "  ");
   jspace::pretty_print(task_kp, cerr, "task_kp", "  ");
   jspace::pretty_print(task_kd, cerr, "task_kd", "  ");
+  jspace::pretty_print(Jx, cerr, "Jx", "  ");
+  jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
   
   jspace::Vector tau_task(Jx.transpose() * (-Lambda)
 			  * (   task_kp.cwise() * poserror
@@ -620,16 +655,19 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Matrix Lambda_p;
   pseudoInverse(invLambda_p, 1e-3, Lambda_p);
   
+  jspace::Vector posture_error(model.getState().position_ - posture_goal);
+  
   cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
-  jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
   jspace::pretty_print(posture_goal, cerr, "posture_goal", "  ");
-  jspace::pretty_print(model.getState().position_, cerr, "position", "  ");
+  jspace::pretty_print(model.getState().position_, cerr, "posture", "  ");
+  jspace::pretty_print(posture_error, cerr, "posture_error", "  ");
   jspace::pretty_print(posture_kp, cerr, "posture_kp", "  ");
   jspace::pretty_print(posture_kd, cerr, "posture_kd", "  ");
+  jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
+  jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
 
   jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
-			     * (  posture_kp.cwise() * (model.getState().position_ - posture_goal)
+			     * (  posture_kp.cwise() * posture_error
 				+ posture_kd.cwise() *  model.getState().velocity_));
   
   cerr << "--------------------------------------------------\n";
@@ -643,6 +681,7 @@ bool stepTaskPosture(jspace::Model const & model,
   tau = tau_task + tau_posture + gg;
   
   cerr << "--------------------------------------------------\n";
+  jspace::pretty_print(gg, cerr, "gravity", "  ");
   jspace::pretty_print(tau, cerr, "tau", "  ");
 }
 
