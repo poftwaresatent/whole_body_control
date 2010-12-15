@@ -56,6 +56,19 @@ struct ctrl_to_ui_s {
 
 
 struct ui_to_ctrl_s {
+  ui_to_ctrl_s & operator = (ui_to_ctrl_s const & rhs) {
+    if (&rhs != this) {
+      local_control_point = rhs.local_control_point;
+      task_goal = rhs.task_goal;
+      task_kp = rhs.task_kp;
+      task_kd = rhs.task_kd;
+      posture_goal = rhs.posture_goal;
+      posture_kp = rhs.posture_kp;
+      posture_kd = rhs.posture_kd;
+    }
+    return *this;
+  }
+  
   jspace::Vector local_control_point;
   jspace::Vector task_goal;
   jspace::Vector task_kp;
@@ -281,7 +294,9 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_GOAL:
     {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
 	  jspace::convert(request.value, out.task_goal);
@@ -297,7 +312,9 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KP:
     {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
 	  jspace::convert(request.value, out.task_kp);
@@ -313,7 +330,9 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KD:
     {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
 	  jspace::convert(request.value, out.task_kd);
@@ -329,7 +348,9 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_GOAL:
     {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
 	  jspace::convert(request.value, out.posture_goal);
@@ -345,7 +366,9 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KP:
     {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
 	  jspace::convert(request.value, out.posture_kp);
@@ -361,7 +384,9 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KD:
     {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
 	  jspace::convert(request.value, out.posture_kd);
