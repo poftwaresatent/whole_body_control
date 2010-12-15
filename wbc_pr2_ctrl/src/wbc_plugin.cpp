@@ -39,7 +39,7 @@ using namespace std;
 
 static bool stepTaskPosture(jspace::Model const & model,
 			    taoDNode const * end_effector,
-			    jspace::Vector const & local_control_point,
+			    jspace::Vector const & control_point,
 			    jspace::Vector const & task_goal,
 			    jspace::Vector const & task_kp,
 			    jspace::Vector const & task_kd,
@@ -47,6 +47,39 @@ static bool stepTaskPosture(jspace::Model const & model,
 			    jspace::Vector const & posture_kp,
 			    jspace::Vector const & posture_kd,
 			    jspace::Vector & tau);
+
+
+struct ctrl_to_ui_s {
+  jspace::State state;
+  jspace::Vector tau;
+};
+
+
+struct ui_to_ctrl_s {
+  ui_to_ctrl_s & operator = (ui_to_ctrl_s const & rhs) {
+    if (&rhs != this) {
+      control_point = rhs.control_point;
+      task_goal = rhs.task_goal;
+      task_kp = rhs.task_kp;
+      task_kd = rhs.task_kd;
+      posture_goal = rhs.posture_goal;
+      posture_kp = rhs.posture_kp;
+      posture_kd = rhs.posture_kd;
+    }
+    return *this;
+  }
+  
+  jspace::Vector control_point;
+  jspace::Vector task_goal;
+  jspace::Vector task_kp;
+  jspace::Vector task_kd;
+  jspace::Vector posture_goal;
+  jspace::Vector posture_kp;
+  jspace::Vector posture_kd;
+};
+
+
+static size_t const NBUF(2);
 
 
 class WBCPlugin
@@ -67,18 +100,15 @@ public:
   size_t ndof_;
   jspace::Model model_;
   taoDNode const * end_effector_;
-  jspace::State state_;
-  jspace::Vector tau_;
   int tick_;
   
+  size_t ctrl_to_ui_tick_;
+  ctrl_to_ui_s ctrl_to_ui_data_[NBUF];
+  
+  size_t ui_to_ctrl_tick_;
+  ui_to_ctrl_s ui_to_ctrl_data_[NBUF];
+  
   ros::ServiceServer ui_server_;
-  jspace::Vector local_control_point_;
-  jspace::Vector task_goal_;
-  jspace::Vector task_kp_;
-  jspace::Vector task_kd_;
-  jspace::Vector posture_goal_;
-  jspace::Vector posture_kp_;
-  jspace::Vector posture_kd_;
 };
 
 
@@ -86,7 +116,9 @@ WBCPlugin::
 WBCPlugin()
   : ros_model_("/wbc_pr2_ctrl/"),
     ndof_(0),
-    tick_(0)
+    tick_(0),
+    ctrl_to_ui_tick_(1),	// start at one because we need tick-1
+    ui_to_ctrl_tick_(1)		// start at one because we need tick-1
 {
 }
 
@@ -97,46 +129,70 @@ WBCPlugin::
 }
 
 
+static inline size_t clean(size_t tick)
+{
+  return tick % NBUF;
+}
+
+
+static inline size_t dirty(size_t tick)
+{
+  return (tick - 1) % NBUF;
+}
+
+
 void WBCPlugin::
 update(void)
 {
+  ctrl_to_ui_s & out(ctrl_to_ui_data_[dirty(ctrl_to_ui_tick_)]);
+  ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+  
   //////////////////////////////////////////////////
   // update state
   
   ros::WallTime const wall_now(ros::WallTime::now());
-  state_.time_sec_ = wall_now.sec;
-  state_.time_usec_ = wall_now.nsec / 1000;
+  out.state.time_sec_ = wall_now.sec;
+  out.state.time_usec_ = wall_now.nsec / 1000;
   
   for (size_t ii(0); ii < ndof_; ++ii) {
-    state_.position_[ii] = controlled_joint_[ii]->position_;
-    state_.velocity_[ii] = controlled_joint_[ii]->velocity_;
-    state_.force_[ii] = controlled_joint_[ii]->measured_effort_;
+    out.state.position_[ii] = controlled_joint_[ii]->position_;
+    out.state.velocity_[ii] = controlled_joint_[ii]->velocity_;
+    out.state.force_[ii] = controlled_joint_[ii]->measured_effort_;
   }
-  model_.update(state_);
+  model_.update(out.state);
   
   //////////////////////////////////////////////////
   // compute control torques
   
   bool const ok(stepTaskPosture(model_,
-				end_effector_, local_control_point_,
-				task_goal_, task_kp_, task_kd_,
-				posture_goal_, posture_kp_, posture_kd_,
-				tau_));
+				end_effector_,
+				in.control_point,
+				in.task_goal,
+				in.task_kp,
+				in.task_kd,
+				in.posture_goal,
+				in.posture_kp,
+				in.posture_kd,
+				out.tau));
   
   //////////////////////////////////////////////////
   // send torques to motors
   
   if (ok) {
     for (size_t ii(0); ii < ndof_; ++ii) {
-      controlled_joint_[ii]->commanded_effort_ = tau_[ii];
+      controlled_joint_[ii]->commanded_effort_ = out.tau[ii];
     }
   }
   else {
     for (size_t ii(0); ii < ndof_; ++ii) {
+      out.tau[ii] = 0;
       controlled_joint_[ii]->commanded_effort_ = 0;
     }
   }
   
+  // I guess ctrl_to_ui_tick is synonymous with just tick... also note
+  // that ui_to_ctrl_tick gets updated in uiCallback()
+  ++ctrl_to_ui_tick_;
   ++tick_;
 }
 
@@ -184,13 +240,15 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       throw std::runtime_error("no l_wrist_roll_link in model (MAKE THIS RUNTIME CONFIGURABLE)");
     }
     
-    local_control_point_ << 0.0 , 0.1 , 0.0;
-    task_goal_ =     0.2 * jspace::Vector::Ones(3);
-    task_kp_ =      20.0 * jspace::Vector::Ones(3);
-    task_kd_ =       1.0 * jspace::Vector::Ones(3);
-    posture_goal_ = 20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-    posture_kp_ =   20.0 * jspace::Vector::Ones(ndof_);
-    posture_kd_ =    1.0 * jspace::Vector::Ones(ndof_);
+    for (size_t ii(0); ii < NBUF; ++ii) {
+      ui_to_ctrl_data_[ii].control_point = jspace::Vector::Zero(3);
+      ui_to_ctrl_data_[ii].task_goal =     0.2 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].task_kp =     100.0 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].task_kd =      20.0 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].posture_goal = 20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].posture_kp =  100.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].posture_kd =   20.0 * jspace::Vector::Ones(ndof_);
+    }
     
     ROS_INFO ("marking gravity-compensated joints");
     std::vector<std::string>::const_iterator
@@ -206,8 +264,10 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       ROS_INFO ("disabled gravity compensation for link %s (ID %d)", gclink->c_str(), id);
     }
     
-    state_.init(ndof_, ndof_, ndof_);
-    tau_ = jspace::Vector::Zero(ndof_);
+    for (size_t ii(0); ii < NBUF; ++ii) {
+      ctrl_to_ui_data_[ii].state.init(ndof_, ndof_, ndof_);
+      ctrl_to_ui_data_[ii].tau = jspace::Vector::Zero(ndof_);
+    }
     tick_ = 0;
     
     ROS_INFO ("wbc_plugin ready to rock!");
@@ -231,82 +291,241 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   
   switch (request.mode) {
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK:
-    if ( ! request.goal.empty()) {
-      if (3 != request.goal.size()) {
-	jspace::convert(request.goal, task_goal_);
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_CONTROL_POINT:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.control_point);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid control point dimension";
+	}
       }
-      else {
-	response.ok = false;
-	response.errstr = "invalid task goal dimension";
-      }
+      ++ui_to_ctrl_tick_;
+      break;
     }
-    if ( ! request.kp.empty()) {
-      if (3 != request.kp.size()) {
-	jspace::convert(request.kp, task_kp_);
-      }
-      else {
-	response.ok = false;
-	response.errstr = "invalid task kp dimension";
-      }
-    }
-    if ( ! request.kd.empty()) {
-      if (3 != request.kd.size()) {
-	jspace::convert(request.kd, task_kd_);
-      }
-      else {
-	response.ok = false;
-	response.errstr = "invalid task kd dimension";
-      }
-    }
-    break;
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE:
-    if ( ! request.goal.empty()) {
-      if (ndof_ != request.goal.size()) {
-	jspace::convert(request.goal, posture_goal_);
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_GOAL:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.task_goal);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid task goal dimension";
+	}
       }
-      else {
-	response.ok = false;
-	response.errstr = "invalid posture goal dimension";
-      }
+      ++ui_to_ctrl_tick_;
+      break;
     }
-    if ( ! request.kp.empty()) {
-      if (ndof_ != request.kp.size()) {
-	jspace::convert(request.kp, posture_kp_);
-      }
-      else {
-	response.ok = false;
-	response.errstr = "invalid posture kp dimension";
-      }
-    }
-    if ( ! request.kd.empty()) {
-      if (ndof_ != request.kd.size()) {
-	jspace::convert(request.kd, posture_kd_);
-      }
-      else {
-	response.ok = false;
-	response.errstr = "invalid posture kd dimension";
-      }
-    }
-    break;
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK:
-    jspace::convert(task_goal_, response.goal);
-    jspace::convert(task_kp_, response.kp);
-    jspace::convert(task_kd_, response.kd);
-    break;
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KP:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.task_kp);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid task kp dimension";
+	}
+      }
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KD:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (3 == request.value.size()) {
+	  jspace::convert(request.value, out.task_kd);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid task kd dimension";
+	}
+      }
+      ++ui_to_ctrl_tick_;
+      break;
+    }
     
-  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE:
-    jspace::convert(posture_goal_, response.goal);
-    jspace::convert(posture_kp_, response.kp);
-    jspace::convert(posture_kd_, response.kd);
-    break;
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_GOAL:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (ndof_ == request.value.size()) {
+	  jspace::convert(request.value, out.posture_goal);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid posture goal dimension";
+	}
+      }
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KP:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (ndof_ == request.value.size()) {
+	  jspace::convert(request.value, out.posture_kp);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid posture kp dimension";
+	}
+      }
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+
+  case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KD:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
+      out = in;
+      if ( ! request.value.empty()) {
+	if (ndof_ == request.value.size()) {
+	  jspace::convert(request.value, out.posture_kd);
+	}
+	else {
+	  response.ok = false;
+	  response.errstr = "invalid posture kd dimension";
+	}
+      }
+      ++ui_to_ctrl_tick_;
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_CONTROL_POINT:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.control_point, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(-1); // should not hardcode this... ah well.
+	response.upper_bound.push_back(1);
+	response.unit.push_back("m");
+      }
+      response.name.push_back("ctrl pt x");
+      response.name.push_back("ctrl pt y");
+      response.name.push_back("ctrl pt z");
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_GOAL:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.task_goal, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(-2); // should not hardcode this... ah well.
+	response.upper_bound.push_back(2);
+	response.unit.push_back("m");
+      }
+      response.name.push_back("EE pos x");
+      response.name.push_back("EE pos y");
+      response.name.push_back("EE pos z");
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KP:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.task_kp, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
+      }
+      response.name.push_back("kp x");
+      response.name.push_back("kp y");
+      response.name.push_back("kp z");
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KD:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.task_kd, response.value);
+      for (size_t ii(0); ii < 3; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(63); // should not hardcode this... ah well.
+      }
+      response.name.push_back("kd x");
+      response.name.push_back("kd y");
+      response.name.push_back("kd z");
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_GOAL:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.posture_goal, response.value);
+      for (size_t ii(0); ii < ndof_; ++ii) {
+	response.lower_bound.push_back(-2 * M_PI); // should not hardcode this... ah well.
+	response.upper_bound.push_back(2 * M_PI);
+	response.unit.push_back("rad");
+	ostringstream msg;
+	msg << "joint pos " << ii;
+	response.name.push_back(msg.str());
+      }
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KP:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.posture_kp, response.value);
+      for (size_t ii(0); ii < ndof_; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
+	ostringstream msg;
+	msg << "joint kp " << ii;
+	response.name.push_back(msg.str());
+      }
+      break;
+    }
+    
+  case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KD:
+    {
+      ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
+      jspace::convert(in.posture_kd, response.value);
+      for (size_t ii(0); ii < ndof_; ++ii) {
+	response.lower_bound.push_back(0);
+	response.upper_bound.push_back(63); // should not hardcode this... ah well.
+	ostringstream msg;
+	msg << "joint kd " << ii;
+	response.name.push_back(msg.str());
+      }
+      break;
+    }
     
   default:
-    response.ok = false;
-    response.errstr = "invalid mode";
-    break;
+    {
+      ostringstream msg;
+      msg << "invalid mode: " << request.mode;
+      response.ok = false;
+      response.errstr = msg.str();
+      break;
+    }
   }
   
   return true;
@@ -333,7 +552,7 @@ static void pseudoInverse(jspace::Matrix const & matrix,
 
 bool stepTaskPosture(jspace::Model const & model,
 		     taoDNode const * end_effector,
-		     jspace::Vector const & local_control_point,
+		     jspace::Vector const & control_point,
 		     jspace::Vector const & task_goal,
 		     jspace::Vector const & task_kp,
 		     jspace::Vector const & task_kd,
@@ -345,9 +564,9 @@ bool stepTaskPosture(jspace::Model const & model,
   //////////////////////////////////////////////////
   // sanity checks
   
-  if (local_control_point.rows() != 3) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid local_control_point dimension %d",
-	       local_control_point.rows());
+  if (control_point.rows() != 3) {
+    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid control_point dimension %d",
+	       control_point.rows());
     return false;
   }
   if (task_goal.rows() != 3) {
@@ -388,9 +607,9 @@ bool stepTaskPosture(jspace::Model const & model,
   
   jspace::Transform eepos;
   model.computeGlobalFrame(end_effector,
-			   local_control_point[0],
-			   local_control_point[1],
-			   local_control_point[2],
+			   control_point[0],
+			   control_point[1],
+			   control_point[2],
 			   eepos);
   
   jspace::Matrix Jfull;
@@ -406,16 +625,19 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Matrix Lambda;
   pseudoInverse(invLambda, 1e-3, Lambda);
   
-  jspace::Vector poserror(eepos.translation() - task_goal);
+  jspace::Vector curpos(eepos.translation());
+  jspace::Vector poserror(curpos - task_goal);
   jspace::Vector velerror(Jx * model.getState().velocity_); // desired velocity == zero
 
   cerr << "==================================================\n";
-  jspace::pretty_print(Jx, cerr, "Jx", "  ");
-  jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
+  jspace::pretty_print(task_goal, cerr, "task_goal", "  ");
+  jspace::pretty_print(curpos, cerr, "curpos", "  ");
   jspace::pretty_print(poserror, cerr, "poserror", "  ");
   jspace::pretty_print(velerror, cerr, "velerror", "  ");
   jspace::pretty_print(task_kp, cerr, "task_kp", "  ");
   jspace::pretty_print(task_kd, cerr, "task_kd", "  ");
+  jspace::pretty_print(Jx, cerr, "Jx", "  ");
+  jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
   
   jspace::Vector tau_task(Jx.transpose() * (-Lambda)
 			  * (   task_kp.cwise() * poserror
@@ -433,16 +655,19 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Matrix Lambda_p;
   pseudoInverse(invLambda_p, 1e-3, Lambda_p);
   
+  jspace::Vector posture_error(model.getState().position_ - posture_goal);
+  
   cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
-  jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
   jspace::pretty_print(posture_goal, cerr, "posture_goal", "  ");
-  jspace::pretty_print(model.getState().position_, cerr, "position", "  ");
+  jspace::pretty_print(model.getState().position_, cerr, "posture", "  ");
+  jspace::pretty_print(posture_error, cerr, "posture_error", "  ");
   jspace::pretty_print(posture_kp, cerr, "posture_kp", "  ");
   jspace::pretty_print(posture_kd, cerr, "posture_kd", "  ");
+  jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
+  jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
 
   jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
-			     * (  posture_kp.cwise() * (model.getState().position_ - posture_goal)
+			     * (  posture_kp.cwise() * posture_error
 				+ posture_kd.cwise() *  model.getState().velocity_));
   
   cerr << "--------------------------------------------------\n";
@@ -456,6 +681,7 @@ bool stepTaskPosture(jspace::Model const & model,
   tau = tau_task + tau_posture + gg;
   
   cerr << "--------------------------------------------------\n";
+  jspace::pretty_print(gg, cerr, "gravity", "  ");
   jspace::pretty_print(tau, cerr, "tau", "  ");
 }
 
