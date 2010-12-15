@@ -19,7 +19,7 @@
  */
 
 /**
-   \file testRolo.cpp
+   \file trjgen.cpp
    \author Roland Philippsen
 */
 
