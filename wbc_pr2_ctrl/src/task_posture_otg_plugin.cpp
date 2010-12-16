@@ -259,7 +259,7 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     for (size_t ii(0); ii < NBUF; ++ii) {
       
       ui_to_ctrl_data_[ii].task_otg.reset(new TypeIOTG(3, 1e-3));
-      ui_to_ctrl_data_[ii].task_otg.reset(new TypeIOTG(ndof_, 1e-3));
+      ui_to_ctrl_data_[ii].posture_otg.reset(new TypeIOTG(ndof_, 1e-3));
       
       ui_to_ctrl_data_[ii].end_effector = ee;
       ui_to_ctrl_data_[ii].control_point = jspace::Vector::Zero(3);
@@ -726,8 +726,8 @@ bool stepTaskPosture(jspace::Model const & model,
   
   // use online trajectory generator for acceleration-bounded control
   
-  jspace::Vector otg_posture_pos(3);
-  jspace::Vector otg_posture_vel(3);
+  jspace::Vector otg_posture_pos(ndof);
+  jspace::Vector otg_posture_vel(ndof);
   otg_result = in.posture_otg->GetNextMotionState_Position(model.getState().position_.data(),
 							   model.getState().velocity_.data(),
 							   in.posture_maxvel.data(),
