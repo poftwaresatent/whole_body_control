@@ -57,24 +57,13 @@ namespace {
   {
   public:
     explicit OTGCursor(size_t ndof);
-      // ui_to_ctrl_data_[ii].task_selection.resize(3);
-      // for (size_t jj(0); jj < 3; ++jj) {
-      // 	ui_to_ctrl_data_[ii].task_selection[jj] = true;
-      // }
     
     TypeIOTG::TypeIOTGResult next(TypeIOTG & otg,
 				  jspace::Vector const & maxvel,
 				  jspace::Vector const & maxacc,
 				  jspace::Vector const & goal);
-  // int otg_result(in.task_otg->GetNextMotionState_Position(curpos.data(),
-  // 							  curvel.data(),
-  // 							  in.task_maxvel.data(),
-  // 							  in.task_maxacc.data(),
-  // 							  in.task_goal.data(),
-  // 							  in.task_selection.data(),
-  // 							  otg_task_pos.data(),
-  // 							  otg_task_vel.data()));
     
+    // good candidates for inlining!
     jspace::Vector & position();
     jspace::Vector const & position() const;
     jspace::Vector & velocity();
@@ -830,6 +819,89 @@ bool stepTaskPosture(jspace::Model const & model,
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(gg, cerr, "gravity", "  ");
   jspace::pretty_print(out.tau, cerr, "tau", "  ");
+}
+
+
+namespace {  
+  
+  
+  OTGCursor::
+  OTGCursor(size_t ndof)
+    : clean_(0),
+      dirty_(1)
+  {
+    for (size_t ii(0); ii < 2; ++ii) {
+      pos_[ii] = jspace::Vector::Zero(ndof);
+      vel_[ii] = jspace::Vector::Zero(ndof);
+    }
+    selection_.resize(ndof);
+    for (size_t ii; ii < ndof; ++ii) {
+      selection_[ii] = true;
+    }
+  }
+  
+  
+  TypeIOTG::TypeIOTGResult OTGCursor::
+  next(TypeIOTG & otg,
+       jspace::Vector const & maxvel,
+       jspace::Vector const & maxacc,
+       jspace::Vector const & goal)
+  {
+    int const otg_result(otg.GetNextMotionState_Position(pos_[clean_].data(),
+							 vel_[clean_].data(),
+							 maxvel.data(),
+							 maxacc.data(),
+							 goal.data(),
+							 selection_.data(),
+							 pos_[dirty_].data(),
+							 vel_[dirty_].data()));
+    if (0 <= otg_result) {
+      dirty_ = clean_;
+      clean_ ^= 1;
+    }
+    return otg_result;
+  }
+  
+  
+  jspace::Vector & OTGCursor::
+  position()
+  {
+    return pos_[clean_];
+  }
+  
+  
+  jspace::Vector const & OTGCursor::
+  position() const
+  {
+    return pos_[clean_];
+  }
+
+  
+  jspace::Vector & OTGCursor::
+  velocity()
+  {
+    return vel_[clean_];
+  }
+
+
+  jspace::Vector const & OTGCursor::
+  velocity() const
+  {
+    return vel_[clean_];
+  }
+  
+  
+  OTGCursor & OTGCursor::
+  operator = (OTGCursor const & rhs)
+  {
+    if (&rhs != this) {
+      selection_ = rhs.selection_;
+      pos_[clean_] = rhs.pos_[rhs.clean_];
+      vel_[clean_] = rhs.vel_[rhs.clean_];
+    }
+    return *this;
+  }
+  
 }
 
 
