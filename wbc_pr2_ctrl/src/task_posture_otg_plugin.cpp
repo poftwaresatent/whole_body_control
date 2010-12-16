@@ -53,48 +53,89 @@ namespace {
   };
   
   
-  struct ui_to_ctrl_s {
-    ui_to_ctrl_s & operator = (ui_to_ctrl_s const & rhs) {
+  class OTGCursor
+  {
+  public:
+    explicit OTGCursor(size_t ndof);
+      // ui_to_ctrl_data_[ii].task_selection.resize(3);
+      // for (size_t jj(0); jj < 3; ++jj) {
+      // 	ui_to_ctrl_data_[ii].task_selection[jj] = true;
+      // }
+    
+    TypeIOTG::TypeIOTGResult next(TypeIOTG & otg,
+				  jspace::Vector const & maxvel,
+				  jspace::Vector const & maxacc,
+				  jspace::Vector const & goal);
+  // int otg_result(in.task_otg->GetNextMotionState_Position(curpos.data(),
+  // 							  curvel.data(),
+  // 							  in.task_maxvel.data(),
+  // 							  in.task_maxacc.data(),
+  // 							  in.task_goal.data(),
+  // 							  in.task_selection.data(),
+  // 							  otg_task_pos.data(),
+  // 							  otg_task_vel.data()));
+    
+    jspace::Vector & position();
+    jspace::Vector const & position() const;
+    jspace::Vector & velocity();
+    jspace::Vector const & velocity() const;
+    
+    OTGCursor & operator = (OTGCursor const & rhs);
+    
+  protected:
+    typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> boolvec_t;
+    
+    boolvec_t selection_;
+    jspace::Vector pos_[2];
+    jspace::Vector vel_[2];
+    size_t clean_;
+    size_t dirty_;
+  };
+  
+  
+  struct level_s {
+    level_s & operator = (level_s const & rhs) {
       if (&rhs != this) {
-	task_otg = rhs.task_otg;
-	posture_otg = rhs.posture_otg;
-	end_effector = rhs.end_effector;
-	control_point = rhs.control_point;
-	task_goal = rhs.task_goal;
-	task_selection = rhs.task_selection;
-	task_maxvel = rhs.task_maxvel;
-	task_maxacc = rhs.task_maxacc;
-	task_kp = rhs.task_kp;
-	task_kd = rhs.task_kd;
-	posture_goal = rhs.posture_goal;
-	posture_selection = rhs.posture_selection;
-	posture_maxvel = rhs.posture_maxvel;
-	posture_maxacc = rhs.posture_maxacc;
-	posture_kp = rhs.posture_kp;
-	posture_kd = rhs.posture_kd;
+	// Here, in this particular plugin, we know that otg and
+	// cursor are shared between all our instances anyway, but
+	// this will not be valid in all cases...
+	goal = rhs.goal;
+	maxvel = rhs.maxvel;
+	maxacc = rhs.maxacc;
+	kp = rhs.kp;
+	kd = rhs.kd;
+	goal_changed = rhs.goal_changed;
       }
       return *this;
     }
     
-    typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> boolvec_t;
-    
-    boost::shared_ptr<TypeIOTG> task_otg;
-    boost::shared_ptr<TypeIOTG> posture_otg;
+    boost::shared_ptr<TypeIOTG> otg;
+    boost::shared_ptr<OTGCursor> cursor;
+    jspace::Vector goal;
+    jspace::Vector maxvel;
+    jspace::Vector maxacc;
+    jspace::Vector kp;
+    jspace::Vector kd;
+    mutable bool goal_changed;
+  };
+  
+  
+  struct ui_to_ctrl_s {
+    ui_to_ctrl_s & operator = (ui_to_ctrl_s const & rhs) {
+      if (&rhs != this) {
+	end_effector = rhs.end_effector;
+	control_point = rhs.control_point;
+	for (size_t ii(0); ii < 2; ++ii) {
+	  level[ii] = rhs.level[ii];
+	}
+      }
+      return *this;
+    }
     
     taoDNode const * end_effector;
     jspace::Vector control_point;
-    jspace::Vector task_goal;
-    boolvec_t task_selection;
-    jspace::Vector task_maxvel;
-    jspace::Vector task_maxacc;
-    jspace::Vector task_kp;
-    jspace::Vector task_kd;
-    jspace::Vector posture_goal;
-    boolvec_t posture_selection;
-    jspace::Vector posture_maxvel;
-    jspace::Vector posture_maxacc;
-    jspace::Vector posture_kp;
-    jspace::Vector posture_kd;
+    
+    level_s level[2];
   };
 
 }
@@ -106,6 +147,12 @@ static bool stepTaskPosture(jspace::Model const & model,
 
 
 static size_t const NBUF(2);
+
+enum {
+  TASK,
+  POSTURE,
+  NLEVELS
+};
 
 
 class TaskPostureOTGPlugin
@@ -256,33 +303,44 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       throw std::runtime_error("no l_wrist_roll_link in model (MAKE THIS RUNTIME CONFIGURABLE)");
     }
     
+    ROS_INFO ("initialising shared instances of task-internal data");
+    
+    ui_to_ctrl_data_[0].level[TASK].otg.reset(new TypeIOTG(3, 1e-3));
+    ui_to_ctrl_data_[0].level[TASK].cursor.reset(new OTGCursor(3));
+    ui_to_ctrl_data_[0].level[POSTURE].otg.reset(new TypeIOTG(7, 1e-3));
+    ui_to_ctrl_data_[0].level[POSTURE].cursor.reset(new OTGCursor(7));
+    for (size_t ii(1); ii < NBUF; ++ii) {
+      for (size_t jj(0); jj < NLEVELS; +jj) {
+	ui_to_ctrl_data_[ii].level[jj].otg = ui_to_ctrl_data_[0].level[jj].otg;
+	ui_to_ctrl_data_[ii].level[jj].cursor = ui_to_ctrl_data_[0].level[jj].cursor;
+      }
+    }
+    
+    ROS_INFO ("initialising double-buffered instances of task-internal data");
+    
     for (size_t ii(0); ii < NBUF; ++ii) {
-      
-      ui_to_ctrl_data_[ii].task_otg.reset(new TypeIOTG(3, 1e-3));
-      ui_to_ctrl_data_[ii].posture_otg.reset(new TypeIOTG(ndof_, 1e-3));
       
       ui_to_ctrl_data_[ii].end_effector = ee;
       ui_to_ctrl_data_[ii].control_point = jspace::Vector::Zero(3);
       
-      ui_to_ctrl_data_[ii].task_goal =     0.2 * jspace::Vector::Ones(3);
-      ui_to_ctrl_data_[ii].task_selection.resize(3);
-      for (size_t jj(0); jj < 3; ++jj) {
-	ui_to_ctrl_data_[ii].task_selection[jj] = true;
+      ui_to_ctrl_data_[ii].level[TASK].goal =     0.2 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].level[TASK].maxvel =   0.3 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].level[TASK].maxacc =   0.6 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].level[TASK].kp =     100.0 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].level[TASK].kd =      20.0 * jspace::Vector::Ones(3);
+      
+      ui_to_ctrl_data_[ii].level[POSTURE].goal =  20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].level[POSTURE].maxvel = 1.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].level[POSTURE].maxacc = 2.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].level[POSTURE].kp =   100.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].level[POSTURE].kd =    20.0 * jspace::Vector::Ones(ndof_);
+      
+      for (size_t jj(0); jj < NLEVELS; +jj) {
+	// The first time around, the trajectories will need to get
+	// initialized, just as if a goal had just been set.
+	ui_to_ctrl_data_[ii].level[jj].goal_changed = true;
       }
-      ui_to_ctrl_data_[ii].task_maxvel =   0.3 * jspace::Vector::Ones(3);
-      ui_to_ctrl_data_[ii].task_maxacc =   0.6 * jspace::Vector::Ones(3);
-      ui_to_ctrl_data_[ii].task_kp =     100.0 * jspace::Vector::Ones(3);
-      ui_to_ctrl_data_[ii].task_kd =      20.0 * jspace::Vector::Ones(3);
-
-      ui_to_ctrl_data_[ii].posture_goal =  20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].posture_selection.resize(ndof_);
-      for (size_t jj(0); jj < ndof_; ++jj) {
-	ui_to_ctrl_data_[ii].posture_selection[jj] = true;
-      }
-      ui_to_ctrl_data_[ii].posture_maxvel = 1.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].posture_maxacc = 2.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].posture_kp =   100.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].posture_kd =    20.0 * jspace::Vector::Ones(ndof_);
+      
     }
     
     ROS_INFO ("marking gravity-compensated joints");
@@ -351,7 +409,8 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
-	  jspace::convert(request.value, out.task_goal);
+	  jspace::convert(request.value, out.level[TASK].goal);
+	  out.level[TASK].goal_changed = true;
 	}
 	else {
 	  response.ok = false;
@@ -369,7 +428,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
-	  jspace::convert(request.value, out.task_kp);
+	  jspace::convert(request.value, out.level[TASK].kp);
 	}
 	else {
 	  response.ok = false;
@@ -387,7 +446,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
-	  jspace::convert(request.value, out.task_kd);
+	  jspace::convert(request.value, out.level[TASK].kd);
 	}
 	else {
 	  response.ok = false;
@@ -405,7 +464,8 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
-	  jspace::convert(request.value, out.posture_goal);
+	  jspace::convert(request.value, out.level[POSTURE].goal);
+	  out.level[POSTURE].goal_changed = true;
 	}
 	else {
 	  response.ok = false;
@@ -423,7 +483,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
-	  jspace::convert(request.value, out.posture_kp);
+	  jspace::convert(request.value, out.level[POSTURE].kp);
 	}
 	else {
 	  response.ok = false;
@@ -441,7 +501,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
       out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
-	  jspace::convert(request.value, out.posture_kd);
+	  jspace::convert(request.value, out.level[POSTURE].kd);
 	}
 	else {
 	  response.ok = false;
@@ -470,7 +530,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_GOAL:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.task_goal, response.value);
+      jspace::convert(in.level[TASK].goal, response.value);
       for (size_t ii(0); ii < 3; ++ii) {
 	response.lower_bound.push_back(-2); // should not hardcode this... ah well.
 	response.upper_bound.push_back(2);
@@ -485,7 +545,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KP:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.task_kp, response.value);
+      jspace::convert(in.level[TASK].kp, response.value);
       for (size_t ii(0); ii < 3; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
@@ -499,7 +559,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KD:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.task_kd, response.value);
+      jspace::convert(in.level[TASK].kd, response.value);
       for (size_t ii(0); ii < 3; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(63); // should not hardcode this... ah well.
@@ -513,7 +573,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_GOAL:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.posture_goal, response.value);
+      jspace::convert(in.level[POSTURE].goal, response.value);
       for (size_t ii(0); ii < ndof_; ++ii) {
 	response.lower_bound.push_back(-2 * M_PI); // should not hardcode this... ah well.
 	response.upper_bound.push_back(2 * M_PI);
@@ -528,7 +588,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KP:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.posture_kp, response.value);
+      jspace::convert(in.level[POSTURE].kp, response.value);
       for (size_t ii(0); ii < ndof_; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
@@ -542,7 +602,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KD:
     {
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
-      jspace::convert(in.posture_kd, response.value);
+      jspace::convert(in.level[POSTURE].kd, response.value);
       for (size_t ii(0); ii < ndof_; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(63); // should not hardcode this... ah well.
@@ -597,56 +657,56 @@ bool stepTaskPosture(jspace::Model const & model,
 	       in.control_point.rows());
     return false;
   }
-  if (in.task_goal.rows() != 3) {
+  if (in.level[TASK].goal.rows() != 3) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_goal dimension %d",
-	       in.task_goal.rows());
+	       in.level[TASK].goal.rows());
     return false;
   }
-  if (in.task_maxvel.rows() != 3) {
+  if (in.level[TASK].maxvel.rows() != 3) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_maxvel dimension %d",
-  	       in.task_maxvel.rows());
+  	       in.level[TASK].maxvel.rows());
     return false;
   }
-  if (in.task_maxacc.rows() != 3) {
+  if (in.level[TASK].maxacc.rows() != 3) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_maxacc dimension %d",
-  	       in.task_maxacc.rows());
+  	       in.level[TASK].maxacc.rows());
     return false;
   }
-  if (in.task_kp.rows() != 3) {
+  if (in.level[TASK].kp.rows() != 3) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_kp dimension %d",
-	       in.task_kp.rows());
+	       in.level[TASK].kp.rows());
     return false;
   }
-  if (in.task_kd.rows() != 3) {
+  if (in.level[TASK].kd.rows() != 3) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_kd dimension %d",
-	       in.task_kd.rows());
+	       in.level[TASK].kd.rows());
     return false;
   }
   
   size_t const ndof(model.getNDOF());
-  if (in.posture_goal.rows() != ndof) {
+  if (in.level[POSTURE].goal.rows() != ndof) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_goal dimension %d",
-	       in.posture_goal.rows());
+	       in.level[POSTURE].goal.rows());
     return false;
   }
-  if (in.posture_maxvel.rows() != ndof) {
+  if (in.level[POSTURE].maxvel.rows() != ndof) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_maxvel dimension %d",
-  	       in.posture_maxvel.rows());
+  	       in.level[POSTURE].maxvel.rows());
     return false;
   }
-  if (in.posture_maxacc.rows() != ndof) {
+  if (in.level[POSTURE].maxacc.rows() != ndof) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_maxacc dimension %d",
-  	       in.posture_maxacc.rows());
+  	       in.level[POSTURE].maxacc.rows());
     return false;
   }
-  if (in.posture_kp.rows() != ndof) {
+  if (in.level[POSTURE].kp.rows() != ndof) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_kp dimension %d",
-	       in.posture_kp.rows());
+	       in.level[POSTURE].kp.rows());
     return false;
   }
-  if (in.posture_kd.rows() != ndof) {
+  if (in.level[POSTURE].kd.rows() != ndof) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_kd dimension %d",
-	       in.posture_kd.rows());
+	       in.level[POSTURE].kd.rows());
     return false;
   }
 
@@ -674,43 +734,41 @@ bool stepTaskPosture(jspace::Model const & model,
   pseudoInverse(invLambda, 1e-3, Lambda);
   
   // use online trajectory generator for acceleration-bounded control
-  
   jspace::Vector curpos(eepos.translation());
   jspace::Vector curvel(Jx * model.getState().velocity_);
-  jspace::Vector otg_task_pos(3);
-  jspace::Vector otg_task_vel(3);
-  int otg_result(in.task_otg->GetNextMotionState_Position(curpos.data(),
-							  curvel.data(),
-							  in.task_maxvel.data(),
-							  in.task_maxacc.data(),
-							  in.task_goal.data(),
-							  in.task_selection.data(),
-							  otg_task_pos.data(),
-							  otg_task_vel.data()));
+  if (in.level[TASK].goal_changed) {
+    in.level[TASK].cursor->position() = curpos;
+    in.level[TASK].cursor->velocity() = curvel;
+    in.level[TASK].goal_changed = false;
+  }
+  int otg_result(in.level[TASK].cursor->next(*in.level[TASK].otg,
+					     in.level[TASK].maxvel,
+					     in.level[TASK].maxacc,
+					     in.level[TASK].goal));
   if (0 > otg_result) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): OTG returned failure code %d for task",
 	       otg_result);
     return false;
   }
-  jspace::Vector poserror(curpos - otg_task_pos);
-  jspace::Vector velerror(curvel - otg_task_vel);
-
+  jspace::Vector poserror(curpos - in.level[TASK].cursor->position());
+  jspace::Vector velerror(curvel - in.level[TASK].cursor->velocity());
+  
   cerr << "==================================================\n";
-  jspace::pretty_print(in.task_goal, cerr, "task_goal", "  ");
+  jspace::pretty_print(in.level[TASK].goal, cerr, "task_goal", "  ");
   jspace::pretty_print(curpos, cerr, "curpos", "  ");
   jspace::pretty_print(curvel, cerr, "curvel", "  ");
-  jspace::pretty_print(otg_task_pos, cerr, "otg_task_pos", "  ");
-  jspace::pretty_print(otg_task_vel, cerr, "otg_task_vel", "  ");
+  jspace::pretty_print(in.level[TASK].cursor->position(), cerr, "otg_task_pos", "  ");
+  jspace::pretty_print(in.level[TASK].cursor->velocity(), cerr, "otg_task_vel", "  ");
   jspace::pretty_print(poserror, cerr, "poserror", "  ");
   jspace::pretty_print(velerror, cerr, "velerror", "  ");
-  jspace::pretty_print(in.task_kp, cerr, "task_kp", "  ");
-  jspace::pretty_print(in.task_kd, cerr, "task_kd", "  ");
+  jspace::pretty_print(in.level[TASK].kp, cerr, "task_kp", "  ");
+  jspace::pretty_print(in.level[TASK].kd, cerr, "task_kd", "  ");
   jspace::pretty_print(Jx, cerr, "Jx", "  ");
   jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
   
   jspace::Vector tau_task(Jx.transpose() * (-Lambda)
-			  * (   in.task_kp.cwise() * poserror
-			      + in.task_kd.cwise() * velerror));
+			  * (   in.level[TASK].kp.cwise() * poserror
+			      + in.level[TASK].kd.cwise() * velerror));
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(tau_task, cerr, "tau_task", "  ");
@@ -725,41 +783,39 @@ bool stepTaskPosture(jspace::Model const & model,
   pseudoInverse(invLambda_p, 1e-3, Lambda_p);
   
   // use online trajectory generator for acceleration-bounded control
-  
-  jspace::Vector otg_posture_pos(ndof);
-  jspace::Vector otg_posture_vel(ndof);
-  otg_result = in.posture_otg->GetNextMotionState_Position(model.getState().position_.data(),
-							   model.getState().velocity_.data(),
-							   in.posture_maxvel.data(),
-							   in.posture_maxacc.data(),
-							   in.posture_goal.data(),
-							   in.posture_selection.data(),
-							   otg_posture_pos.data(),
-							   otg_posture_vel.data());
+  if (in.level[POSTURE].goal_changed) {
+    in.level[POSTURE].cursor->position() = model.getState().position_;
+    in.level[POSTURE].cursor->velocity() = model.getState().velocity_;
+    in.level[POSTURE].goal_changed = false;
+  }
+  otg_result = in.level[POSTURE].cursor->next(*in.level[POSTURE].otg,
+					      in.level[POSTURE].maxvel,
+					      in.level[POSTURE].maxacc,
+					      in.level[POSTURE].goal);
   if (0 > otg_result) {
     ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): OTG returned failure code %d for posture",
 	       otg_result);
     return false;
   }
-  jspace::Vector posture_poserror(model.getState().position_ - otg_posture_pos);
-  jspace::Vector posture_velerror(model.getState().velocity_ - otg_posture_vel);
+  jspace::Vector posture_poserror(model.getState().position_ - in.level[TASK].cursor->position());
+  jspace::Vector posture_velerror(model.getState().velocity_ - in.level[TASK].cursor->velocity());
   
   cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(in.posture_goal, cerr, "posture_goal", "  ");
+  jspace::pretty_print(in.level[POSTURE].goal, cerr, "posture_goal", "  ");
   jspace::pretty_print(model.getState().position_, cerr, "posture curpos", "  ");
   jspace::pretty_print(model.getState().velocity_, cerr, "posture curvel", "  ");
-  jspace::pretty_print(otg_posture_pos, cerr, "otg_posture_pos", "  ");
-  jspace::pretty_print(otg_posture_vel, cerr, "otg_posture_vel", "  ");
+  jspace::pretty_print(in.level[TASK].cursor->position(), cerr, "otg_posture_pos", "  ");
+  jspace::pretty_print(in.level[TASK].cursor->velocity(), cerr, "otg_posture_vel", "  ");
   jspace::pretty_print(posture_poserror, cerr, "posture_poserror", "  ");
   jspace::pretty_print(posture_velerror, cerr, "posture_velerror", "  ");
-  jspace::pretty_print(in.posture_kp, cerr, "posture_kp", "  ");
-  jspace::pretty_print(in.posture_kd, cerr, "posture_kd", "  ");
+  jspace::pretty_print(in.level[POSTURE].kp, cerr, "posture_kp", "  ");
+  jspace::pretty_print(in.level[POSTURE].kd, cerr, "posture_kd", "  ");
   jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
   jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
 
   jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
-			     * (  in.posture_kp.cwise() * posture_poserror
-				+ in.posture_kd.cwise() * posture_velerror));
+			     * (  in.level[POSTURE].kp.cwise() * posture_poserror
+				+ in.level[POSTURE].kd.cwise() * posture_velerror));
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(tau_posture, cerr, "tau_posture", "  ");
