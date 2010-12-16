@@ -56,14 +56,18 @@ namespace {
   struct ui_to_ctrl_s {
     ui_to_ctrl_s & operator = (ui_to_ctrl_s const & rhs) {
       if (&rhs != this) {
+	task_otg = rhs.task_otg;
+	posture_otg = rhs.posture_otg;
 	end_effector = rhs.end_effector;
 	control_point = rhs.control_point;
 	task_goal = rhs.task_goal;
+	task_selection = rhs.task_selection;
 	task_maxvel = rhs.task_maxvel;
 	task_maxacc = rhs.task_maxacc;
 	task_kp = rhs.task_kp;
 	task_kd = rhs.task_kd;
 	posture_goal = rhs.posture_goal;
+	posture_selection = rhs.posture_selection;
 	posture_maxvel = rhs.posture_maxvel;
 	posture_maxacc = rhs.posture_maxacc;
 	posture_kp = rhs.posture_kp;
@@ -72,14 +76,21 @@ namespace {
       return *this;
     }
     
+    typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> boolvec_t;
+    
+    boost::shared_ptr<TypeIOTG> task_otg;
+    boost::shared_ptr<TypeIOTG> posture_otg;
+    
     taoDNode const * end_effector;
     jspace::Vector control_point;
     jspace::Vector task_goal;
+    boolvec_t task_selection;
     jspace::Vector task_maxvel;
     jspace::Vector task_maxacc;
     jspace::Vector task_kp;
     jspace::Vector task_kd;
     jspace::Vector posture_goal;
+    boolvec_t posture_selection;
     jspace::Vector posture_maxvel;
     jspace::Vector posture_maxacc;
     jspace::Vector posture_kp;
@@ -246,17 +257,28 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     }
     
     for (size_t ii(0); ii < NBUF; ++ii) {
-
+      
+      ui_to_ctrl_data_[ii].task_otg.reset(new TypeIOTG(3, 1e-3));
+      ui_to_ctrl_data_[ii].task_otg.reset(new TypeIOTG(ndof_, 1e-3));
+      
       ui_to_ctrl_data_[ii].end_effector = ee;
       ui_to_ctrl_data_[ii].control_point = jspace::Vector::Zero(3);
-
+      
       ui_to_ctrl_data_[ii].task_goal =     0.2 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].task_selection.resize(3);
+      for (size_t jj(0); jj < 3; ++jj) {
+	ui_to_ctrl_data_[ii].task_selection[jj] = true;
+      }
       ui_to_ctrl_data_[ii].task_maxvel =   0.3 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].task_maxacc =   0.6 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].task_kp =     100.0 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].task_kd =      20.0 * jspace::Vector::Ones(3);
 
       ui_to_ctrl_data_[ii].posture_goal =  20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].posture_selection.resize(ndof_);
+      for (size_t jj(0); jj < ndof_; ++jj) {
+	ui_to_ctrl_data_[ii].posture_selection[jj] = true;
+      }
       ui_to_ctrl_data_[ii].posture_maxvel = 1.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
       ui_to_ctrl_data_[ii].posture_maxacc = 2.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
       ui_to_ctrl_data_[ii].posture_kp =   100.0 * jspace::Vector::Ones(ndof_);
@@ -651,13 +673,34 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Matrix Lambda;
   pseudoInverse(invLambda, 1e-3, Lambda);
   
+  // use online trajectory generator for acceleration-bounded control
+  
   jspace::Vector curpos(eepos.translation());
-  jspace::Vector poserror(curpos - in.task_goal);
-  jspace::Vector velerror(Jx * model.getState().velocity_); // desired velocity == zero
+  jspace::Vector curvel(Jx * model.getState().velocity_);
+  jspace::Vector otg_task_pos(3);
+  jspace::Vector otg_task_vel(3);
+  int otg_result(in.task_otg->GetNextMotionState_Position(curpos.data(),
+							  curvel.data(),
+							  in.task_maxvel.data(),
+							  in.task_maxacc.data(),
+							  in.task_goal.data(),
+							  in.task_selection.data(),
+							  otg_task_pos.data(),
+							  otg_task_vel.data()));
+  if (0 > otg_result) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): OTG returned failure code %d for task",
+	       otg_result);
+    return false;
+  }
+  jspace::Vector poserror(curpos - otg_task_pos);
+  jspace::Vector velerror(curvel - otg_task_vel);
 
   cerr << "==================================================\n";
   jspace::pretty_print(in.task_goal, cerr, "task_goal", "  ");
   jspace::pretty_print(curpos, cerr, "curpos", "  ");
+  jspace::pretty_print(curvel, cerr, "curvel", "  ");
+  jspace::pretty_print(otg_task_pos, cerr, "otg_task_pos", "  ");
+  jspace::pretty_print(otg_task_vel, cerr, "otg_task_vel", "  ");
   jspace::pretty_print(poserror, cerr, "poserror", "  ");
   jspace::pretty_print(velerror, cerr, "velerror", "  ");
   jspace::pretty_print(in.task_kp, cerr, "task_kp", "  ");
@@ -681,20 +724,42 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Matrix Lambda_p;
   pseudoInverse(invLambda_p, 1e-3, Lambda_p);
   
-  jspace::Vector posture_error(model.getState().position_ - in.posture_goal);
+  // use online trajectory generator for acceleration-bounded control
+  
+  jspace::Vector otg_posture_pos(3);
+  jspace::Vector otg_posture_vel(3);
+  otg_result = in.posture_otg->GetNextMotionState_Position(model.getState().position_.data(),
+							   model.getState().velocity_.data(),
+							   in.posture_maxvel.data(),
+							   in.posture_maxacc.data(),
+							   in.posture_goal.data(),
+							   in.posture_selection.data(),
+							   otg_posture_pos.data(),
+							   otg_posture_vel.data());
+  if (0 > otg_result) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): OTG returned failure code %d for posture",
+	       otg_result);
+    return false;
+  }
+  jspace::Vector posture_poserror(model.getState().position_ - otg_posture_pos);
+  jspace::Vector posture_velerror(model.getState().velocity_ - otg_posture_vel);
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(in.posture_goal, cerr, "posture_goal", "  ");
-  jspace::pretty_print(model.getState().position_, cerr, "posture", "  ");
-  jspace::pretty_print(posture_error, cerr, "posture_error", "  ");
+  jspace::pretty_print(model.getState().position_, cerr, "posture curpos", "  ");
+  jspace::pretty_print(model.getState().velocity_, cerr, "posture curvel", "  ");
+  jspace::pretty_print(otg_posture_pos, cerr, "otg_posture_pos", "  ");
+  jspace::pretty_print(otg_posture_vel, cerr, "otg_posture_vel", "  ");
+  jspace::pretty_print(posture_poserror, cerr, "posture_poserror", "  ");
+  jspace::pretty_print(posture_velerror, cerr, "posture_velerror", "  ");
   jspace::pretty_print(in.posture_kp, cerr, "posture_kp", "  ");
   jspace::pretty_print(in.posture_kd, cerr, "posture_kd", "  ");
   jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
   jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
 
   jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
-			     * (  in.posture_kp.cwise() * posture_error
-				+ in.posture_kd.cwise() *  model.getState().velocity_));
+			     * (  in.posture_kp.cwise() * posture_poserror
+				+ in.posture_kd.cwise() * posture_velerror));
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(tau_posture, cerr, "tau_posture", "  ");
