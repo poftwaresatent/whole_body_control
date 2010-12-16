@@ -58,10 +58,10 @@ namespace {
   public:
     explicit OTGCursor(size_t ndof);
     
-    TypeIOTG::TypeIOTGResult next(TypeIOTG & otg,
-				  jspace::Vector const & maxvel,
-				  jspace::Vector const & maxacc,
-				  jspace::Vector const & goal);
+    int next(TypeIOTG & otg,
+	     jspace::Vector const & maxvel,
+	     jspace::Vector const & maxacc,
+	     jspace::Vector const & goal);
     
     // good candidates for inlining!
     jspace::Vector & position();
@@ -299,7 +299,7 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     ui_to_ctrl_data_[0].level[POSTURE].otg.reset(new TypeIOTG(7, 1e-3));
     ui_to_ctrl_data_[0].level[POSTURE].cursor.reset(new OTGCursor(7));
     for (size_t ii(1); ii < NBUF; ++ii) {
-      for (size_t jj(0); jj < NLEVELS; +jj) {
+      for (size_t jj(0); jj < NLEVELS; ++jj) {
 	ui_to_ctrl_data_[ii].level[jj].otg = ui_to_ctrl_data_[0].level[jj].otg;
 	ui_to_ctrl_data_[ii].level[jj].cursor = ui_to_ctrl_data_[0].level[jj].cursor;
       }
@@ -324,7 +324,7 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       ui_to_ctrl_data_[ii].level[POSTURE].kp =   100.0 * jspace::Vector::Ones(ndof_);
       ui_to_ctrl_data_[ii].level[POSTURE].kd =    20.0 * jspace::Vector::Ones(ndof_);
       
-      for (size_t jj(0); jj < NLEVELS; +jj) {
+      for (size_t jj(0); jj < NLEVELS; ++jj) {
 	// The first time around, the trajectories will need to get
 	// initialized, just as if a goal had just been set.
 	ui_to_ctrl_data_[ii].level[jj].goal_changed = true;
@@ -841,7 +841,7 @@ namespace {
   }
   
   
-  TypeIOTG::TypeIOTGResult OTGCursor::
+  int OTGCursor::
   next(TypeIOTG & otg,
        jspace::Vector const & maxvel,
        jspace::Vector const & maxacc,
