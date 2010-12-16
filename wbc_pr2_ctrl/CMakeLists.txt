@@ -30,6 +30,7 @@ rosbuild_add_library (wbc_pr2_plugins
   src/test_plugin.cpp
   src/pump_plugin.cpp
   src/wbc_plugin.cpp
+  src/task_posture_otg_plugin.cpp
   )
 
 target_link_libraries (wbc_pr2_plugins wbc_pr2_ctrl)

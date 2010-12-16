@@ -15,6 +15,7 @@
   <license>LGPLv3</license>
   <review status="unreviewed" notes=""/>
   <url>http://stanford-wbc.sourceforge.net/</url>
+  <depend package="reflexxes_otg"/>
   <depend package="wbc_core"/>
   <depend package="wbc_urdf"/>
   <depend package="wbc_msgs"/>

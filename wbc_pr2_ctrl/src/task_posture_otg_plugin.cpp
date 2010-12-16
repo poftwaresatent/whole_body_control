@@ -19,8 +19,12 @@
  */
 
 /**
-   \file wbc_plugin.cpp
-   \brief Plugin that directly implements a whole-body controller.
+   \file task_posture_otg_plugin.cpp
+
+   \brief Plugin that directly implements a WBC with task and
+   nullspace-posture, and which uses the Reflexxes OTG library to
+   limit accelerations in each task space separately.
+
    \author Roland Philippsen
 */
 
@@ -33,20 +37,9 @@
 #include <ros/console.h>
 #include <tao/dynamics/taoDNode.h>
 #include <Eigen/SVD>
+#include <reflexxes_otg/TypeIOTG.h>
 
 using namespace std;
-
-
-static bool stepTaskPosture(jspace::Model const & model,
-			    taoDNode const * end_effector,
-			    jspace::Vector const & control_point,
-			    jspace::Vector const & task_goal,
-			    jspace::Vector const & task_kp,
-			    jspace::Vector const & task_kd,
-			    jspace::Vector const & posture_goal,
-			    jspace::Vector const & posture_kp,
-			    jspace::Vector const & posture_kd,
-			    jspace::Vector & tau);
 
 
 namespace {
@@ -58,27 +51,37 @@ namespace {
     jspace::State state;
     jspace::Vector tau;
   };
-
-
+  
+  
   struct ui_to_ctrl_s {
     ui_to_ctrl_s & operator = (ui_to_ctrl_s const & rhs) {
       if (&rhs != this) {
+	end_effector = rhs.end_effector;
 	control_point = rhs.control_point;
 	task_goal = rhs.task_goal;
+	task_maxvel = rhs.task_maxvel;
+	task_maxacc = rhs.task_maxacc;
 	task_kp = rhs.task_kp;
 	task_kd = rhs.task_kd;
 	posture_goal = rhs.posture_goal;
+	posture_maxvel = rhs.posture_maxvel;
+	posture_maxacc = rhs.posture_maxacc;
 	posture_kp = rhs.posture_kp;
 	posture_kd = rhs.posture_kd;
       }
       return *this;
     }
-  
+    
+    taoDNode const * end_effector;
     jspace::Vector control_point;
     jspace::Vector task_goal;
+    jspace::Vector task_maxvel;
+    jspace::Vector task_maxacc;
     jspace::Vector task_kp;
     jspace::Vector task_kd;
     jspace::Vector posture_goal;
+    jspace::Vector posture_maxvel;
+    jspace::Vector posture_maxacc;
     jspace::Vector posture_kp;
     jspace::Vector posture_kd;
   };
@@ -86,15 +89,20 @@ namespace {
 }
 
 
+static bool stepTaskPosture(jspace::Model const & model,
+			    ui_to_ctrl_s const & in,
+			    ctrl_to_ui_s & out);
+
+
 static size_t const NBUF(2);
 
 
-class WBCPlugin
+class TaskPostureOTGPlugin
   : public pr2_controller_interface::Controller
 {
 public:
-  WBCPlugin();
-  virtual ~WBCPlugin();
+  TaskPostureOTGPlugin();
+  virtual ~TaskPostureOTGPlugin();
   
   virtual void update(void);
   virtual bool init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle &nn);
@@ -106,7 +114,6 @@ public:
   jspace::ros::Model ros_model_;
   size_t ndof_;
   jspace::Model model_;
-  taoDNode const * end_effector_;
   int tick_;
   
   size_t ctrl_to_ui_tick_;
@@ -119,8 +126,8 @@ public:
 };
 
 
-WBCPlugin::
-WBCPlugin()
+TaskPostureOTGPlugin::
+TaskPostureOTGPlugin()
   : ros_model_("/wbc_pr2_ctrl/"),
     ndof_(0),
     tick_(0),
@@ -130,8 +137,8 @@ WBCPlugin()
 }
 
 
-WBCPlugin::
-~WBCPlugin()
+TaskPostureOTGPlugin::
+~TaskPostureOTGPlugin()
 {
 }
 
@@ -148,7 +155,7 @@ static inline size_t dirty(size_t tick)
 }
 
 
-void WBCPlugin::
+void TaskPostureOTGPlugin::
 update(void)
 {
   ctrl_to_ui_s & out(ctrl_to_ui_data_[dirty(ctrl_to_ui_tick_)]);
@@ -171,16 +178,7 @@ update(void)
   //////////////////////////////////////////////////
   // compute control torques
   
-  bool const ok(stepTaskPosture(model_,
-				end_effector_,
-				in.control_point,
-				in.task_goal,
-				in.task_kp,
-				in.task_kd,
-				in.posture_goal,
-				in.posture_kp,
-				in.posture_kd,
-				out.tau));
+  bool const ok(stepTaskPosture(model_, in, out));
   
   //////////////////////////////////////////////////
   // send torques to motors
@@ -204,7 +202,7 @@ update(void)
 }
 
 
-bool WBCPlugin::
+bool TaskPostureOTGPlugin::
 init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
 {
   try {
@@ -242,19 +240,27 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       throw std::runtime_error(msg.str());
     }
     
-    end_effector_ = model_.getNodeByName("l_wrist_roll_link");
-    if ( ! end_effector_) {
+    taoDNode * ee(model_.getNodeByName("l_wrist_roll_link"));
+    if ( ! ee) {
       throw std::runtime_error("no l_wrist_roll_link in model (MAKE THIS RUNTIME CONFIGURABLE)");
     }
     
     for (size_t ii(0); ii < NBUF; ++ii) {
+
+      ui_to_ctrl_data_[ii].end_effector = ee;
       ui_to_ctrl_data_[ii].control_point = jspace::Vector::Zero(3);
+
       ui_to_ctrl_data_[ii].task_goal =     0.2 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].task_maxvel =   0.3 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].task_maxacc =   0.6 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].task_kp =     100.0 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].task_kd =      20.0 * jspace::Vector::Ones(3);
-      ui_to_ctrl_data_[ii].posture_goal = 20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].posture_kp =  100.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].posture_kd =   20.0 * jspace::Vector::Ones(ndof_);
+
+      ui_to_ctrl_data_[ii].posture_goal =  20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].posture_maxvel = 1.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].posture_maxacc = 2.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].posture_kp =   100.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].posture_kd =    20.0 * jspace::Vector::Ones(ndof_);
     }
     
     ROS_INFO ("marking gravity-compensated joints");
@@ -280,17 +286,17 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     ROS_INFO ("wbc_plugin ready to rock!");
   }
   catch (std::exception const & ee) {
-    ROS_ERROR ("WBCPlugin::init(): EXCEPTION: %s", ee.what());
+    ROS_ERROR ("TaskPostureOTGPlugin::init(): EXCEPTION: %s", ee.what());
     return false;
   }
   
-  ui_server_ = nn.advertiseService("ui", &WBCPlugin::uiCallback, this);
+  ui_server_ = nn.advertiseService("ui", &TaskPostureOTGPlugin::uiCallback, this);
   
   return true;
 }
 
 
-bool WBCPlugin::
+bool TaskPostureOTGPlugin::
 uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 	   wbc_pr2_ctrl::TaskPostureUI::Response & response)
 {
@@ -558,54 +564,67 @@ static void pseudoInverse(jspace::Matrix const & matrix,
 
 
 bool stepTaskPosture(jspace::Model const & model,
-		     taoDNode const * end_effector,
-		     jspace::Vector const & control_point,
-		     jspace::Vector const & task_goal,
-		     jspace::Vector const & task_kp,
-		     jspace::Vector const & task_kd,
-		     jspace::Vector const & posture_goal,
-		     jspace::Vector const & posture_kp,
-		     jspace::Vector const & posture_kd,
-		     jspace::Vector & tau)
+		     ui_to_ctrl_s const & in,
+		     ctrl_to_ui_s & out)
 {
   //////////////////////////////////////////////////
   // sanity checks
   
-  if (control_point.rows() != 3) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid control_point dimension %d",
-	       control_point.rows());
+  if (in.control_point.rows() != 3) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid control_point dimension %d",
+	       in.control_point.rows());
     return false;
   }
-  if (task_goal.rows() != 3) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid task_goal dimension %d",
-	       task_goal.rows());
+  if (in.task_goal.rows() != 3) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_goal dimension %d",
+	       in.task_goal.rows());
     return false;
   }
-  if (task_kp.rows() != 3) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid task_kp dimension %d",
-	       task_kp.rows());
+  if (in.task_maxvel.rows() != 3) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_maxvel dimension %d",
+  	       in.task_maxvel.rows());
     return false;
   }
-  if (task_kd.rows() != 3) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid task_kd dimension %d",
-	       task_kd.rows());
+  if (in.task_maxacc.rows() != 3) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_maxacc dimension %d",
+  	       in.task_maxacc.rows());
+    return false;
+  }
+  if (in.task_kp.rows() != 3) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_kp dimension %d",
+	       in.task_kp.rows());
+    return false;
+  }
+  if (in.task_kd.rows() != 3) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid task_kd dimension %d",
+	       in.task_kd.rows());
     return false;
   }
   
   size_t const ndof(model.getNDOF());
-  if (posture_goal.rows() != ndof) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid posture_goal dimension %d",
-	       posture_goal.rows());
+  if (in.posture_goal.rows() != ndof) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_goal dimension %d",
+	       in.posture_goal.rows());
     return false;
   }
-  if (posture_kp.rows() != ndof) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid posture_kp dimension %d",
-	       posture_kp.rows());
+  if (in.posture_maxvel.rows() != ndof) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_maxvel dimension %d",
+  	       in.posture_maxvel.rows());
     return false;
   }
-  if (posture_kd.rows() != ndof) {
-    ROS_ERROR ("WBCPlugin::stepTaskPosture(): invalid posture_kd dimension %d",
-	       posture_kd.rows());
+  if (in.posture_maxacc.rows() != ndof) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_maxacc dimension %d",
+  	       in.posture_maxacc.rows());
+    return false;
+  }
+  if (in.posture_kp.rows() != ndof) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_kp dimension %d",
+	       in.posture_kp.rows());
+    return false;
+  }
+  if (in.posture_kd.rows() != ndof) {
+    ROS_ERROR ("TaskPostureOTGPlugin::stepTaskPosture(): invalid posture_kd dimension %d",
+	       in.posture_kd.rows());
     return false;
   }
 
@@ -613,14 +632,14 @@ bool stepTaskPosture(jspace::Model const & model,
   // task
   
   jspace::Transform eepos;
-  model.computeGlobalFrame(end_effector,
-			   control_point[0],
-			   control_point[1],
-			   control_point[2],
+  model.computeGlobalFrame(in.end_effector,
+			   in.control_point[0],
+			   in.control_point[1],
+			   in.control_point[2],
 			   eepos);
   
   jspace::Matrix Jfull;
-  model.computeJacobian(end_effector,
+  model.computeJacobian(in.end_effector,
 			eepos.translation()[0],
 			eepos.translation()[1],
 			eepos.translation()[2],
@@ -633,22 +652,22 @@ bool stepTaskPosture(jspace::Model const & model,
   pseudoInverse(invLambda, 1e-3, Lambda);
   
   jspace::Vector curpos(eepos.translation());
-  jspace::Vector poserror(curpos - task_goal);
+  jspace::Vector poserror(curpos - in.task_goal);
   jspace::Vector velerror(Jx * model.getState().velocity_); // desired velocity == zero
 
   cerr << "==================================================\n";
-  jspace::pretty_print(task_goal, cerr, "task_goal", "  ");
+  jspace::pretty_print(in.task_goal, cerr, "task_goal", "  ");
   jspace::pretty_print(curpos, cerr, "curpos", "  ");
   jspace::pretty_print(poserror, cerr, "poserror", "  ");
   jspace::pretty_print(velerror, cerr, "velerror", "  ");
-  jspace::pretty_print(task_kp, cerr, "task_kp", "  ");
-  jspace::pretty_print(task_kd, cerr, "task_kd", "  ");
+  jspace::pretty_print(in.task_kp, cerr, "task_kp", "  ");
+  jspace::pretty_print(in.task_kd, cerr, "task_kd", "  ");
   jspace::pretty_print(Jx, cerr, "Jx", "  ");
   jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
   
   jspace::Vector tau_task(Jx.transpose() * (-Lambda)
-			  * (   task_kp.cwise() * poserror
-			      + task_kd.cwise() * velerror));
+			  * (   in.task_kp.cwise() * poserror
+			      + in.task_kd.cwise() * velerror));
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(tau_task, cerr, "tau_task", "  ");
@@ -662,20 +681,20 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Matrix Lambda_p;
   pseudoInverse(invLambda_p, 1e-3, Lambda_p);
   
-  jspace::Vector posture_error(model.getState().position_ - posture_goal);
+  jspace::Vector posture_error(model.getState().position_ - in.posture_goal);
   
   cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(posture_goal, cerr, "posture_goal", "  ");
+  jspace::pretty_print(in.posture_goal, cerr, "posture_goal", "  ");
   jspace::pretty_print(model.getState().position_, cerr, "posture", "  ");
   jspace::pretty_print(posture_error, cerr, "posture_error", "  ");
-  jspace::pretty_print(posture_kp, cerr, "posture_kp", "  ");
-  jspace::pretty_print(posture_kd, cerr, "posture_kd", "  ");
+  jspace::pretty_print(in.posture_kp, cerr, "posture_kp", "  ");
+  jspace::pretty_print(in.posture_kd, cerr, "posture_kd", "  ");
   jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
   jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
 
   jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
-			     * (  posture_kp.cwise() * posture_error
-				+ posture_kd.cwise() *  model.getState().velocity_));
+			     * (  in.posture_kp.cwise() * posture_error
+				+ in.posture_kd.cwise() *  model.getState().velocity_));
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(tau_posture, cerr, "tau_posture", "  ");
@@ -685,12 +704,12 @@ bool stepTaskPosture(jspace::Model const & model,
   
   jspace::Vector gg;
   model.getGravity(gg);
-  tau = tau_task + tau_posture + gg;
+  out.tau = tau_task + tau_posture + gg;
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(gg, cerr, "gravity", "  ");
-  jspace::pretty_print(tau, cerr, "tau", "  ");
+  jspace::pretty_print(out.tau, cerr, "tau", "  ");
 }
 
 
-PLUGINLIB_REGISTER_CLASS (WBCPlugin, WBCPlugin, pr2_controller_interface::Controller)
+PLUGINLIB_REGISTER_CLASS (TaskPostureOTGPlugin, TaskPostureOTGPlugin, pr2_controller_interface::Controller)

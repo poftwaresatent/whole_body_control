@@ -1,0 +1,2 @@
+wbc_pr2_ctrl_task_posture_otg_plugin:
+  type: TaskPostureOTGPlugin
