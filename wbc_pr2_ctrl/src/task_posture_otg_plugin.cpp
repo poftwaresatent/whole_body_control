@@ -75,10 +75,10 @@ namespace {
     typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> boolvec_t;
     
     boolvec_t selection_;
-    jspace::Vector pos_[2];
-    jspace::Vector vel_[2];
-    size_t clean_;
-    size_t dirty_;
+    jspace::Vector pos_clean_;
+    jspace::Vector vel_clean_;
+    jspace::Vector pos_dirty_;
+    jspace::Vector vel_dirty_;
   };
   
   
@@ -827,13 +827,11 @@ namespace {
   
   OTGCursor::
   OTGCursor(size_t ndof)
-    : clean_(0),
-      dirty_(1)
   {
-    for (size_t ii(0); ii < 2; ++ii) {
-      pos_[ii] = jspace::Vector::Zero(ndof);
-      vel_[ii] = jspace::Vector::Zero(ndof);
-    }
+    pos_clean_ = jspace::Vector::Zero(ndof);
+    vel_clean_ = jspace::Vector::Zero(ndof);
+    pos_dirty_ = jspace::Vector::Zero(ndof);
+    vel_dirty_ = jspace::Vector::Zero(ndof);
     selection_.resize(ndof);
     for (size_t ii; ii < ndof; ++ii) {
       selection_[ii] = true;
@@ -847,17 +845,17 @@ namespace {
        jspace::Vector const & maxacc,
        jspace::Vector const & goal)
   {
-    int const otg_result(otg.GetNextMotionState_Position(pos_[clean_].data(),
-							 vel_[clean_].data(),
+    int const otg_result(otg.GetNextMotionState_Position(pos_clean_.data(),
+							 vel_clean_.data(),
 							 maxvel.data(),
 							 maxacc.data(),
 							 goal.data(),
 							 selection_.data(),
-							 pos_[dirty_].data(),
-							 vel_[dirty_].data()));
+							 pos_dirty_.data(),
+							 vel_dirty_.data()));
     if (0 <= otg_result) {
-      dirty_ = clean_;
-      clean_ ^= 1;
+      pos_clean_ = pos_dirty_;
+      vel_clean_ = vel_dirty_;
     }
     return otg_result;
   }
@@ -866,28 +864,28 @@ namespace {
   jspace::Vector & OTGCursor::
   position()
   {
-    return pos_[clean_];
+    return pos_clean_;
   }
   
   
   jspace::Vector const & OTGCursor::
   position() const
   {
-    return pos_[clean_];
+    return pos_clean_;
   }
 
   
   jspace::Vector & OTGCursor::
   velocity()
   {
-    return vel_[clean_];
+    return vel_clean_;
   }
 
 
   jspace::Vector const & OTGCursor::
   velocity() const
   {
-    return vel_[clean_];
+    return vel_clean_;
   }
   
   
@@ -896,8 +894,8 @@ namespace {
   {
     if (&rhs != this) {
       selection_ = rhs.selection_;
-      pos_[clean_] = rhs.pos_[rhs.clean_];
-      vel_[clean_] = rhs.vel_[rhs.clean_];
+      pos_clean_ = rhs.pos_clean_;
+      vel_clean_ = rhs.vel_clean_;
     }
     return *this;
   }
