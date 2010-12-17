@@ -1,13 +1,18 @@
 ROS stack for Stanford Whole-Body Controller
 ==============================================
 
-Integration of Stanford-WBC in ROS was started in late 2009, as part
-of a project supported by [Willow Garage][WG]. The aim of this part of
-the project is to perform whole-body control [PR2][], and one of the
-main outcomes has been the open-sourcing of the core Stanford-WBC
-codebase. Currently, the most active developments here are in the area
-of taking into account motor torque limitations within the WBC
-framework.
+The integration of Stanford-WBC in ROS started in late 2009, as part
+of a project supported by [Willow Garage][WG]. The aim of this project
+is to perform whole-body control in [PR2][], and as a result one of
+the main outcomes has been to open-source the core Stanford-WBC
+codebase. We are currently finalizing a first release that enables
+compliant control of operational tasks in the end effectors while
+controlling compliant postures in the null-space of the task. The
+medium term objective is to take into account motor torque limitations
+while optimizing the execution of tasks and postures for the desired
+behaviors. The long term objective is to provide an easy to reuse
+framework for creating new compliant whole-body behavior by composing
+existing ones and easily adding custom tasks.
 
 [WG]: http://www.willowgarage.com/
 [PR2]: http://www.willowgarage.com/pages/pr2/overview
