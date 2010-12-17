@@ -1,0 +1,11 @@
+<launch>
+  <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/chain.yaml" />
+  <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/task_posture_otg_plugin.yaml" />
+  <node
+      pkg="pr2_controller_manager"
+      type="spawner"
+      name="wbc_pr2_ctrl_task_posture_otg_spawner"
+      args="wbc_pr2_ctrl_task_posture_otg_plugin"
+      output="screen">
+  </node>
+</launch>

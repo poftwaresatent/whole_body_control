@@ -22,3 +22,6 @@ opspace_planar_controller:
   op_kp: 25
   op_kd: 10
   op_vmax: 0.1
+wbc_pr2_ctrl_task_posture_otg_plugin:
+  end_effector_name: link_5
+  debug_output: off

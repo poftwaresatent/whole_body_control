@@ -138,6 +138,7 @@ static bool stepTaskPosture(jspace::Model const & model,
 
 static size_t const NBUF(2);
 static wbc_pr2_ctrl::TaskPostureOTGDebug dbg_msg;
+static bool debug_output;
 
 enum {
   TASK,
@@ -258,6 +259,21 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
 {
   try {
     
+    string debug_output_string;
+    if ( ! nn.getParam("debug_output", debug_output_string)) {
+      debug_output = false;
+      ROS_INFO ("debug_output disabled (use `on' to enable it)");
+    }
+    else {
+      if (("on" == debug_output_string) ||
+	  ("true" == debug_output_string) ||
+	  ("enabled" == debug_output_string) ||
+	  ("TRUE" == debug_output_string)) {
+	debug_output = true;
+	ROS_INFO ("debug_output enabled");
+      }
+    }
+    
     ROS_INFO ("creating TAO tree from URDF");
     static size_t const n_tao_roots(1);
     ros_model_.initFromURDF(nn, robot->model_->robot_model_, n_tao_roots);
@@ -291,9 +307,15 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       throw std::runtime_error(msg.str());
     }
     
-    taoDNode * ee(model_.getNodeByName("l_wrist_roll_link"));
+    string end_effector_name;
+    if ( ! nn.getParam("end_effector_name", end_effector_name)) {
+      end_effector_name = "l_wrist_roll_link";
+    }
+    ROS_INFO ("end_effector_name `%s'", end_effector_name.c_str());
+    
+    taoDNode * ee(model_.getNodeByName(end_effector_name));
     if ( ! ee) {
-      throw std::runtime_error("no l_wrist_roll_link in model (MAKE THIS RUNTIME CONFIGURABLE)");
+      throw std::runtime_error("end effector `" + end_effector_name + "' not in model");
     }
     
     ROS_INFO ("initialising shared instances of task-internal data");
@@ -756,6 +778,9 @@ bool stepTaskPosture(jspace::Model const & model,
   }
   jspace::Vector poserror(curpos - in.level[TASK].cursor->position());
   jspace::Vector velerror(curvel - in.level[TASK].cursor->velocity());
+  jspace::Vector tau_task(Jx.transpose() * (-Lambda)
+			  * (   in.level[TASK].kp.cwise() * poserror
+			      + in.level[TASK].kd.cwise() * velerror));
   
   // debugging...
   
@@ -765,25 +790,22 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::convert(in.level[TASK].cursor->velocity(), dbg_msg.task.vel_trj);
   jspace::convert(in.level[TASK].goal, dbg_msg.task.pos_end);
   
-  cerr << "==================================================\n";
-  jspace::pretty_print(in.level[TASK].goal, cerr, "task_goal", "  ");
-  jspace::pretty_print(curpos, cerr, "curpos", "  ");
-  jspace::pretty_print(curvel, cerr, "curvel", "  ");
-  jspace::pretty_print(in.level[TASK].cursor->position(), cerr, "otg_task_pos", "  ");
-  jspace::pretty_print(in.level[TASK].cursor->velocity(), cerr, "otg_task_vel", "  ");
-  jspace::pretty_print(poserror, cerr, "poserror", "  ");
-  jspace::pretty_print(velerror, cerr, "velerror", "  ");
-  jspace::pretty_print(in.level[TASK].kp, cerr, "task_kp", "  ");
-  jspace::pretty_print(in.level[TASK].kd, cerr, "task_kd", "  ");
-  jspace::pretty_print(Jx, cerr, "Jx", "  ");
-  jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
-  
-  jspace::Vector tau_task(Jx.transpose() * (-Lambda)
-			  * (   in.level[TASK].kp.cwise() * poserror
-			      + in.level[TASK].kd.cwise() * velerror));
-  
-  cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(tau_task, cerr, "tau_task", "  ");
+  if (debug_output) {
+    cerr << "==================================================\n";
+    jspace::pretty_print(in.level[TASK].goal, cerr, "task_goal", "  ");
+    jspace::pretty_print(curpos, cerr, "curpos", "  ");
+    jspace::pretty_print(curvel, cerr, "curvel", "  ");
+    jspace::pretty_print(in.level[TASK].cursor->position(), cerr, "otg_task_pos", "  ");
+    jspace::pretty_print(in.level[TASK].cursor->velocity(), cerr, "otg_task_vel", "  ");
+    jspace::pretty_print(poserror, cerr, "poserror", "  ");
+    jspace::pretty_print(velerror, cerr, "velerror", "  ");
+    jspace::pretty_print(in.level[TASK].kp, cerr, "task_kp", "  ");
+    jspace::pretty_print(in.level[TASK].kd, cerr, "task_kd", "  ");
+    jspace::pretty_print(Jx, cerr, "Jx", "  ");
+    jspace::pretty_print(Lambda, cerr, "Lambda", "  ");
+    cerr << "--------------------------------------------------\n";
+    jspace::pretty_print(tau_task, cerr, "tau_task", "  ");
+  }
   
   //////////////////////////////////////////////////
   // posture
@@ -811,6 +833,9 @@ bool stepTaskPosture(jspace::Model const & model,
   }
   jspace::Vector posture_poserror(model.getState().position_ - in.level[POSTURE].cursor->position());
   jspace::Vector posture_velerror(model.getState().velocity_ - in.level[POSTURE].cursor->velocity());
+  jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
+			     * (  in.level[POSTURE].kp.cwise() * posture_poserror
+				+ in.level[POSTURE].kd.cwise() * posture_velerror));
   
   // debugging...
   
@@ -820,25 +845,22 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::convert(in.level[POSTURE].cursor->velocity(), dbg_msg.posture.vel_trj);
   jspace::convert(in.level[POSTURE].goal, dbg_msg.posture.pos_end);
   
-  cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(in.level[POSTURE].goal, cerr, "posture_goal", "  ");
-  jspace::pretty_print(model.getState().position_, cerr, "posture curpos", "  ");
-  jspace::pretty_print(model.getState().velocity_, cerr, "posture curvel", "  ");
-  jspace::pretty_print(in.level[POSTURE].cursor->position(), cerr, "otg_posture_pos", "  ");
-  jspace::pretty_print(in.level[POSTURE].cursor->velocity(), cerr, "otg_posture_vel", "  ");
-  jspace::pretty_print(posture_poserror, cerr, "posture_poserror", "  ");
-  jspace::pretty_print(posture_velerror, cerr, "posture_velerror", "  ");
-  jspace::pretty_print(in.level[POSTURE].kp, cerr, "posture_kp", "  ");
-  jspace::pretty_print(in.level[POSTURE].kd, cerr, "posture_kd", "  ");
-  jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
-  jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
-
-  jspace::Vector tau_posture(nullspace.transpose() * (-Lambda_p)
-			     * (  in.level[POSTURE].kp.cwise() * posture_poserror
-				+ in.level[POSTURE].kd.cwise() * posture_velerror));
-  
-  cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(tau_posture, cerr, "tau_posture", "  ");
+  if (debug_output) {
+    cerr << "--------------------------------------------------\n";
+    jspace::pretty_print(in.level[POSTURE].goal, cerr, "posture_goal", "  ");
+    jspace::pretty_print(model.getState().position_, cerr, "posture curpos", "  ");
+    jspace::pretty_print(model.getState().velocity_, cerr, "posture curvel", "  ");
+    jspace::pretty_print(in.level[POSTURE].cursor->position(), cerr, "otg_posture_pos", "  ");
+    jspace::pretty_print(in.level[POSTURE].cursor->velocity(), cerr, "otg_posture_vel", "  ");
+    jspace::pretty_print(posture_poserror, cerr, "posture_poserror", "  ");
+    jspace::pretty_print(posture_velerror, cerr, "posture_velerror", "  ");
+    jspace::pretty_print(in.level[POSTURE].kp, cerr, "posture_kp", "  ");
+    jspace::pretty_print(in.level[POSTURE].kd, cerr, "posture_kd", "  ");
+    jspace::pretty_print(nullspace, cerr, "nullspace", "  ");
+    jspace::pretty_print(Lambda_p, cerr, "Lambda_p", "  ");
+    cerr << "--------------------------------------------------\n";
+    jspace::pretty_print(tau_posture, cerr, "tau_posture", "  ");
+  }
   
   //////////////////////////////////////////////////
   // sum it up...
@@ -847,9 +869,11 @@ bool stepTaskPosture(jspace::Model const & model,
   model.getGravity(gg);
   out.tau = tau_task + tau_posture + gg;
   
-  cerr << "--------------------------------------------------\n";
-  jspace::pretty_print(gg, cerr, "gravity", "  ");
-  jspace::pretty_print(out.tau, cerr, "tau", "  ");
+  if (debug_output) {
+    cerr << "--------------------------------------------------\n";
+    jspace::pretty_print(gg, cerr, "gravity", "  ");
+    jspace::pretty_print(out.tau, cerr, "tau", "  ");
+  }
 }
 
 
