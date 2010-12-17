@@ -190,8 +190,9 @@ class ValueProxy(Tix.Frame):
     def LazyInit(self):
         if not self.task_posture_ui_srv:
             self.labeltext.set('lazy init...')
-            rospy.wait_for_service('/wbc_pr2_ctrl_wbc_plugin/ui')
-            self.task_posture_ui_srv = rospy.ServiceProxy('/wbc_pr2_ctrl_wbc_plugin/ui', srv.TaskPostureUI)
+            service_name = '/wbc_pr2_ctrl/tp_ui'
+            rospy.wait_for_service(service_name)
+            self.task_posture_ui_srv = rospy.ServiceProxy(service_name, srv.TaskPostureUI)
             self.labeltext.set('lazy init DONE')
 
     def Get(self):

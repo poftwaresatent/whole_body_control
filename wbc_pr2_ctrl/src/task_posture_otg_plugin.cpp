@@ -29,6 +29,7 @@
 */
 
 #include <wbc_pr2_ctrl/TaskPostureUI.h>
+#include <wbc_pr2_ctrl/TaskPostureOTGDebug.h>
 #include <pr2_controller_interface/controller.h>
 #include <pluginlib/class_list_macros.h>
 #include <jspace/tao_util.hpp>
@@ -136,6 +137,7 @@ static bool stepTaskPosture(jspace::Model const & model,
 
 
 static size_t const NBUF(2);
+static wbc_pr2_ctrl::TaskPostureOTGDebug dbg_msg;
 
 enum {
   TASK,
@@ -170,6 +172,7 @@ public:
   ui_to_ctrl_s ui_to_ctrl_data_[NBUF];
   
   ros::ServiceServer ui_server_;
+  ros::Publisher dbg_pub_;
 };
 
 
@@ -231,6 +234,7 @@ update(void)
   // send torques to motors
   
   if (ok) {
+    dbg_pub_.publish(dbg_msg);
     for (size_t ii(0); ii < ndof_; ++ii) {
       controlled_joint_[ii]->commanded_effort_ = out.tau[ii];
     }
@@ -312,15 +316,15 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
       ui_to_ctrl_data_[ii].end_effector = ee;
       ui_to_ctrl_data_[ii].control_point = jspace::Vector::Zero(3);
       
-      ui_to_ctrl_data_[ii].level[TASK].goal =     0.2 * jspace::Vector::Ones(3);
+      ui_to_ctrl_data_[ii].level[TASK].goal =     0.6 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].level[TASK].maxvel =   0.3 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].level[TASK].maxacc =   0.6 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].level[TASK].kp =     100.0 * jspace::Vector::Ones(3);
       ui_to_ctrl_data_[ii].level[TASK].kd =      20.0 * jspace::Vector::Ones(3);
       
       ui_to_ctrl_data_[ii].level[POSTURE].goal =  20.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].level[POSTURE].maxvel = 1.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
-      ui_to_ctrl_data_[ii].level[POSTURE].maxacc = 2.0 * M_PI / 180.0 * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].level[POSTURE].maxvel =       M_PI         * jspace::Vector::Ones(ndof_);
+      ui_to_ctrl_data_[ii].level[POSTURE].maxacc = 2.0 * M_PI         * jspace::Vector::Ones(ndof_);
       ui_to_ctrl_data_[ii].level[POSTURE].kp =   100.0 * jspace::Vector::Ones(ndof_);
       ui_to_ctrl_data_[ii].level[POSTURE].kd =    20.0 * jspace::Vector::Ones(ndof_);
       
@@ -359,8 +363,19 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     return false;
   }
   
-  ui_server_ = nn.advertiseService("ui", &TaskPostureOTGPlugin::uiCallback, this);
-  
+  ui_server_ = nn.advertiseService("/wbc_pr2_ctrl/tp_ui", &TaskPostureOTGPlugin::uiCallback, this);
+  dbg_pub_ = nn.advertise<wbc_pr2_ctrl::TaskPostureOTGDebug>("/wbc_pr2_ctr/tp_dbg", 100);
+  dbg_msg.task.pos_act.assign(3, 0.0);
+  dbg_msg.task.vel_act.assign(3, 0.0);
+  dbg_msg.task.pos_trj.assign(3, 0.0);
+  dbg_msg.task.vel_trj.assign(3, 0.0);
+  dbg_msg.task.pos_end.assign(3, 0.0);
+  dbg_msg.posture.pos_act.assign(ndof_, 0.0);
+  dbg_msg.posture.vel_act.assign(ndof_, 0.0);
+  dbg_msg.posture.pos_trj.assign(ndof_, 0.0);
+  dbg_msg.posture.vel_trj.assign(ndof_, 0.0);
+  dbg_msg.posture.pos_end.assign(ndof_, 0.0);
+    
   return true;
 }
 
@@ -742,6 +757,14 @@ bool stepTaskPosture(jspace::Model const & model,
   jspace::Vector poserror(curpos - in.level[TASK].cursor->position());
   jspace::Vector velerror(curvel - in.level[TASK].cursor->velocity());
   
+  // debugging...
+  
+  jspace::convert(curpos, dbg_msg.task.pos_act);
+  jspace::convert(curvel, dbg_msg.task.vel_act);
+  jspace::convert(in.level[TASK].cursor->position(), dbg_msg.task.pos_trj);
+  jspace::convert(in.level[TASK].cursor->velocity(), dbg_msg.task.vel_trj);
+  jspace::convert(in.level[TASK].goal, dbg_msg.task.pos_end);
+  
   cerr << "==================================================\n";
   jspace::pretty_print(in.level[TASK].goal, cerr, "task_goal", "  ");
   jspace::pretty_print(curpos, cerr, "curpos", "  ");
@@ -788,6 +811,14 @@ bool stepTaskPosture(jspace::Model const & model,
   }
   jspace::Vector posture_poserror(model.getState().position_ - in.level[POSTURE].cursor->position());
   jspace::Vector posture_velerror(model.getState().velocity_ - in.level[POSTURE].cursor->velocity());
+  
+  // debugging...
+  
+  jspace::convert(model.getState().position_, dbg_msg.posture.pos_act);
+  jspace::convert(model.getState().velocity_, dbg_msg.posture.vel_act);
+  jspace::convert(in.level[POSTURE].cursor->position(), dbg_msg.posture.pos_trj);
+  jspace::convert(in.level[POSTURE].cursor->velocity(), dbg_msg.posture.vel_trj);
+  jspace::convert(in.level[POSTURE].goal, dbg_msg.posture.pos_end);
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(in.level[POSTURE].goal, cerr, "posture_goal", "  ");
