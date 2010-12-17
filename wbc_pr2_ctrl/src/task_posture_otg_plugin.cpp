@@ -296,8 +296,8 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     
     ui_to_ctrl_data_[0].level[TASK].otg.reset(new TypeIOTG(3, 1e-3));
     ui_to_ctrl_data_[0].level[TASK].cursor.reset(new OTGCursor(3));
-    ui_to_ctrl_data_[0].level[POSTURE].otg.reset(new TypeIOTG(7, 1e-3));
-    ui_to_ctrl_data_[0].level[POSTURE].cursor.reset(new OTGCursor(7));
+    ui_to_ctrl_data_[0].level[POSTURE].otg.reset(new TypeIOTG(ndof_, 1e-3));
+    ui_to_ctrl_data_[0].level[POSTURE].cursor.reset(new OTGCursor(ndof_));
     for (size_t ii(1); ii < NBUF; ++ii) {
       for (size_t jj(0); jj < NLEVELS; ++jj) {
 	ui_to_ctrl_data_[ii].level[jj].otg = ui_to_ctrl_data_[0].level[jj].otg;
@@ -786,15 +786,15 @@ bool stepTaskPosture(jspace::Model const & model,
 	       otg_result);
     return false;
   }
-  jspace::Vector posture_poserror(model.getState().position_ - in.level[TASK].cursor->position());
-  jspace::Vector posture_velerror(model.getState().velocity_ - in.level[TASK].cursor->velocity());
+  jspace::Vector posture_poserror(model.getState().position_ - in.level[POSTURE].cursor->position());
+  jspace::Vector posture_velerror(model.getState().velocity_ - in.level[POSTURE].cursor->velocity());
   
   cerr << "--------------------------------------------------\n";
   jspace::pretty_print(in.level[POSTURE].goal, cerr, "posture_goal", "  ");
   jspace::pretty_print(model.getState().position_, cerr, "posture curpos", "  ");
   jspace::pretty_print(model.getState().velocity_, cerr, "posture curvel", "  ");
-  jspace::pretty_print(in.level[TASK].cursor->position(), cerr, "otg_posture_pos", "  ");
-  jspace::pretty_print(in.level[TASK].cursor->velocity(), cerr, "otg_posture_vel", "  ");
+  jspace::pretty_print(in.level[POSTURE].cursor->position(), cerr, "otg_posture_pos", "  ");
+  jspace::pretty_print(in.level[POSTURE].cursor->velocity(), cerr, "otg_posture_vel", "  ");
   jspace::pretty_print(posture_poserror, cerr, "posture_poserror", "  ");
   jspace::pretty_print(posture_velerror, cerr, "posture_velerror", "  ");
   jspace::pretty_print(in.level[POSTURE].kp, cerr, "posture_kp", "  ");
