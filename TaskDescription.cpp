@@ -1,0 +1,152 @@
+/*
+ * Whole-Body Control for Human-Centered Robotics http://www.me.utexas.edu/~hcrl/
+ *
+ * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
+ *
+ * Authors: Roland Philippsen and Luis Sentis
+ *
+ * BSD license:
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of
+ *    contributors to this software may be used to endorse or promote
+ *    products derived from this software without specific prior written
+ *    permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHORS AND CONTRIBUTORS ``AS IS''
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
+ * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
+ * PARTICULAR PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT
+ * HOLDER OR THE CONTRIBUTORS TO THIS SOFTWARE BE LIABLE FOR ANY
+ * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+ * GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+ * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+ * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <TaskDescription.hpp>
+
+
+namespace opspace {
+  
+  
+  TaskParameterEntry::
+  TaskParameterEntry(std::string const & name,
+		     task_param_type_t type,
+		     size_t index)
+    : name_(name),
+      type_(type),
+      index_(index),
+      integer_(0),
+      real_(0),
+      vector_(0),
+      matrix_(0)
+  {
+    switch (type) {
+    case TASK_PARAM_TYPE_INTEGER:
+      integer_ = new int();
+      break;
+    case TASK_PARAM_TYPE_REAL:
+      real_ = new double();
+      break;
+    case TASK_PARAM_TYPE_VECTOR:
+      vector_ = new Vector();
+      break;
+    case TASK_PARAM_TYPE_MATRIX:
+      matrix_ = new Matrix();
+      break;
+    default:
+      const_cast<task_param_type_t &>(type_) = TASK_PARAM_TYPE_VOID;
+    }
+  }
+  
+  
+  TaskParameterEntry::
+  ~TaskParameterEntry()
+  {
+    delete integer_;
+    delete real_;
+    delete vector_;
+    delete matrix_;
+  }
+  
+  
+  TaskParameterTable::
+  ~TaskParameterTable()
+  {
+    for (storage_t::iterator ii(storage_.begin()); ii != storage_.end(); ++ii) {
+      delete *ii;
+    }
+  }
+  
+  
+  TaskParameterEntry * TaskParameterTable::
+  add(std::string const & name,
+      task_param_type_t type)
+  {
+    size_t const index(storage_.size());
+    TaskParameterEntry * entry(new TaskParameterEntry(name, type, index));
+    storage_.push_back(entry);
+    return entry;
+  }
+  
+  
+  TaskDescription::
+  TaskDescription(std::string const & name,
+		  task_param_select_t parameter_selection)
+    : name_(name)
+  {
+    if (parameter_selection & TASK_PARAM_SELECT_GOAL) {
+      goal_ = parameter_table_.add("goal", TASK_PARAM_TYPE_VECTOR)->getVector();
+    }
+    if (parameter_selection & TASK_PARAM_SELECT_KP) {
+      kp_ = parameter_table_.add("kp", TASK_PARAM_TYPE_VECTOR)->getVector();
+    }
+    if (parameter_selection & TASK_PARAM_SELECT_KD) {
+      kd_ = parameter_table_.add("kd", TASK_PARAM_TYPE_VECTOR)->getVector();
+    }
+    if (parameter_selection & TASK_PARAM_SELECT_VMAX) {
+      vmax_ = parameter_table_.add("vmax", TASK_PARAM_TYPE_VECTOR)->getVector();
+    }
+    if (parameter_selection & TASK_PARAM_SELECT_AMAX) {
+      amax_ = parameter_table_.add("amax", TASK_PARAM_TYPE_VECTOR)->getVector();
+    }
+  }
+  
+  
+  Status TaskDescription::
+  setGoal(Vector const & goal)
+  {
+    Status st;
+    if ( ! goal_) {
+      st.ok = false;
+      st.errstr = "no goal in task " + name_;
+      return st;
+    }
+    *goal_ = goal;
+  }
+  
+  
+  Status TaskDescription::
+  getGoal(Vector & goal)
+  {
+    Status st;
+    if ( ! goal_) {
+      st.ok = false;
+      st.errstr = "no goal in task " + name_;
+      return st;
+    }
+    goal = *goal_;
+  }
+
+
+}
