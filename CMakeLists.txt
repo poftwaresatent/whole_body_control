@@ -1,8 +1,12 @@
 include_directories (
   ../stanford_wbc/jspace
+  .
   )
 
-add_library (opspace SHARED opspace.cpp)
+add_library (opspace SHARED
+  opspace.cpp
+  TaskDescription.cpp
+  )
 target_link_libraries (opspace jspace)
 
 add_executable (hello_world hello_world.cpp)
