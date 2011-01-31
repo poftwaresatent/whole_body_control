@@ -57,6 +57,17 @@ namespace opspace {
   } task_param_type_t;
   
   
+  typedef enum {
+    TASK_PARAM_SELECT_NONE =  0,
+    TASK_PARAM_SELECT_GOAL =  1,
+    TASK_PARAM_SELECT_KP   =  2,
+    TASK_PARAM_SELECT_KD   =  4,
+    TASK_PARAM_SELECT_VMAX =  8,
+    TASK_PARAM_SELECT_AMAX = 16,
+    TASK_PARAM_SELECT_ALL  = 31
+  } task_param_select_t;
+  
+  
   class TaskParameterEntry
   {
   public:
@@ -87,39 +98,16 @@ namespace opspace {
   };
   
   
-  class TaskParameterTable
-  {
-  public:
-    typedef std::vector<TaskParameterEntry *> storage_t;
-    
-    virtual ~TaskParameterTable();
-    
-    TaskParameterEntry * add(std::string const & name,
-			     task_param_type_t type);
-    
-  protected:
-    storage_t storage_;
-  };
-  
-  
-  typedef enum {
-    TASK_PARAM_SELECT_NONE =  0,
-    TASK_PARAM_SELECT_GOAL =  1,
-    TASK_PARAM_SELECT_KP   =  2,
-    TASK_PARAM_SELECT_KD   =  4,
-    TASK_PARAM_SELECT_VMAX =  8,
-    TASK_PARAM_SELECT_AMAX = 16,
-    TASK_PARAM_SELECT_ALL  = 31
-  } task_param_select_t;
-  
-  
   class TaskDescription
   {
-  public:
+  protected:
     TaskDescription(std::string const & name,
 		    task_param_select_t parameter_selection);
     
-    virtual ~TaskDescription() {}
+  public:
+    typedef std::vector<TaskParameterEntry *> parameter_table_t;
+    
+    virtual ~TaskDescription();
     
     /**
        Abstract, implemented by subclasses in order to initialize the
@@ -152,27 +140,30 @@ namespace opspace {
     Status setGoal(Vector const & goal);
     Status getGoal(Vector & goal);
     
-    Status setKp(Vector const & kp);
-    Status getKp(Vector & kp);
+    // Status setKp(Vector const & kp);
+    // Status getKp(Vector & kp);
     
-    Status setKd(Vector const & kd);
-    Status getKd(Vector & kd);
+    // Status setKd(Vector const & kd);
+    // Status getKd(Vector & kd);
     
-    Status setVmax(Vector const & vmax);
-    Status getVmax(Vector & vmax);
+    // Status setVmax(Vector const & vmax);
+    // Status getVmax(Vector & vmax);
     
-    Status setAmax(Vector const & amax);
-    Status getAmax(Vector & amax);
+    // Status setAmax(Vector const & amax);
+    // Status getAmax(Vector & amax);
     
-    TaskParameterTable & getParameterTable()             { return parameter_table_; }
-    TaskParameterTable const & getParameterTable() const { return parameter_table_; }
+    parameter_table_t & getParameterTable()             { return parameter_table_; }
+    parameter_table_t const & getParameterTable() const { return parameter_table_; }
     
   protected:
+    TaskParameterEntry * defineParameter(std::string const & name,
+					 task_param_type_t type);
+    
     std::string const name_;
     Vector actual_;
     Vector command_;
     Vector Jacobian_;
-    TaskParameterTable parameter_table_;
+    parameter_table_t parameter_table_;
     
     Vector * goal_;
     Vector * kp_;

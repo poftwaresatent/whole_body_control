@@ -80,46 +80,47 @@ namespace opspace {
   }
   
   
-  TaskParameterTable::
-  ~TaskParameterTable()
-  {
-    for (storage_t::iterator ii(storage_.begin()); ii != storage_.end(); ++ii) {
-      delete *ii;
-    }
-  }
-  
-  
-  TaskParameterEntry * TaskParameterTable::
-  add(std::string const & name,
-      task_param_type_t type)
-  {
-    size_t const index(storage_.size());
-    TaskParameterEntry * entry(new TaskParameterEntry(name, type, index));
-    storage_.push_back(entry);
-    return entry;
-  }
-  
-  
   TaskDescription::
   TaskDescription(std::string const & name,
 		  task_param_select_t parameter_selection)
     : name_(name)
   {
     if (parameter_selection & TASK_PARAM_SELECT_GOAL) {
-      goal_ = parameter_table_.add("goal", TASK_PARAM_TYPE_VECTOR)->getVector();
+      goal_ = defineParameter("goal", TASK_PARAM_TYPE_VECTOR)->getVector();
     }
     if (parameter_selection & TASK_PARAM_SELECT_KP) {
-      kp_ = parameter_table_.add("kp", TASK_PARAM_TYPE_VECTOR)->getVector();
+      kp_ = defineParameter("kp", TASK_PARAM_TYPE_VECTOR)->getVector();
     }
     if (parameter_selection & TASK_PARAM_SELECT_KD) {
-      kd_ = parameter_table_.add("kd", TASK_PARAM_TYPE_VECTOR)->getVector();
+      kd_ = defineParameter("kd", TASK_PARAM_TYPE_VECTOR)->getVector();
     }
     if (parameter_selection & TASK_PARAM_SELECT_VMAX) {
-      vmax_ = parameter_table_.add("vmax", TASK_PARAM_TYPE_VECTOR)->getVector();
+      vmax_ = defineParameter("vmax", TASK_PARAM_TYPE_VECTOR)->getVector();
     }
     if (parameter_selection & TASK_PARAM_SELECT_AMAX) {
-      amax_ = parameter_table_.add("amax", TASK_PARAM_TYPE_VECTOR)->getVector();
+      amax_ = defineParameter("amax", TASK_PARAM_TYPE_VECTOR)->getVector();
     }
+  }
+  
+  
+  TaskDescription::
+  ~TaskDescription()
+  {
+    for (parameter_table_t::iterator ii(parameter_table_.begin());
+	 ii != parameter_table_.end(); ++ii) {
+      delete *ii;
+    }
+  }
+  
+  
+  TaskParameterEntry * TaskDescription::
+  defineParameter(std::string const & name,
+		  task_param_type_t type)
+  {
+    size_t const index(parameter_table_.size());
+    TaskParameterEntry * entry(new TaskParameterEntry(name, type, index));
+    parameter_table_.push_back(entry);
+    return entry;
   }
   
   
