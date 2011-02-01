@@ -33,8 +33,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OPSPACE_TASK_DESCRIPTION_HPP
-#define OPSPACE_TASK_DESCRIPTION_HPP
+#ifndef OPSPACE_TASK_HPP
+#define OPSPACE_TASK_HPP
 
 #include <jspace/Model.hpp>
 #include <jspace/Status.hpp>
@@ -68,18 +68,18 @@ namespace opspace {
   } task_param_select_t;
   
   
-  class TaskParameterEntry
+  class TaskParameter
   {
   public:
     std::string const name_;
     task_param_type_t const type_;
     size_t const index_;
     
-    TaskParameterEntry(std::string const & name,
-		       task_param_type_t type,
-		       size_t index);
+    TaskParameter(std::string const & name,
+		  task_param_type_t type,
+		  size_t index);
     
-    virtual ~TaskParameterEntry();
+    virtual ~TaskParameter();
     
     int * getInteger()               { return integer_; }
     const int * getInteger() const   { return integer_; }
@@ -100,16 +100,16 @@ namespace opspace {
   };
   
   
-  class TaskDescription
+  class Task
   {
   protected:
-    TaskDescription(std::string const & name,
-		    task_param_select_t parameter_selection);
+    Task(std::string const & name,
+	 task_param_select_t parameter_selection);
     
   public:
-    typedef std::vector<TaskParameterEntry *> parameter_table_t;
+    typedef std::vector<TaskParameter *> parameter_table_t;
     
-    virtual ~TaskDescription();
+    virtual ~Task();
     
     /**
        Abstract, implemented by subclasses in order to initialize the
@@ -160,8 +160,8 @@ namespace opspace {
     void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
     
   protected:
-    TaskParameterEntry * defineParameter(std::string const & name,
-					 task_param_type_t type);
+    TaskParameter * defineParameter(std::string const & name,
+				    task_param_type_t type);
     
     std::string const name_;
     Vector actual_;
@@ -178,4 +178,4 @@ namespace opspace {
   
 }
 
-#endif // OPSPACE_TASK_DESCRIPTION_HPP
+#endif // OPSPACE_TASK_HPP

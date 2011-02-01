@@ -40,10 +40,10 @@ using namespace jspace;
 namespace opspace {
   
   
-  TaskParameterEntry::
-  TaskParameterEntry(std::string const & name,
-		     task_param_type_t type,
-		     size_t index)
+  TaskParameter::
+  TaskParameter(std::string const & name,
+		task_param_type_t type,
+		size_t index)
     : name_(name),
       type_(type),
       index_(index),
@@ -71,8 +71,8 @@ namespace opspace {
   }
   
   
-  TaskParameterEntry::
-  ~TaskParameterEntry()
+  TaskParameter::
+  ~TaskParameter()
   {
     delete integer_;
     delete real_;
@@ -81,7 +81,7 @@ namespace opspace {
   }
   
   
-  void TaskParameterEntry::
+  void TaskParameter::
   dump(std::ostream & os, std::string const & title, std::string const & prefix) const
   {
     if ( ! title.empty()) {
@@ -106,9 +106,9 @@ namespace opspace {
   }
   
   
-  TaskDescription::
-  TaskDescription(std::string const & name,
-		  task_param_select_t parameter_selection)
+  Task::
+  Task(std::string const & name,
+       task_param_select_t parameter_selection)
     : name_(name)
   {
     if (parameter_selection & TASK_PARAM_SELECT_GOAL) {
@@ -129,8 +129,8 @@ namespace opspace {
   }
   
   
-  TaskDescription::
-  ~TaskDescription()
+  Task::
+  ~Task()
   {
     for (parameter_table_t::iterator ii(parameter_table_.begin());
 	 ii != parameter_table_.end(); ++ii) {
@@ -139,18 +139,18 @@ namespace opspace {
   }
   
   
-  TaskParameterEntry * TaskDescription::
+  TaskParameter * Task::
   defineParameter(std::string const & name,
 		  task_param_type_t type)
   {
     size_t const index(parameter_table_.size());
-    TaskParameterEntry * entry(new TaskParameterEntry(name, type, index));
+    TaskParameter * entry(new TaskParameter(name, type, index));
     parameter_table_.push_back(entry);
     return entry;
   }
   
   
-  Status TaskDescription::
+  Status Task::
   setGoal(Vector const & goal)
   {
     Status st;
@@ -163,7 +163,7 @@ namespace opspace {
   }
   
   
-  Status TaskDescription::
+  Status Task::
   getGoal(Vector & goal)
   {
     Status st;
@@ -176,7 +176,7 @@ namespace opspace {
   }
   
   
-  void TaskDescription::
+  void Task::
   dump(std::ostream & os, std::string const & title, std::string const & prefix) const
   {
     if ( ! title.empty()) {

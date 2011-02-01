@@ -43,10 +43,10 @@ using namespace std;
 
 namespace {
   
-  class TaskFoo : public TaskDescription {
+  class TaskFoo : public Task {
   public:
     TaskFoo():
-      TaskDescription("foo", TASK_PARAM_SELECT_ALL),
+      Task("foo", TASK_PARAM_SELECT_ALL),
       initialized_(false)
     {
       foo_ = defineParameter("foo", TASK_PARAM_TYPE_REAL);
@@ -73,7 +73,7 @@ namespace {
 
   protected:
     bool initialized_;
-    TaskParameterEntry * foo_;
+    TaskParameter * foo_;
   };
   
 }
