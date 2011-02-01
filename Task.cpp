@@ -41,10 +41,12 @@ namespace opspace {
   
   
   TaskParameter::
-  TaskParameter(std::string const & name,
+  TaskParameter(Task const * owner,
+		std::string const & name,
 		task_param_type_t type,
 		size_t index)
-    : name_(name),
+    : owner_(owner),
+      name_(name),
       type_(type),
       index_(index),
       integer_(0),
@@ -81,6 +83,94 @@ namespace opspace {
   }
   
   
+  Status TaskParameter::
+  setInteger(int value)
+  {
+    Status st;
+    if (owner_) {
+      st = owner_->checkInteger(this, value);
+      if ( ! st) {
+	return st;
+      }
+    }
+    *integer_ = value;
+    return st;
+  }
+  
+  
+  Status TaskParameter::
+  setReal(double value)
+  {
+    Status st;
+    if (owner_) {
+      st = owner_->checkReal(this, value);
+      if ( ! st) {
+	return st;
+      }
+    }
+    *real_ = value;
+    return st;
+  }
+  
+  
+  Status TaskParameter::
+  setVector(Vector const & value)
+  {
+    Status st;
+    if (owner_) {
+      st = owner_->checkVector(this, value);
+      if ( ! st) {
+	return st;
+      }
+    }
+    *vector_ = value;
+    return st;
+  }
+  
+  
+  Status TaskParameter::
+  setMatrix(Matrix const & value)
+  {
+    Status st;
+    if (owner_) {
+      st = owner_->checkMatrix(this, value);
+      if ( ! st) {
+	return st;
+      }
+    }
+    *matrix_ = value;
+    return st;
+  }
+  
+  
+  void TaskParameter::
+  initInteger(int value)
+  {
+    *integer_ = value;
+  }
+  
+  
+  void TaskParameter::
+  initReal(double value)
+  {
+    *real_ = value;
+  }
+  
+  
+  void TaskParameter::
+  initVector(Vector const & value)
+  {
+    *vector_ = value;
+  }
+  
+  
+  void TaskParameter::
+  initMatrix(Matrix const & value)
+  {
+    *matrix_ = value;
+  }
+  
+  
   void TaskParameter::
   dump(std::ostream & os, std::string const & title, std::string const & prefix) const
   {
@@ -112,19 +202,19 @@ namespace opspace {
     : name_(name)
   {
     if (parameter_selection & TASK_PARAM_SELECT_GOAL) {
-      goal_ = defineParameter("goal", TASK_PARAM_TYPE_VECTOR)->getVector();
+      goal_ = defineParameter("goal", TASK_PARAM_TYPE_VECTOR);
     }
     if (parameter_selection & TASK_PARAM_SELECT_KP) {
-      kp_ = defineParameter("kp", TASK_PARAM_TYPE_VECTOR)->getVector();
+      kp_ = defineParameter("kp", TASK_PARAM_TYPE_VECTOR);
     }
     if (parameter_selection & TASK_PARAM_SELECT_KD) {
-      kd_ = defineParameter("kd", TASK_PARAM_TYPE_VECTOR)->getVector();
+      kd_ = defineParameter("kd", TASK_PARAM_TYPE_VECTOR);
     }
     if (parameter_selection & TASK_PARAM_SELECT_VMAX) {
-      vmax_ = defineParameter("vmax", TASK_PARAM_TYPE_VECTOR)->getVector();
+      vmax_ = defineParameter("vmax", TASK_PARAM_TYPE_VECTOR);
     }
     if (parameter_selection & TASK_PARAM_SELECT_AMAX) {
-      amax_ = defineParameter("amax", TASK_PARAM_TYPE_VECTOR)->getVector();
+      amax_ = defineParameter("amax", TASK_PARAM_TYPE_VECTOR);
     }
   }
   
@@ -144,35 +234,10 @@ namespace opspace {
 		  task_param_type_t type)
   {
     size_t const index(parameter_table_.size());
-    TaskParameter * entry(new TaskParameter(name, type, index));
+    TaskParameter * entry(new TaskParameter(this, name, type, index));
     parameter_table_.push_back(entry);
+    parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
-  }
-  
-  
-  Status Task::
-  setGoal(Vector const & goal)
-  {
-    Status st;
-    if ( ! goal_) {
-      st.ok = false;
-      st.errstr = "no goal in task " + name_;
-      return st;
-    }
-    *goal_ = goal;
-  }
-  
-  
-  Status Task::
-  getGoal(Vector & goal)
-  {
-    Status st;
-    if ( ! goal_) {
-      st.ok = false;
-      st.errstr = "no goal in task " + name_;
-      return st;
-    }
-    goal = *goal_;
   }
   
   
@@ -191,6 +256,88 @@ namespace opspace {
     pretty_print(actual_, os, "    actual:", "      ");
     pretty_print(command_, os, "    command:", "      ");
     pretty_print(Jacobian_, os, "    Jacobian:", "      ");
+  }
+  
+  
+  TaskParameter * Task::
+  lookupParameter(std::string const & name)
+  {
+    parameter_lookup_t::iterator ii(parameter_lookup_.find(name));
+    if (parameter_lookup_.end() == ii) {
+      return 0;
+    }
+    return ii->second;
+  }
+  
+  
+  TaskParameter const * Task::
+  lookupParameter(std::string const & name) const
+  {
+    parameter_lookup_t::const_iterator ii(parameter_lookup_.find(name));
+    if (parameter_lookup_.end() == ii) {
+      return 0;
+    }
+    return ii->second;
+  }
+  
+  
+  TaskParameter * Task::
+  lookupParameter(std::string const & name, task_param_type_t type)
+  {
+    parameter_lookup_t::iterator ii(parameter_lookup_.find(name));
+    if (parameter_lookup_.end() == ii) {
+      return 0;
+    }
+    if (type != ii->second->type_) {
+      return 0;	      // could maybe implement some sort of casting...
+    }
+    return ii->second;
+  }
+  
+  
+  TaskParameter const * Task::
+  lookupParameter(std::string const & name, task_param_type_t type) const
+  {
+    parameter_lookup_t::const_iterator ii(parameter_lookup_.find(name));
+    if (parameter_lookup_.end() == ii) {
+      return 0;
+    }
+    if (type != ii->second->type_) {
+      return 0;	      // could maybe implement some sort of casting...
+    }
+    return ii->second;
+  }
+  
+  
+  Status Task::
+  checkInteger(TaskParameter const * param, int value) const
+  {
+    Status ok;
+    return ok;
+  }
+  
+  
+  Status Task::
+  checkReal(TaskParameter const * param, double value) const
+  {
+    Status ok;
+    return ok;
+  }
+  
+  
+  Status Task::
+  checkVector(TaskParameter const * param, Vector const & value) const
+  {
+    Status ok;
+    return ok;
+  }
+  
+  
+  Status Task::
+  checkMatrix(TaskParameter const * param, Matrix const & value) const
+  {
+    Status ok;
+    return ok;
   }
   
 }

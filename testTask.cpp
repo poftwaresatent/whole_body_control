@@ -45,15 +45,17 @@ namespace {
   
   class TaskFoo : public Task {
   public:
-    TaskFoo():
-      Task("foo", TASK_PARAM_SELECT_ALL),
-      initialized_(false)
+    TaskFoo()
+      : Task("foo", TASK_PARAM_SELECT_ALL),
+	initialized_(false)
     {
       foo_ = defineParameter("foo", TASK_PARAM_TYPE_REAL);
-      *(foo_->getReal()) = 42.17;
+      foo_->setReal(42.17);
     }
     
     virtual Status init(Model const & model) {
+      goal_->initVector(model.getState().position_);
+      actual_ = model.getState().position_;
       initialized_ = true;
       return update(model);
     }
@@ -70,7 +72,20 @@ namespace {
       Jacobian_ = Matrix::Identity(actual_.rows(), actual_.rows());
       return st;
     }
-
+    
+    virtual Status checkVector(TaskParameter const * param, Vector const & value) const
+    {
+      Status st;
+      if (param == goal_) {
+	if (value.rows() != actual_.rows()) {
+	  st.ok = false;
+	  st.errstr = "invalid goal dimension";
+	  return st;
+	}
+      }
+      return st;
+    }
+    
   protected:
     bool initialized_;
     TaskParameter * foo_;
@@ -117,6 +132,25 @@ int main(int argc, char ** argv)
       throw runtime_error("TaskFoo::update() failed: " + st.errstr);
     }
     foo.dump(cout, "TaskFoo after update", "  ");
+    
+    warnx("retrieving goal parameter");
+    TaskParameter * goal(foo.lookupParameter("goal", TASK_PARAM_TYPE_VECTOR));
+    if ( ! goal) {
+      throw runtime_error("failed to retrieve goal parameter");
+    }
+    
+    warnx("trying to set invalid goal");
+    st = goal->setVector(Vector::Ones(ndof + 1));
+    if (st) {
+      throw runtime_error("failed to fail on invalid goal");
+    }
+    
+    warnx("trying to set valid goal");
+    st = goal->setVector(Vector::Ones(ndof));
+    if ( ! st) {
+      throw runtime_error("failed to set valid goal");
+    }
+    foo.dump(cout, "TaskFoo after setting goal", "  ");
   }
   
   catch (runtime_error const & ee) {

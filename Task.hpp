@@ -68,31 +68,46 @@ namespace opspace {
   } task_param_select_t;
   
   
+  class Task;
+  
+  
   class TaskParameter
   {
   public:
+    Task const * owner_;
     std::string const name_;
     task_param_type_t const type_;
     size_t const index_;
     
-    TaskParameter(std::string const & name,
+    TaskParameter(Task const * owner,
+		  std::string const & name,
 		  task_param_type_t type,
 		  size_t index);
     
     virtual ~TaskParameter();
     
-    int * getInteger()               { return integer_; }
     const int * getInteger() const   { return integer_; }
-    double * getReal()               { return real_; }
     const double * getReal() const   { return real_; }
-    Vector * getVector()             { return vector_; }
     const Vector * getVector() const { return vector_; }
-    Matrix * getMatrix()             { return matrix_; }
     const Matrix * getMatrix() const { return matrix_; }
+    
+    Status setInteger(int value);
+    Status setReal(double value);
+    Status setVector(Vector const & value);
+    Status setMatrix(Matrix const & value);
+    
+    void initInteger(int value);
+    void initReal(double value);
+    void initVector(Vector const & value);
+    void initMatrix(Matrix const & value);
     
     void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
     
   protected:
+    /** Privileged access for owners, to avoid runtime type check
+	overhead. Use with care though. */
+    friend class Task;
+    
     int * integer_;
     double * real_;
     Vector * vector_;
@@ -139,20 +154,16 @@ namespace opspace {
     Vector const & getCommand() const  { return command_; }
     Matrix const & getJacobian() const { return Jacobian_; }
     
-    Status setGoal(Vector const & goal);
-    Status getGoal(Vector & goal);
+    TaskParameter * lookupParameter(std::string const & name);
+    TaskParameter const * lookupParameter(std::string const & name) const;
     
-    // Status setKp(Vector const & kp);
-    // Status getKp(Vector & kp);
+    TaskParameter * lookupParameter(std::string const & name, task_param_type_t type);
+    TaskParameter const * lookupParameter(std::string const & name, task_param_type_t type) const;
     
-    // Status setKd(Vector const & kd);
-    // Status getKd(Vector & kd);
-    
-    // Status setVmax(Vector const & vmax);
-    // Status getVmax(Vector & vmax);
-    
-    // Status setAmax(Vector const & amax);
-    // Status getAmax(Vector & amax);
+    virtual Status checkInteger(TaskParameter const * param, int value) const;
+    virtual Status checkReal(TaskParameter const * param, double value) const;
+    virtual Status checkVector(TaskParameter const * param, Vector const & value) const;
+    virtual Status checkMatrix(TaskParameter const * param, Matrix const & value) const;
     
     parameter_table_t & getParameterTable()             { return parameter_table_; }
     parameter_table_t const & getParameterTable() const { return parameter_table_; }
@@ -160,6 +171,8 @@ namespace opspace {
     void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
     
   protected:
+    typedef std::map<std::string, TaskParameter *> parameter_lookup_t;
+    
     TaskParameter * defineParameter(std::string const & name,
 				    task_param_type_t type);
     
@@ -168,12 +181,13 @@ namespace opspace {
     Vector command_;
     Matrix Jacobian_;
     parameter_table_t parameter_table_;
+    parameter_lookup_t parameter_lookup_;
     
-    Vector * goal_;
-    Vector * kp_;
-    Vector * kd_;
-    Vector * vmax_;
-    Vector * amax_;
+    TaskParameter * goal_;
+    TaskParameter * kp_;
+    TaskParameter * kd_;
+    TaskParameter * vmax_;
+    TaskParameter * amax_;
   };
   
 }
