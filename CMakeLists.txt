@@ -5,12 +5,12 @@ include_directories (
 
 add_library (opspace SHARED
   opspace.cpp
-  TaskDescription.cpp
+  Task.cpp
   )
 target_link_libraries (opspace jspace)
 
 add_executable (hello_world hello_world.cpp)
 target_link_libraries (hello_world opspace)
 
-add_executable (testTaskDescription testTaskDescription.cpp)
-target_link_libraries (testTaskDescription opspace jspace_test)
+add_executable (testTask testTask.cpp)
+target_link_libraries (testTask opspace jspace_test)

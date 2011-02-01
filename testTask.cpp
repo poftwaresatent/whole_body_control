@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <TaskDescription.hpp>
+#include <Task.hpp>
 #include <jspace/test/model_library.hpp>
 #include <err.h>
 
