@@ -34,8 +34,12 @@
  */
 
 #include <TaskDescription.hpp>
+#include <jspace/test/model_library.hpp>
+#include <err.h>
 
+using namespace jspace;
 using namespace opspace;
+using namespace std;
 
 namespace {
   
@@ -62,8 +66,8 @@ namespace {
 	return st;
       }
       actual_ = model.getState().position_;
-      command_ = Vector::Zero(actual_.cols());
-      Jacobian_ = Matrix::Identity(actual_.cols(), actual_.cols());
+      command_ = Vector::Zero(actual_.rows());
+      Jacobian_ = Matrix::Identity(actual_.rows(), actual_.rows());
       return st;
     }
 
@@ -76,5 +80,50 @@ namespace {
 
 int main(int argc, char ** argv)
 {
-  TaskFoo foo;
+  Model * puma(0);
+  
+  try {
+    warnx("creating Puma model");
+    puma = test::create_puma_model();
+    size_t const ndof(puma->getNDOF());
+    State state(ndof, ndof, 0);
+    for (size_t ii(0); ii < ndof; ++ii) {
+      state.position_[ii] = 0.1 * ii + 0.8;
+      state.velocity_[ii] = 0.2 - 0.05 * ii;
+    }
+    puma->update(state);
+    
+    warnx("creating TaskFoo");
+    TaskFoo foo;
+    Status st;
+    foo.dump(cout, "freshly created TaskFoo", "  ");
+    
+    warnx("testing update before init");
+    st = foo.update(*puma);
+    if (st) {
+      throw runtime_error("TaskFoo::update() should have failed before init");
+    }
+    
+    warnx("testing init");
+    st = foo.init(*puma);
+    if ( ! st) {
+      throw runtime_error("TaskFoo::init() failed: " + st.errstr);
+    }
+    foo.dump(cout, "freshly initialized TaskFoo", "  ");
+    
+    warnx("testing update");
+    st = foo.update(*puma);
+    if ( ! st) {
+      throw runtime_error("TaskFoo::update() failed: " + st.errstr);
+    }
+    foo.dump(cout, "TaskFoo after update", "  ");
+  }
+  
+  catch (runtime_error const & ee) {
+    delete puma;
+    errx(EXIT_FAILURE, "EXCEPTION: %s", ee.what());
+  }
+  
+  warnx("done with all tests");
+  delete puma;
 }

@@ -35,6 +35,7 @@
 
 #include <TaskDescription.hpp>
 
+using namespace jspace;
 
 namespace opspace {
   
@@ -77,6 +78,31 @@ namespace opspace {
     delete real_;
     delete vector_;
     delete matrix_;
+  }
+  
+  
+  void TaskParameterEntry::
+  dump(std::ostream & os, std::string const & title, std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    switch (type_) {
+    case TASK_PARAM_TYPE_INTEGER:
+      os << prefix << name_ << " : integer = " << *integer_ << "\n";
+      break;
+    case TASK_PARAM_TYPE_REAL:
+      os << prefix << name_ << " : real = " << *real_ << "\n";
+      break;
+    case TASK_PARAM_TYPE_VECTOR:
+      os << prefix << name_ << " : vector = " << pretty_string(*vector_) << "\n";
+      break;
+    case TASK_PARAM_TYPE_MATRIX:
+      os << prefix << name_ << " : matrix =\n" << pretty_string(*matrix_, prefix + "  ") << "\n";
+      break;
+    default:
+      os << prefix << name_ << " : void\n";
+    }
   }
   
   
@@ -148,6 +174,23 @@ namespace opspace {
     }
     goal = *goal_;
   }
-
-
+  
+  
+  void TaskDescription::
+  dump(std::ostream & os, std::string const & title, std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    os << prefix << "task: `" << name_ << "'\n"
+       << prefix << "  parameters:\n";
+    for (parameter_table_t::const_iterator ii(parameter_table_.begin());
+	 ii != parameter_table_.end(); ++ii) {
+      (*ii)->dump(os, "", prefix + "    ");
+    }
+    pretty_print(actual_, os, "    actual:", "      ");
+    pretty_print(command_, os, "    command:", "      ");
+    pretty_print(Jacobian_, os, "    Jacobian:", "      ");
+  }
+  
 }

@@ -90,6 +90,8 @@ namespace opspace {
     Matrix * getMatrix()             { return matrix_; }
     const Matrix * getMatrix() const { return matrix_; }
     
+    void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
+    
   protected:
     int * integer_;
     double * real_;
@@ -155,6 +157,8 @@ namespace opspace {
     parameter_table_t & getParameterTable()             { return parameter_table_; }
     parameter_table_t const & getParameterTable() const { return parameter_table_; }
     
+    void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
+    
   protected:
     TaskParameterEntry * defineParameter(std::string const & name,
 					 task_param_type_t type);
@@ -162,7 +166,7 @@ namespace opspace {
     std::string const name_;
     Vector actual_;
     Vector command_;
-    Vector Jacobian_;
+    Matrix Jacobian_;
     parameter_table_t parameter_table_;
     
     Vector * goal_;
