@@ -104,10 +104,6 @@ namespace opspace {
     void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
     
   protected:
-    /** Privileged access for owners, to avoid runtime type check
-	overhead. Use with care though. */
-    friend class Task;
-    
     int * integer_;
     double * real_;
     Vector * vector_;
