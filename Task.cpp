@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <Task.hpp>
+#include <opspace/Task.hpp>
 
 using namespace jspace;
 
@@ -255,7 +255,7 @@ namespace opspace {
     }
     pretty_print(actual_, os, "    actual:", "      ");
     pretty_print(command_, os, "    command:", "      ");
-    pretty_print(Jacobian_, os, "    Jacobian:", "      ");
+    pretty_print(jacobian_, os, "    Jacobian:", "      ");
   }
   
   

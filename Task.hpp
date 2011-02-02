@@ -136,19 +136,19 @@ namespace opspace {
        Abstract, implemented by subclasses in order to compute the
        current task state, the command, and the Jacobian. Given the
        current joint-space model passed as argument to this method,
-       subclasses have to set the actual_, command_, and Jacobian_
+       subclasses have to set the actual_, command_, and jacobian_
        fields. These will then get retrieved by the ServoBehavior
        instance to assemble joint torque commands according to the
        task hierarchy.
        
        \note Make sure your subclass sets the actual_, command_, and
-       Jacobian_ fields in the implementation of this method.
+       jacobian_ fields in the implementation of this method.
     */
     virtual Status update(Model const & model) = 0;
     
     Vector const & getActual() const   { return actual_; }
     Vector const & getCommand() const  { return command_; }
-    Matrix const & getJacobian() const { return Jacobian_; }
+    Matrix const & getJacobian() const { return jacobian_; }
     
     TaskParameter * lookupParameter(std::string const & name);
     TaskParameter const * lookupParameter(std::string const & name) const;
@@ -175,7 +175,7 @@ namespace opspace {
     std::string const name_;
     Vector actual_;
     Vector command_;
-    Matrix Jacobian_;
+    Matrix jacobian_;
     parameter_table_t parameter_table_;
     parameter_lookup_t parameter_lookup_;
     

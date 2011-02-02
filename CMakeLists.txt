@@ -1,6 +1,6 @@
 include_directories (
   ../stanford_wbc/jspace
-  .
+  ../
   )
 
 add_library (opspace SHARED

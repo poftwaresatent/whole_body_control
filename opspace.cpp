@@ -33,79 +33,151 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <jspace/Model.hpp>
+#include <opspace/opspace.hpp>
 #include <Eigen/LU>
 #include <Eigen/SVD>
 
 using namespace std;
 
+namespace opspace {
 
-void pseudoInverse(jspace::Matrix const & matrix,
-		   double sigmaThreshold,
-		   jspace::Matrix & invMatrix)
-{
-  Eigen::SVD<jspace::Matrix> svd(matrix);
-  // not sure if we need to svd.sort()... probably not
-  int const nrows(svd.singularValues().rows());
-  jspace::Matrix invS;
-  invS = jspace::Matrix::Zero(nrows, nrows);
-  for (int ii(0); ii < nrows; ++ii) {
-    if (svd.singularValues().coeff(ii) > sigmaThreshold) {
-      invS.coeffRef(ii, ii) = 1.0 / svd.singularValues().coeff(ii);
+  void pseudoInverse(Matrix const & matrix,
+		     double sigmaThreshold,
+		     Matrix & invMatrix)
+  {
+    Eigen::SVD<Matrix> svd(matrix);
+    // not sure if we need to svd.sort()... probably not
+    int const nrows(svd.singularValues().rows());
+    Matrix invS;
+    invS = Matrix::Zero(nrows, nrows);
+    for (int ii(0); ii < nrows; ++ii) {
+      if (svd.singularValues().coeff(ii) > sigmaThreshold) {
+	invS.coeffRef(ii, ii) = 1.0 / svd.singularValues().coeff(ii);
+      }
     }
+    invMatrix = svd.matrixU() * invS * svd.matrixU().transpose();
   }
-  invMatrix = svd.matrixU() * invS * svd.matrixU().transpose();
-}
-
-
-void computeLambda(jspace::Matrix const * nullspace_in,
-		   jspace::Matrix const * jacobian,
-		   jspace::Matrix const & invMassInertia,
-		   jspace::Matrix & lambda,
-		   jspace::Matrix * nullspace_out)
-{
-  if (nullspace_in) {
-    if (jacobian) {
-      jspace::Matrix const
-	invLambda((*nullspace_in) * (*jacobian) * invMassInertia * jacobian->transpose());
-      pseudoInverse(invLambda, 1e-3, lambda);
+  
+  
+  void computeLambda(Matrix const * nullspace_in,
+		     Matrix const * jacobian,
+		     Matrix const & invMassInertia,
+		     Matrix & lambda,
+		     Matrix * nullspace_out)
+  {
+    if (nullspace_in) {
+      if (jacobian) {
+	Matrix const
+	  invLambda((*nullspace_in) * (*jacobian) * invMassInertia * jacobian->transpose());
+	pseudoInverse(invLambda, 1e-3, lambda);
+      }
+      else {
+	Matrix const invLambda((*nullspace_in) * invMassInertia);
+	pseudoInverse(invLambda, 1e-3, lambda);
+      }
     }
     else {
-      jspace::Matrix const invLambda((*nullspace_in) * invMassInertia);
-      pseudoInverse(invLambda, 1e-3, lambda);
+      if (jacobian) {
+	Matrix const invLambda((*jacobian) * invMassInertia * jacobian->transpose());
+	pseudoInverse(invLambda, 1e-3, lambda);
+      }
+      else {
+	// Well, actually in this case the caller should just directly
+	// use massInertia from jspace::Model which avoids the explicit
+	// matrix inversion.
+	lambda = invMassInertia.inverse();
+      }
     }
-  }
-  else {
-    if (jacobian) {
-      jspace::Matrix const invLambda((*jacobian) * invMassInertia * jacobian->transpose());
-      pseudoInverse(invLambda, 1e-3, lambda);
-    }
-    else {
-      // Well, actually in this case the caller should just directly
-      // use massInertia from jspace::Model which avoids the explicit
-      // matrix inversion.
-      lambda = invMassInertia.inverse();
+  
+    if (nullspace_out) {
+      if (jacobian) {
+	Matrix const jbar(invMassInertia * jacobian->transpose() * lambda);
+	int nrows(jbar.rows());
+	*nullspace_out = Matrix::Identity(nrows, nrows) - jbar * (*jacobian);
+      }
+      else {
+	// Jacobian is identity
+	if (nullspace_in) {
+	  Matrix const jbar(invMassInertia * lambda);
+	  int nrows(jbar.rows());
+	  *nullspace_out = Matrix::Identity(nrows, nrows) - jbar;
+	}
+	else {
+	  // Lambda is massInertia... and Jacobian is identity, so Jbar is identity
+	  int nrows(invMassInertia.rows());
+	  *nullspace_out = Matrix::Zero(nrows, nrows);
+	}
+      }
     }
   }
   
-  if (nullspace_out) {
-    if (jacobian) {
-      jspace::Matrix const jbar(invMassInertia * jacobian->transpose() * lambda);
-      int nrows(jbar.rows());
-      *nullspace_out = jspace::Matrix::Identity(nrows, nrows) - jbar * (*jacobian);
+  
+  TaskAccumulator::
+  TaskAccumulator(Matrix const & invMassInertia)
+    : invMassInertia_(invMassInertia),
+      ndof_(invMassInertia_.rows()),
+      command_(ndof_)
+  {
+  }
+  
+  
+  TaskAccumulator::
+  ~TaskAccumulator()
+  {
+    for (matrix_table_t::iterator ii(lambda_table_.begin());
+	 ii != lambda_table_.end(); ++ii) {
+      delete *ii;
     }
-    else {
-      // Jacobian is identity
-      if (nullspace_in) {
-	jspace::Matrix const jbar(invMassInertia * lambda);
-	int nrows(jbar.rows());
-	*nullspace_out = jspace::Matrix::Identity(nrows, nrows) - jbar;
-      }
-      else {
-	// Lambda is massInertia... and Jacobian is identity, so Jbar is identity
-	int nrows(invMassInertia.rows());
-	*nullspace_out = jspace::Matrix::Zero(nrows, nrows);
-      }
+    for (matrix_table_t::iterator ii(nullspace_table_.begin());
+	 ii != nullspace_table_.end(); ++ii) {
+      delete *ii;
     }
   }
+  
+  
+  size_t TaskAccumulator::
+  addTask(Vector const & acceleration,
+	  Matrix const & jacobian)
+  {
+    Matrix * lambda(new Matrix());
+    Matrix * nullspace(new Matrix());
+    size_t const level(lambda_table_.size());
+    
+    if (0 == level) {
+
+      // First iteration, nullspace_in is identity, which we can
+      // signal by passing a zero pointer.
+      
+      computeLambda(0, &jacobian, invMassInertia_, *lambda, nullspace);
+      command_ = jacobian.transpose() * (*lambda) * acceleration;
+      
+    }
+    else {
+      
+      Matrix const * prev_nullspace(nullspace_table_[level - 1]);
+      computeLambda(prev_nullspace, &jacobian, invMassInertia_, *lambda, nullspace);
+
+#warning TRIPLE CHECK THIS TRANSPOSE STUFF WITH LUIS
+#warning TRIPLE CHECK THIS TRANSPOSE STUFF WITH LUIS
+#warning TRIPLE CHECK THIS TRANSPOSE STUFF WITH LUIS
+      command_ = prev_nullspace->transpose() * jacobian.transpose() * (*lambda) * acceleration;
+      
+    }
+    
+    lambda_table_.push_back(lambda);
+    nullspace_table_.push_back(nullspace);
+    
+    return level;
+  }
+  
+  
+  Matrix const * TaskAccumulator::
+  getLambda(size_t level) const
+  {
+    if (level >= lambda_table_.size()) {
+      return 0;
+    }
+    return lambda_table_[level];
+  }
+  
 }
