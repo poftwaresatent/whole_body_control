@@ -951,10 +951,26 @@ namespace {
 							 selection_.data(),
 							 pos_dirty_.data(),
 							 vel_dirty_.data()));
+    
+    cerr << "++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+	 << "OTGCursor::next():\n";
+    jspace::pretty_print(maxvel, cerr, "  maxvel", "    ");
+    jspace::pretty_print(maxacc, cerr, "  maxacc", "    ");
+    jspace::pretty_print(goal, cerr, "  goal", "    ");
+    jspace::pretty_print(pos_clean_, cerr, "  pos_clean", "    ");
+    jspace::pretty_print(pos_dirty_, cerr, "  pos_dirty", "    ");
+    jspace::pretty_print(vel_clean_, cerr, "  vel_clean", "    ");
+    jspace::pretty_print(vel_dirty_, cerr, "  vel_dirty", "    ");
+    
     if (0 <= otg_result) {
       pos_clean_ = pos_dirty_;
       vel_clean_ = vel_dirty_;
+      cerr << "  success\n";
     }
+    else {
+      cerr << "  ERROR: " << otg_result << "\n";
+    }
+    
     return otg_result;
   }
   
