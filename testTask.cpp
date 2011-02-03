@@ -46,8 +46,8 @@ namespace {
   
   class SelectedJointPostureTask : public Task {
   public:
-    SelectedJointPostureTask()
-      : Task("foo"),
+    explicit SelectedJointPostureTask(std::string const & name)
+      : Task(name),
 	kp_(100.0),
 	kd_(20.0),
 	initialized_(false)
@@ -140,7 +140,7 @@ int main(int argc, char ** argv)
     puma->update(state);
     
     warnx("creating odd SelectedJointPostureTask");
-    SelectedJointPostureTask odd;
+    SelectedJointPostureTask odd("odd");
     Status st;
     odd.dump(cout, "freshly created odd task", "  ");
     
@@ -188,7 +188,7 @@ int main(int argc, char ** argv)
     odd.dump(cout, "odd task after update", "  ");
     
     warnx("creating, initializing, and updating even task");
-    SelectedJointPostureTask even;
+    SelectedJointPostureTask even("even");
     selection = even.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR);
     sel = Vector::Zero(ndof);
     for (size_t ii(1); ii < ndof; ii += 2) {
@@ -217,6 +217,39 @@ int main(int argc, char ** argv)
       pretty_print(*tacc.getNullspace(ii), cout, "  nullspace of level " + os.str(), "    ");
     }
     pretty_print(tacc.getFinalCommand(), cout, "final command", "  ");
+    
+    warnx("comparing against full joint posture task");
+    SelectedJointPostureTask all("all");
+    selection = all.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR);
+    selection->set(static_cast<Vector const &>(Vector::Ones(ndof)));
+    all.init(*puma);
+    all.update(*puma);
+    all.dump(cout, "all task after update", "  ");
+    
+    warnx("computing verification torque");
+    Matrix aa;
+    if ( ! puma->getMassInertia(aa)) {
+      throw runtime_error("failed to get mass inertia");
+    }
+    Vector tau_check_one;
+    tau_check_one = aa * all.getCommand();
+    pretty_print(tau_check_one, cout, "verification command one", "  ");
+
+    warnx("computing second verification torque");
+    TaskAccumulator tacc_two(invA);
+    tacc_two.addTask(all.getCommand(), all.getJacobian());
+    pretty_print(*tacc_two.getLambda(0), cout, "  lambda of second check", "    ");
+    pretty_print(*tacc_two.getJstar(0), cout, "  jstar of second check", "    ");
+    pretty_print(*tacc_two.getNullspace(0), cout, "  nullspace of second check", "    ");
+    pretty_print(tacc_two.getFinalCommand(), cout, "torque check number two", "  ");
+    
+    Vector delta_one;
+    delta_one = tau_check_one - tacc.getFinalCommand();
+    pretty_print(delta_one, cout, "delta one", "  ");
+
+    Vector delta_two;
+    delta_two = tacc_two.getFinalCommand() - tacc.getFinalCommand();
+    pretty_print(delta_two, cout, "delta two", "  ");
   }
   
   catch (runtime_error const & ee) {
