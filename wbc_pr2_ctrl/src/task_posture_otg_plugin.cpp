@@ -931,7 +931,7 @@ namespace {
     pos_dirty_ = jspace::Vector::Zero(ndof);
     vel_dirty_ = jspace::Vector::Zero(ndof);
     selection_.resize(ndof);
-    for (size_t ii; ii < ndof; ++ii) {
+    for (size_t ii(0); ii < ndof; ++ii) {
       selection_[ii] = true;
     }
   }
