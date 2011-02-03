@@ -232,8 +232,10 @@ update(void)
   // compute control torques
   
   bool const ok(stepTaskPosture(model_, in, out));
-  cerr << "++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-       << "UI callback debug:\n" << ui_dbg_msg_;
+  if (debug_output) {
+    cerr << "++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+	 << "UI callback debug:\n" << ui_dbg_msg_;
+  }
   
   //////////////////////////////////////////////////
   // send torques to motors
@@ -968,26 +970,30 @@ namespace {
 							 pos_dirty_.data(),
 							 vel_dirty_.data()));
     
-    cerr << "++++++++++++++++++++++++++++++++++++++++++++++++++\n"
-	 << "OTGCursor::next():\n";
-    jspace::pretty_print(maxvel, cerr, "  maxvel", "    ");
-    jspace::pretty_print(maxacc, cerr, "  maxacc", "    ");
-    jspace::pretty_print(goal, cerr, "  goal", "    ");
-    cerr << "  selection\n    ";
-    dump_selection_vector(cerr, selection_.data(), selection_.rows());
-    cerr << "\n";
-    jspace::pretty_print(pos_clean_, cerr, "  pos_clean", "    ");
-    jspace::pretty_print(pos_dirty_, cerr, "  pos_dirty", "    ");
-    jspace::pretty_print(vel_clean_, cerr, "  vel_clean", "    ");
-    jspace::pretty_print(vel_dirty_, cerr, "  vel_dirty", "    ");
+    if (debug_output) {
+      cerr << "++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+	   << "OTGCursor::next():\n";
+      jspace::pretty_print(maxvel, cerr, "  maxvel", "    ");
+      jspace::pretty_print(maxacc, cerr, "  maxacc", "    ");
+      jspace::pretty_print(goal, cerr, "  goal", "    ");
+      cerr << "  selection\n    ";
+      dump_selection_vector(cerr, selection_.data(), selection_.rows());
+      cerr << "\n";
+      jspace::pretty_print(pos_clean_, cerr, "  pos_clean", "    ");
+      jspace::pretty_print(pos_dirty_, cerr, "  pos_dirty", "    ");
+      jspace::pretty_print(vel_clean_, cerr, "  vel_clean", "    ");
+      jspace::pretty_print(vel_dirty_, cerr, "  vel_dirty", "    ");
+      if (0 <= otg_result) {
+	cerr << "  success\n";
+      }
+      else {
+	cerr << "  ERROR: " << otg_result << "\n";
+      }
+    }
     
     if (0 <= otg_result) {
       pos_clean_ = pos_dirty_;
       vel_clean_ = vel_dirty_;
-      cerr << "  success\n";
-    }
-    else {
-      cerr << "  ERROR: " << otg_result << "\n";
     }
     
     return otg_result;
