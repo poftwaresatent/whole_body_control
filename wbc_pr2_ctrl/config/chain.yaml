@@ -24,4 +24,4 @@ opspace_planar_controller:
   op_vmax: 0.1
 wbc_pr2_ctrl_task_posture_otg_plugin:
   end_effector_name: link_5
-  debug_output: off
+  debug_output: on

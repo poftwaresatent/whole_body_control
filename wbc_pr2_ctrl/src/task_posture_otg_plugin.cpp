@@ -174,6 +174,8 @@ public:
   
   ros::ServiceServer ui_server_;
   ros::Publisher dbg_pub_;
+  
+  std::string ui_dbg_msg_;
 };
 
 
@@ -230,6 +232,8 @@ update(void)
   // compute control torques
   
   bool const ok(stepTaskPosture(model_, in, out));
+  cerr << "++++++++++++++++++++++++++++++++++++++++++++++++++\n"
+       << "UI callback debug:\n" << ui_dbg_msg_;
   
   //////////////////////////////////////////////////
   // send torques to motors
@@ -406,18 +410,22 @@ bool TaskPostureOTGPlugin::
 uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 	   wbc_pr2_ctrl::TaskPostureUI::Response & response)
 {
+  std::ostringstream dbg_os;
+  
   response.ok = true;
   
   switch (request.mode) {
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_CONTROL_POINT:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = SET_CONTROL_POINT\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
       out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
 	  jspace::convert(request.value, out.control_point);
+	  jspace::pretty_print(out.control_point, dbg_os, "  control_point", "    ");
 	}
 	else {
 	  response.ok = false;
@@ -430,6 +438,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_GOAL:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = SET_TASK_GOAL\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
       out = in;
@@ -437,6 +446,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 	if (3 == request.value.size()) {
 	  jspace::convert(request.value, out.level[TASK].goal);
 	  out.level[TASK].goal_changed = true;
+	  jspace::pretty_print(out.level[TASK].goal, dbg_os, "  task_goal", "    ");
 	}
 	else {
 	  response.ok = false;
@@ -449,12 +459,14 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KP:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = SET_TASK_KP\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
       out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
 	  jspace::convert(request.value, out.level[TASK].kp);
+	  jspace::pretty_print(out.level[TASK].kp, dbg_os, "  task_kp", "    ");
 	}
 	else {
 	  response.ok = false;
@@ -467,12 +479,14 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_TASK_KD:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = SET_TASK_KD\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
       out = in;
       if ( ! request.value.empty()) {
 	if (3 == request.value.size()) {
 	  jspace::convert(request.value, out.level[TASK].kd);
+	  jspace::pretty_print(out.level[TASK].kd, dbg_os, "  task_kd", "    ");
 	}
 	else {
 	  response.ok = false;
@@ -485,6 +499,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_GOAL:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = SET_POSTURE_GOAL\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
       out = in;
@@ -492,6 +507,7 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 	if (ndof_ == request.value.size()) {
 	  jspace::convert(request.value, out.level[POSTURE].goal);
 	  out.level[POSTURE].goal_changed = true;
+	  jspace::pretty_print(out.level[POSTURE].goal, dbg_os, "  posture_goal", "    ");
 	}
 	else {
 	  response.ok = false;
@@ -504,12 +520,14 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KP:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = SET_POSTURE_KP\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
       out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
 	  jspace::convert(request.value, out.level[POSTURE].kp);
+	  jspace::pretty_print(out.level[POSTURE].kp, dbg_os, "  posture_kp", "    ");
 	}
 	else {
 	  response.ok = false;
@@ -522,12 +540,14 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
 
   case wbc_pr2_ctrl::TaskPostureUI::Request::SET_POSTURE_KD:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = SET_POSTURE_KD\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       ui_to_ctrl_s & out(ui_to_ctrl_data_[dirty(ui_to_ctrl_tick_)]);
       out = in;
       if ( ! request.value.empty()) {
 	if (ndof_ == request.value.size()) {
 	  jspace::convert(request.value, out.level[POSTURE].kd);
+	  jspace::pretty_print(out.level[POSTURE].kd, dbg_os, "  posture_kd", "    ");
 	}
 	else {
 	  response.ok = false;
@@ -540,8 +560,10 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_CONTROL_POINT:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = GET_CONTROL_POINT\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       jspace::convert(in.control_point, response.value);
+      jspace::pretty_print(in.control_point, dbg_os, "  control_point", "    ");
       for (size_t ii(0); ii < 3; ++ii) {
 	response.lower_bound.push_back(-1); // should not hardcode this... ah well.
 	response.upper_bound.push_back(1);
@@ -555,8 +577,10 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_GOAL:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = GET_TASK_GOAL\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       jspace::convert(in.level[TASK].goal, response.value);
+      jspace::pretty_print(in.level[TASK].goal, dbg_os, "  task_goal", "    ");
       for (size_t ii(0); ii < 3; ++ii) {
 	response.lower_bound.push_back(-2); // should not hardcode this... ah well.
 	response.upper_bound.push_back(2);
@@ -570,8 +594,10 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KP:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = GET_TASK_KP\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       jspace::convert(in.level[TASK].kp, response.value);
+      jspace::pretty_print(in.level[TASK].kp, dbg_os, "  task_kp", "    ");
       for (size_t ii(0); ii < 3; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
@@ -584,8 +610,10 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_TASK_KD:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = GET_TASK_KD\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       jspace::convert(in.level[TASK].kd, response.value);
+      jspace::pretty_print(in.level[TASK].kd, dbg_os, "  task_kd", "    ");
       for (size_t ii(0); ii < 3; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(63); // should not hardcode this... ah well.
@@ -598,8 +626,10 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_GOAL:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = GET_POSTURE_GOAL\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       jspace::convert(in.level[POSTURE].goal, response.value);
+      jspace::pretty_print(in.level[POSTURE].goal, dbg_os, "  posture_goal", "    ");
       for (size_t ii(0); ii < ndof_; ++ii) {
 	response.lower_bound.push_back(-2 * M_PI); // should not hardcode this... ah well.
 	response.upper_bound.push_back(2 * M_PI);
@@ -613,8 +643,10 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KP:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = GET_POSTURE_KP\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       jspace::convert(in.level[POSTURE].kp, response.value);
+      jspace::pretty_print(in.level[POSTURE].kp, dbg_os, "  posture_kp", "    ");
       for (size_t ii(0); ii < ndof_; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(1000); // should not hardcode this... ah well.
@@ -627,8 +659,10 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   case wbc_pr2_ctrl::TaskPostureUI::Request::GET_POSTURE_KD:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = GET_POSTURE_KD\n";
       ui_to_ctrl_s const & in(ui_to_ctrl_data_[clean(ui_to_ctrl_tick_)]);
       jspace::convert(in.level[POSTURE].kd, response.value);
+      jspace::pretty_print(in.level[POSTURE].kd, dbg_os, "  posture_kd", "    ");
       for (size_t ii(0); ii < ndof_; ++ii) {
 	response.lower_bound.push_back(0);
 	response.upper_bound.push_back(63); // should not hardcode this... ah well.
@@ -641,13 +675,22 @@ uiCallback(wbc_pr2_ctrl::TaskPostureUI::Request & request,
     
   default:
     {
+      dbg_os << "  request.mode = " << (int) request.mode << " = INVALID\n";
       ostringstream msg;
-      msg << "invalid mode: " << request.mode;
+      msg << "invalid mode: " << (int) request.mode;
       response.ok = false;
       response.errstr = msg.str();
       break;
     }
   }
+  
+  if ( ! response.ok) {
+    dbg_os << "  ERROR = " << response.errstr << "\n";
+  }
+  else {
+    dbg_os << "  success\n";
+  }
+  ui_dbg_msg_ = dbg_os.str();
   
   return true;
 }
