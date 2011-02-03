@@ -40,11 +40,12 @@ namespace opspace {
   using jspace::Matrix;
   using jspace::Vector;
   
-  void computeLambda(Matrix const * nullspace_in,
-		     Matrix const * jacobian,
-		     Matrix const & invMassInertia,
-		     Matrix & lambda,
-		     Matrix * nullspace_out);
+  void computeTaskMatrices(Matrix const * nullspace_in,
+			   Matrix const * jacobian,
+			   Matrix const & invMassInertia,
+			   Matrix & lambda,
+			   Matrix & jstar,
+			   Matrix * nullspace_out);
   
   class TaskAccumulator
   {
@@ -59,8 +60,9 @@ namespace opspace {
     
     Vector const & getFinalCommand() const { return command_; }
     size_t getNLevels() const { return lambda_table_.size(); }
-    Matrix const * getNullspace(size_t level) const;
     Matrix const * getLambda(size_t level) const;
+    Matrix const * getJstar(size_t level) const;
+    Matrix const * getNullspace(size_t level) const;
     
   protected:
     typedef std::vector<Matrix *> matrix_table_t;
@@ -69,8 +71,9 @@ namespace opspace {
     int const ndof_;
     
     Vector command_;
-    matrix_table_t nullspace_table_;
     matrix_table_t lambda_table_;
+    matrix_table_t jstar_table_;
+    matrix_table_t nullspace_table_;
   };
   
 }

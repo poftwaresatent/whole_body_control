@@ -34,6 +34,7 @@
  */
 
 #include <opspace/Task.hpp>
+#include <opspace/opspace.hpp>
 #include <jspace/test/model_library.hpp>
 #include <err.h>
 
@@ -43,9 +44,9 @@ using namespace std;
 
 namespace {
   
-  class TaskFoo : public Task {
+  class SelectedJointPostureTask : public Task {
   public:
-    TaskFoo()
+    SelectedJointPostureTask()
       : Task("foo"),
 	kp_(100.0),
 	kd_(20.0),
@@ -138,25 +139,25 @@ int main(int argc, char ** argv)
     }
     puma->update(state);
     
-    warnx("creating TaskFoo");
-    TaskFoo foo;
+    warnx("creating odd SelectedJointPostureTask");
+    SelectedJointPostureTask odd;
     Status st;
-    foo.dump(cout, "freshly created TaskFoo", "  ");
+    odd.dump(cout, "freshly created odd task", "  ");
     
     warnx("testing update before init");
-    st = foo.update(*puma);
+    st = odd.update(*puma);
     if (st) {
-      throw runtime_error("TaskFoo::update() should have failed before init");
+      throw runtime_error("odd task update() should have failed before init");
     }
     
     warnx("testing init before selection setting");
-    st = foo.init(*puma);
+    st = odd.init(*puma);
     if (st) {
-      throw runtime_error("TaskFoo::init() should have failed before setting selection");
+      throw runtime_error("odd task init() should have failed before setting selection");
     }
     
     warnx("retrieving selection parameter");
-    Parameter * selection(foo.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR));
+    Parameter * selection(odd.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR));
     if ( ! selection) {
       throw runtime_error("failed to retrieve selection parameter");
     }
@@ -170,21 +171,52 @@ int main(int argc, char ** argv)
     if ( ! st) {
       throw runtime_error("failed to set selection: " + st.errstr);
     }
-    foo.dump(cout, "TaskFoo after setting selection", "  ");
+    odd.dump(cout, "odd task after setting selection", "  ");
     
     warnx("testing init");
-    st = foo.init(*puma);
+    st = odd.init(*puma);
     if ( ! st) {
-      throw runtime_error("TaskFoo::init() failed: " + st.errstr);
+      throw runtime_error("odd task init() failed: " + st.errstr);
     }
-    foo.dump(cout, "freshly initialized TaskFoo", "  ");
+    odd.dump(cout, "freshly initialized odd task", "  ");
     
     warnx("testing update");
-    st = foo.update(*puma);
+    st = odd.update(*puma);
     if ( ! st) {
-      throw runtime_error("TaskFoo::update() failed: " + st.errstr);
+      throw runtime_error("odd task update() failed: " + st.errstr);
     }
-    foo.dump(cout, "TaskFoo after update", "  ");
+    odd.dump(cout, "odd task after update", "  ");
+    
+    warnx("creating, initializing, and updating even task");
+    SelectedJointPostureTask even;
+    selection = even.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR);
+    sel = Vector::Zero(ndof);
+    for (size_t ii(1); ii < ndof; ii += 2) {
+      sel[ii] = 1.0;
+    }
+    selection->set(sel);
+    even.init(*puma);
+    even.update(*puma);
+    even.dump(cout, "even task after update", "  ");
+    
+    warnx("creating TaskAccumulator");
+    Matrix invA;
+    if ( ! puma->getInverseMassInertia(invA)) {
+      throw runtime_error("failed to get inv mass inertia");
+    }
+    TaskAccumulator tacc(invA);
+    tacc.addTask(odd.getCommand(), odd.getJacobian());
+    tacc.addTask(even.getCommand(), even.getJacobian());
+    
+    cout << "task matrices:\n";
+    for (size_t ii(0); ii < tacc.getNLevels(); ++ii) {
+      std::ostringstream os;
+      os << ii;
+      pretty_print(*tacc.getLambda(ii), cout, "  lambda of level " + os.str(), "    ");
+      pretty_print(*tacc.getJstar(ii), cout, "  jstar of level " + os.str(), "    ");
+      pretty_print(*tacc.getNullspace(ii), cout, "  nullspace of level " + os.str(), "    ");
+    }
+    pretty_print(tacc.getFinalCommand(), cout, "final command", "  ");
   }
   
   catch (runtime_error const & ee) {

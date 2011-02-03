@@ -59,53 +59,47 @@ namespace opspace {
   }
   
   
-  void computeLambda(Matrix const * nullspace_in,
-		     Matrix const * jacobian,
-		     Matrix const & invMassInertia,
-		     Matrix & lambda,
-		     Matrix * nullspace_out)
+  void computeTaskMatrices(Matrix const * nullspace_in,
+			   Matrix const * jacobian,
+			   Matrix const & invMassInertia,
+			   Matrix & lambda,
+			   Matrix & jstar,
+			   Matrix * nullspace_out)
   {
     if (nullspace_in) {
       if (jacobian) {
-	Matrix const
-	  invLambda((*nullspace_in) * (*jacobian) * invMassInertia * jacobian->transpose());
-	pseudoInverse(invLambda, 1e-3, lambda);
+	jstar = (*jacobian) * (*nullspace_in);
       }
       else {
-	Matrix const invLambda((*nullspace_in) * invMassInertia);
-	pseudoInverse(invLambda, 1e-3, lambda);
+	jstar = *nullspace_in;
       }
     }
     else {
       if (jacobian) {
-	Matrix const invLambda((*jacobian) * invMassInertia * jacobian->transpose());
-	pseudoInverse(invLambda, 1e-3, lambda);
+	jstar = *jacobian;
       }
       else {
-	// Well, actually in this case the caller should just directly
-	// use massInertia from jspace::Model which avoids the explicit
-	// matrix inversion.
-	lambda = invMassInertia.inverse();
+	// this case is a complete waste, because the caller should
+	// just directly get the mass inertia from the model... won't
+	// happen too often, hopefully
+	jstar = Matrix::Identity(invMassInertia.cols(), invMassInertia.rows());
       }
     }
-  
+    
+    Matrix const invLambda(jstar * invMassInertia * jstar.transpose());
+    pseudoInverse(invLambda, 1e-3, lambda);
+    
     if (nullspace_out) {
-      if (jacobian) {
-	Matrix const jbar(invMassInertia * jacobian->transpose() * lambda);
-	int nrows(jbar.rows());
-	*nullspace_out = Matrix::Identity(nrows, nrows) - jbar * (*jacobian);
+      if (( ! jacobian) && ( ! nullspace_in)) {
+	*nullspace_out = Matrix::Zero(invMassInertia.rows(), invMassInertia.cols());
       }
       else {
-	// Jacobian is identity
+	*nullspace_out = Matrix::Identity(invMassInertia.rows(), invMassInertia.cols());
 	if (nullspace_in) {
-	  Matrix const jbar(invMassInertia * lambda);
-	  int nrows(jbar.rows());
-	  *nullspace_out = Matrix::Identity(nrows, nrows) - jbar;
+	  *nullspace_out -= (invMassInertia * jstar.transpose() * lambda * jstar) * (*nullspace_in);
 	}
 	else {
-	  // Lambda is massInertia... and Jacobian is identity, so Jbar is identity
-	  int nrows(invMassInertia.rows());
-	  *nullspace_out = Matrix::Zero(nrows, nrows);
+	  *nullspace_out -= invMassInertia * jstar.transpose() * lambda * jstar;
 	}
       }
     }
@@ -128,6 +122,10 @@ namespace opspace {
 	 ii != lambda_table_.end(); ++ii) {
       delete *ii;
     }
+    for (matrix_table_t::iterator ii(jstar_table_.begin());
+	 ii != jstar_table_.end(); ++ii) {
+      delete *ii;
+    }
     for (matrix_table_t::iterator ii(nullspace_table_.begin());
 	 ii != nullspace_table_.end(); ++ii) {
       delete *ii;
@@ -140,6 +138,7 @@ namespace opspace {
 	  Matrix const & jacobian)
   {
     Matrix * lambda(new Matrix());
+    Matrix * jstar(new Matrix());
     Matrix * nullspace(new Matrix());
     size_t const level(lambda_table_.size());
     
@@ -148,18 +147,20 @@ namespace opspace {
       // First iteration, nullspace_in is identity, which we can
       // signal by passing a zero pointer.
       
-      computeLambda(0, &jacobian, invMassInertia_, *lambda, nullspace);
+      computeTaskMatrices(0, &jacobian, invMassInertia_, *lambda, *jstar, nullspace);
       command_ = jacobian.transpose() * (*lambda) * acceleration;
       
     }
     else {
       
-      Matrix const * prev_nullspace(nullspace_table_[level - 1]);
-      computeLambda(prev_nullspace, &jacobian, invMassInertia_, *lambda, nullspace);
+#warning CHECK JSTAR STUFF WITH LUIS
+#warning CHECK JSTAR STUFF WITH LUIS
+#warning CHECK JSTAR STUFF WITH LUIS
 
-#warning CHECK JSTAR STUFF WITH LUIS
-#warning CHECK JSTAR STUFF WITH LUIS
-#warning CHECK JSTAR STUFF WITH LUIS
+      Matrix const * prev_nullspace(nullspace_table_[level - 1]);
+      
+      computeTaskMatrices(prev_nullspace, &jacobian, invMassInertia_, *lambda, *jstar, nullspace);
+
       Matrix jstar;
       jstar = jacobian * (*prev_nullspace);
       command_ = jstar.transpose() * (*lambda) * acceleration;
@@ -167,6 +168,7 @@ namespace opspace {
     }
     
     lambda_table_.push_back(lambda);
+    jstar_table_.push_back(jstar);
     nullspace_table_.push_back(nullspace);
     
     return level;
@@ -180,6 +182,26 @@ namespace opspace {
       return 0;
     }
     return lambda_table_[level];
+  }
+  
+  
+  Matrix const * TaskAccumulator::
+  getJstar(size_t level) const
+  {
+    if (level >= jstar_table_.size()) {
+      return 0;
+    }
+    return jstar_table_[level];
+  }
+  
+  
+  Matrix const * TaskAccumulator::
+  getNullspace(size_t level) const
+  {
+    if (level >= nullspace_table_.size()) {
+      return 0;
+    }
+    return nullspace_table_[level];
   }
   
 }
