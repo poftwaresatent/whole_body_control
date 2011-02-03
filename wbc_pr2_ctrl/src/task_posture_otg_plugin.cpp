@@ -937,6 +937,22 @@ namespace {
   }
   
   
+  static void dump_selection_vector(std::ostream & os, bool const * selection, size_t len)
+  {
+    for (size_t ii(0); ii < len; ++ii) {
+      if (ii) {
+	os << "    ";
+      }
+      if (selection[ii]) {
+	os << " true";
+      }
+      else {
+	os << "false";
+      }
+    }
+  }
+  
+  
   int OTGCursor::
   next(TypeIOTG & otg,
        jspace::Vector const & maxvel,
@@ -957,6 +973,9 @@ namespace {
     jspace::pretty_print(maxvel, cerr, "  maxvel", "    ");
     jspace::pretty_print(maxacc, cerr, "  maxacc", "    ");
     jspace::pretty_print(goal, cerr, "  goal", "    ");
+    cerr << "  selection\n    ";
+    dump_selection_vector(cerr, selection_.data(), selection_.rows());
+    cerr << "\n";
     jspace::pretty_print(pos_clean_, cerr, "  pos_clean", "    ");
     jspace::pretty_print(pos_dirty_, cerr, "  pos_dirty", "    ");
     jspace::pretty_print(vel_clean_, cerr, "  vel_clean", "    ");
