@@ -40,32 +40,20 @@ using namespace jspace;
 namespace opspace {
   
   
-  TaskParameter::
-  TaskParameter(Task const * owner,
-		std::string const & name,
-		task_param_type_t type,
-		size_t index)
-    : owner_(owner),
-      name_(name),
+  Parameter::
+  Parameter(std::string const & name,
+	    task_param_type_t type,
+	    ParameterChecker const * checker)
+    : name_(name),
       type_(type),
-      index_(index),
-      integer_(0),
-      real_(0),
-      vector_(0),
-      matrix_(0)
+      checker_(checker)
   {
     switch (type) {
+    case TASK_PARAM_TYPE_VOID:
     case TASK_PARAM_TYPE_INTEGER:
-      integer_ = new int();
-      break;
     case TASK_PARAM_TYPE_REAL:
-      real_ = new double();
-      break;
     case TASK_PARAM_TYPE_VECTOR:
-      vector_ = new Vector();
-      break;
     case TASK_PARAM_TYPE_MATRIX:
-      matrix_ = new Matrix();
       break;
     default:
       const_cast<task_param_type_t &>(type_) = TASK_PARAM_TYPE_VOID;
@@ -73,149 +61,145 @@ namespace opspace {
   }
   
   
-  TaskParameter::
-  ~TaskParameter()
+  Parameter::
+  ~Parameter()
   {
-    delete integer_;
-    delete real_;
-    delete vector_;
-    delete matrix_;
   }
   
   
-  Status TaskParameter::
-  setInteger(int value)
+  void Parameter::
+  dump(std::ostream & os, std::string const & prefix) const
+  {
+    os << prefix << name_ << " : void\n";
+  }
+  
+  
+  IntegerParameter::
+  IntegerParameter(std::string const & name, ParameterChecker const * checker, int * integer)
+    : Parameter(name, TASK_PARAM_TYPE_INTEGER, checker),
+      integer_(integer)
+  {
+  }
+  
+  
+  Status IntegerParameter::
+  set(int integer)
   {
     Status st;
-    if (owner_) {
-      st = owner_->checkInteger(this, value);
+    if (checker_) {
+      st = checker_->check(integer_, integer);
       if ( ! st) {
 	return st;
       }
     }
-    *integer_ = value;
+    *integer_ = integer;
     return st;
   }
   
   
-  Status TaskParameter::
-  setReal(double value)
+  void IntegerParameter::
+  dump(std::ostream & os, std::string const & prefix) const
+  {
+    os << prefix << name_ << " : integer = " << *integer_ << "\n";
+  }
+
+
+  RealParameter::
+  RealParameter(std::string const & name, ParameterChecker const * checker, double * real)
+    : Parameter(name, TASK_PARAM_TYPE_REAL, checker),
+      real_(real)
+  {
+  }
+  
+  
+  Status RealParameter::
+  set(double real)
   {
     Status st;
-    if (owner_) {
-      st = owner_->checkReal(this, value);
+    if (checker_) {
+      st = checker_->check(real_, real);
       if ( ! st) {
 	return st;
       }
     }
-    *real_ = value;
+    *real_ = real;
     return st;
   }
   
   
-  Status TaskParameter::
-  setVector(Vector const & value)
+  void RealParameter::
+  dump(std::ostream & os, std::string const & prefix) const
+  {
+    os << prefix << name_ << " : real = " << *real_ << "\n";
+  }
+
+
+  VectorParameter::
+  VectorParameter(std::string const & name, ParameterChecker const * checker, Vector * vector)
+    : Parameter(name, TASK_PARAM_TYPE_VECTOR, checker),
+      vector_(vector)
+  {
+  }
+  
+  
+  Status VectorParameter::
+  set(Vector const & vector)
   {
     Status st;
-    if (owner_) {
-      st = owner_->checkVector(this, value);
+    if (checker_) {
+      st = checker_->check(vector_, vector);
       if ( ! st) {
 	return st;
       }
     }
-    *vector_ = value;
+    *vector_ = vector;
     return st;
   }
   
   
-  Status TaskParameter::
-  setMatrix(Matrix const & value)
+  void VectorParameter::
+  dump(std::ostream & os, std::string const & prefix) const
+  {
+    os << prefix << name_ << " : vector =\n"
+       << prefix << "  " << pretty_string(*vector_) << "\n";
+  }
+
+
+  MatrixParameter::
+  MatrixParameter(std::string const & name, ParameterChecker const * checker, Matrix * matrix)
+    : Parameter(name, TASK_PARAM_TYPE_MATRIX, checker),
+      matrix_(matrix)
+  {
+  }
+  
+  
+  Status MatrixParameter::
+  set(Matrix const & matrix)
   {
     Status st;
-    if (owner_) {
-      st = owner_->checkMatrix(this, value);
+    if (checker_) {
+      st = checker_->check(matrix_, matrix);
       if ( ! st) {
 	return st;
       }
     }
-    *matrix_ = value;
+    *matrix_ = matrix;
     return st;
   }
   
   
-  void TaskParameter::
-  initInteger(int value)
+  void MatrixParameter::
+  dump(std::ostream & os, std::string const & prefix) const
   {
-    *integer_ = value;
-  }
-  
-  
-  void TaskParameter::
-  initReal(double value)
-  {
-    *real_ = value;
-  }
-  
-  
-  void TaskParameter::
-  initVector(Vector const & value)
-  {
-    *vector_ = value;
-  }
-  
-  
-  void TaskParameter::
-  initMatrix(Matrix const & value)
-  {
-    *matrix_ = value;
-  }
-  
-  
-  void TaskParameter::
-  dump(std::ostream & os, std::string const & title, std::string const & prefix) const
-  {
-    if ( ! title.empty()) {
-      os << title << "\n";
-    }
-    switch (type_) {
-    case TASK_PARAM_TYPE_INTEGER:
-      os << prefix << name_ << " : integer = " << *integer_ << "\n";
-      break;
-    case TASK_PARAM_TYPE_REAL:
-      os << prefix << name_ << " : real = " << *real_ << "\n";
-      break;
-    case TASK_PARAM_TYPE_VECTOR:
-      os << prefix << name_ << " : vector = " << pretty_string(*vector_) << "\n";
-      break;
-    case TASK_PARAM_TYPE_MATRIX:
-      os << prefix << name_ << " : matrix =\n" << pretty_string(*matrix_, prefix + "  ") << "\n";
-      break;
-    default:
-      os << prefix << name_ << " : void\n";
-    }
+    os << prefix << name_ << " : matrix =\n"
+       << pretty_string(*matrix_, prefix + "  ") << "\n";
   }
   
   
   Task::
-  Task(std::string const & name,
-       task_param_select_t parameter_selection)
+  Task(std::string const & name)
     : name_(name)
   {
-    if (parameter_selection & TASK_PARAM_SELECT_GOAL) {
-      goal_ = defineParameter("goal", TASK_PARAM_TYPE_VECTOR);
-    }
-    if (parameter_selection & TASK_PARAM_SELECT_KP) {
-      kp_ = defineParameter("kp", TASK_PARAM_TYPE_VECTOR);
-    }
-    if (parameter_selection & TASK_PARAM_SELECT_KD) {
-      kd_ = defineParameter("kd", TASK_PARAM_TYPE_VECTOR);
-    }
-    if (parameter_selection & TASK_PARAM_SELECT_VMAX) {
-      vmax_ = defineParameter("vmax", TASK_PARAM_TYPE_VECTOR);
-    }
-    if (parameter_selection & TASK_PARAM_SELECT_AMAX) {
-      amax_ = defineParameter("amax", TASK_PARAM_TYPE_VECTOR);
-    }
   }
   
   
@@ -229,12 +213,40 @@ namespace opspace {
   }
   
   
-  TaskParameter * Task::
-  defineParameter(std::string const & name,
-		  task_param_type_t type)
+  IntegerParameter * Task::
+  declareParameter(std::string const & name, int * integer)
   {
-    size_t const index(parameter_table_.size());
-    TaskParameter * entry(new TaskParameter(this, name, type, index));
+    IntegerParameter * entry(new IntegerParameter(name, this, integer));
+    parameter_table_.push_back(entry);
+    parameter_lookup_.insert(std::make_pair(name, entry));
+    return entry;
+  }
+  
+  
+  RealParameter * Task::
+  declareParameter(std::string const & name, double * real)
+  {
+    RealParameter * entry(new RealParameter(name, this, real));
+    parameter_table_.push_back(entry);
+    parameter_lookup_.insert(std::make_pair(name, entry));
+    return entry;
+  }
+  
+  
+  VectorParameter * Task::
+  declareParameter(std::string const & name, Vector * vector)
+  {
+    VectorParameter * entry(new VectorParameter(name, this, vector));
+    parameter_table_.push_back(entry);
+    parameter_lookup_.insert(std::make_pair(name, entry));
+    return entry;
+  }
+  
+  
+  MatrixParameter * Task::
+  declareParameter(std::string const & name, Matrix * matrix)
+  {
+    MatrixParameter * entry(new MatrixParameter(name, this, matrix));
     parameter_table_.push_back(entry);
     parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
@@ -251,15 +263,15 @@ namespace opspace {
        << prefix << "  parameters:\n";
     for (parameter_table_t::const_iterator ii(parameter_table_.begin());
 	 ii != parameter_table_.end(); ++ii) {
-      (*ii)->dump(os, "", prefix + "    ");
+      (*ii)->dump(os, prefix + "    ");
     }
-    pretty_print(actual_, os, "    actual:", "      ");
-    pretty_print(command_, os, "    command:", "      ");
-    pretty_print(jacobian_, os, "    Jacobian:", "      ");
+    pretty_print(actual_, os, prefix + "  actual:", prefix + "    ");
+    pretty_print(command_, os, prefix + "  command:", prefix + "    ");
+    pretty_print(jacobian_, os, prefix + "  Jacobian:", prefix + "    ");
   }
   
   
-  TaskParameter * Task::
+  Parameter * Task::
   lookupParameter(std::string const & name)
   {
     parameter_lookup_t::iterator ii(parameter_lookup_.find(name));
@@ -270,7 +282,7 @@ namespace opspace {
   }
   
   
-  TaskParameter const * Task::
+  Parameter const * Task::
   lookupParameter(std::string const & name) const
   {
     parameter_lookup_t::const_iterator ii(parameter_lookup_.find(name));
@@ -281,7 +293,7 @@ namespace opspace {
   }
   
   
-  TaskParameter * Task::
+  Parameter * Task::
   lookupParameter(std::string const & name, task_param_type_t type)
   {
     parameter_lookup_t::iterator ii(parameter_lookup_.find(name));
@@ -295,7 +307,7 @@ namespace opspace {
   }
   
   
-  TaskParameter const * Task::
+  Parameter const * Task::
   lookupParameter(std::string const & name, task_param_type_t type) const
   {
     parameter_lookup_t::const_iterator ii(parameter_lookup_.find(name));
@@ -306,38 +318,6 @@ namespace opspace {
       return 0;	      // could maybe implement some sort of casting...
     }
     return ii->second;
-  }
-  
-  
-  Status Task::
-  checkInteger(TaskParameter const * param, int value) const
-  {
-    Status ok;
-    return ok;
-  }
-  
-  
-  Status Task::
-  checkReal(TaskParameter const * param, double value) const
-  {
-    Status ok;
-    return ok;
-  }
-  
-  
-  Status Task::
-  checkVector(TaskParameter const * param, Vector const & value) const
-  {
-    Status ok;
-    return ok;
-  }
-  
-  
-  Status Task::
-  checkMatrix(TaskParameter const * param, Matrix const & value) const
-  {
-    Status ok;
-    return ok;
   }
   
 }

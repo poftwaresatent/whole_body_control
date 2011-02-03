@@ -46,18 +46,35 @@ namespace {
   class TaskFoo : public Task {
   public:
     TaskFoo()
-      : Task("foo", TASK_PARAM_SELECT_ALL),
+      : Task("foo"),
+	kp_(100.0),
+	kd_(20.0),
 	initialized_(false)
     {
-      foo_ = defineParameter("foo", TASK_PARAM_TYPE_REAL);
-      foo_->setReal(42.17);
+      declareParameter("selection", &selection_);
+      declareParameter("kp", &kp_);
+      declareParameter("kd", &kd_);
     }
     
     virtual Status init(Model const & model) {
-      goal_->initVector(model.getState().position_);
-      actual_ = model.getState().position_;
+      for (size_t ii(0); ii < selection_.rows(); ++ii) {
+	if (selection_[ii] > 0.5) {
+	  active_joints_.push_back(ii);
+	}
+      }
+      if (active_joints_.empty()) {
+	return Status(false, "no active joints");
+      }
+      actual_ = Vector::Zero(active_joints_.size());
+      command_ = Vector::Zero(active_joints_.size());
+      jacobian_ = Matrix::Zero(active_joints_.size(), model.getState().position_.rows());
+      for (size_t ii(0); ii < active_joints_.size(); ++ii) {
+	actual_[ii] = model.getState().position_[active_joints_[ii]];
+	jacobian_.coeffRef(ii, active_joints_[ii]) = 1.0;
+      }
       initialized_ = true;
-      return update(model);
+      Status ok;
+      return ok;
     }
     
     virtual Status update(Model const & model) { 
@@ -67,28 +84,41 @@ namespace {
 	st.errstr = "not initialized";
 	return st;
       }
-      actual_ = model.getState().position_;
-      command_ = Vector::Zero(actual_.rows());
-      Jacobian_ = Matrix::Identity(actual_.rows(), actual_.rows());
+      Vector vel(actual_.rows());
+      for (size_t ii(0); ii < active_joints_.size(); ++ii) {
+	actual_[ii] = model.getState().position_[active_joints_[ii]];
+	vel[ii] = model.getState().velocity_[active_joints_[ii]];
+      }
+      command_ = -kp_ * actual_ - kd_ * vel;
       return st;
     }
     
-    virtual Status checkVector(TaskParameter const * param, Vector const & value) const
+    virtual Status check(double const * param, double value) const
     {
       Status st;
-      if (param == goal_) {
-	if (value.rows() != actual_.rows()) {
-	  st.ok = false;
-	  st.errstr = "invalid goal dimension";
-	  return st;
-	}
+      if (((&kp_ == param) && (value < 0)) || ((&kd_ == param) && (value < 0))) {
+	st.ok = false;
+	st.errstr = "gains must be >= 0";
+      }
+      return st;
+    }
+    
+    virtual Status check(Vector const * param, Vector const & value) const
+    {
+      Status st;
+      if ((&selection_ == param) && (value.rows() == 0)) {
+	st.ok = false;
+	st.errstr = "selection must not be empty";
       }
       return st;
     }
     
   protected:
+    Vector selection_;
+    double kp_;
+    double kd_;
     bool initialized_;
-    TaskParameter * foo_;
+    std::vector<size_t> active_joints_;
   };
   
 }
@@ -119,6 +149,29 @@ int main(int argc, char ** argv)
       throw runtime_error("TaskFoo::update() should have failed before init");
     }
     
+    warnx("testing init before selection setting");
+    st = foo.init(*puma);
+    if (st) {
+      throw runtime_error("TaskFoo::init() should have failed before setting selection");
+    }
+    
+    warnx("retrieving selection parameter");
+    Parameter * selection(foo.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR));
+    if ( ! selection) {
+      throw runtime_error("failed to retrieve selection parameter");
+    }
+    
+    warnx("trying to set selection");
+    Vector sel(Vector::Zero(ndof));
+    for (size_t ii(0); ii < ndof; ii += 2) {
+      sel[ii] = 1.0;
+    }
+    st = selection->set(sel);
+    if ( ! st) {
+      throw runtime_error("failed to set selection: " + st.errstr);
+    }
+    foo.dump(cout, "TaskFoo after setting selection", "  ");
+    
     warnx("testing init");
     st = foo.init(*puma);
     if ( ! st) {
@@ -132,25 +185,6 @@ int main(int argc, char ** argv)
       throw runtime_error("TaskFoo::update() failed: " + st.errstr);
     }
     foo.dump(cout, "TaskFoo after update", "  ");
-    
-    warnx("retrieving goal parameter");
-    TaskParameter * goal(foo.lookupParameter("goal", TASK_PARAM_TYPE_VECTOR));
-    if ( ! goal) {
-      throw runtime_error("failed to retrieve goal parameter");
-    }
-    
-    warnx("trying to set invalid goal");
-    st = goal->setVector(Vector::Ones(ndof + 1));
-    if (st) {
-      throw runtime_error("failed to fail on invalid goal");
-    }
-    
-    warnx("trying to set valid goal");
-    st = goal->setVector(Vector::Ones(ndof));
-    if ( ! st) {
-      throw runtime_error("failed to set valid goal");
-    }
-    foo.dump(cout, "TaskFoo after setting goal", "  ");
   }
   
   catch (runtime_error const & ee) {

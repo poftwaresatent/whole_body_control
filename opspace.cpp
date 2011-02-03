@@ -157,10 +157,12 @@ namespace opspace {
       Matrix const * prev_nullspace(nullspace_table_[level - 1]);
       computeLambda(prev_nullspace, &jacobian, invMassInertia_, *lambda, nullspace);
 
-#warning TRIPLE CHECK THIS TRANSPOSE STUFF WITH LUIS
-#warning TRIPLE CHECK THIS TRANSPOSE STUFF WITH LUIS
-#warning TRIPLE CHECK THIS TRANSPOSE STUFF WITH LUIS
-      command_ = prev_nullspace->transpose() * jacobian.transpose() * (*lambda) * acceleration;
+#warning CHECK JSTAR STUFF WITH LUIS
+#warning CHECK JSTAR STUFF WITH LUIS
+#warning CHECK JSTAR STUFF WITH LUIS
+      Matrix jstar;
+      jstar = jacobian * (*prev_nullspace);
+      command_ = jstar.transpose() * (*lambda) * acceleration;
       
     }
     

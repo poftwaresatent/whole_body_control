@@ -57,68 +57,95 @@ namespace opspace {
   } task_param_type_t;
   
   
-  typedef enum {
-    TASK_PARAM_SELECT_NONE =  0,
-    TASK_PARAM_SELECT_GOAL =  1,
-    TASK_PARAM_SELECT_KP   =  2,
-    TASK_PARAM_SELECT_KD   =  4,
-    TASK_PARAM_SELECT_VMAX =  8,
-    TASK_PARAM_SELECT_AMAX = 16,
-    TASK_PARAM_SELECT_ALL  = 31
-  } task_param_select_t;
+  class ParameterChecker {
+  public:
+    virtual ~ParameterChecker() {}
+    virtual Status check(int const * param, int value) const = 0;
+    virtual Status check(double const * param, double value) const = 0;
+    virtual Status check(Vector const * param, Vector const & value) const = 0;
+    virtual Status check(Matrix const * param, Matrix const & value) const = 0;
+  };
   
   
-  class Task;
-  
-  
-  class TaskParameter
+  class Parameter
   {
   public:
-    Task const * owner_;
     std::string const name_;
     task_param_type_t const type_;
-    size_t const index_;
+    ParameterChecker const * checker_;
     
-    TaskParameter(Task const * owner,
-		  std::string const & name,
-		  task_param_type_t type,
-		  size_t index);
+    Parameter(std::string const & name,
+	      task_param_type_t type,
+	      ParameterChecker const * checker);
     
-    virtual ~TaskParameter();
+    virtual ~Parameter();
     
-    const int * getInteger() const   { return integer_; }
-    const double * getReal() const   { return real_; }
-    const Vector * getVector() const { return vector_; }
-    const Matrix * getMatrix() const { return matrix_; }
+    virtual int const * getInteger() const   { return 0; }
+    virtual double const * getReal() const   { return 0; }
+    virtual Vector const * getVector() const { return 0; }
+    virtual Matrix const * getMatrix() const { return 0; }
     
-    Status setInteger(int value);
-    Status setReal(double value);
-    Status setVector(Vector const & value);
-    Status setMatrix(Matrix const & value);
+    virtual Status set(int integer) { Status err(false, "type mismatch"); return err; }
+    virtual Status set(double real) { Status err(false, "type mismatch"); return err; }
+    virtual Status set(Vector const & vector) { Status err(false, "type mismatch"); return err; }
+    virtual Status set(Matrix const & matrix) { Status err(false, "type mismatch"); return err; }
     
-    void initInteger(int value);
-    void initReal(double value);
-    void initVector(Vector const & value);
-    void initMatrix(Matrix const & value);
-    
-    void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
-    
+    virtual void dump(std::ostream & os, std::string const & prefix) const;
+  };
+  
+  
+  class IntegerParameter : public Parameter {
+  public:
+    IntegerParameter(std::string const & name, ParameterChecker const * checker, int * integer);
+    virtual int const * getInteger() const { return integer_; }
+    virtual Status set(int integer);
+    virtual void dump(std::ostream & os, std::string const & prefix) const;
   protected:
     int * integer_;
+  };
+  
+  
+  class RealParameter : public Parameter {
+  public:
+    RealParameter(std::string const & name, ParameterChecker const * checker, double * real);
+    virtual double const * getReal() const { return real_; }
+    virtual Status set(double real);
+    virtual void dump(std::ostream & os, std::string const & prefix) const;
+  protected:
     double * real_;
+  };
+  
+  
+  class VectorParameter : public Parameter {
+  public:
+    VectorParameter(std::string const & name, ParameterChecker const * checker, Vector * vector);
+    virtual Vector const * getVector() const { return vector_; }
+    virtual Status set(Vector const & vector);
+    virtual void dump(std::ostream & os, std::string const & prefix) const;
+  protected:
     Vector * vector_;
+  };
+  
+  
+  class MatrixParameter : public Parameter {
+  public:
+    MatrixParameter(std::string const & name, ParameterChecker const * checker, Matrix * matrix);
+    virtual Matrix const * getMatrix() const { return matrix_; }
+    virtual Status set(Matrix const & matrix);
+    virtual void dump(std::ostream & os, std::string const & prefix) const;
+  protected:
     Matrix * matrix_;
   };
   
   
   class Task
+    : public ParameterChecker
   {
   protected:
-    Task(std::string const & name,
-	 task_param_select_t parameter_selection);
+    explicit Task(std::string const & name);
     
   public:
-    typedef std::vector<TaskParameter *> parameter_table_t;
+    typedef std::vector<Parameter *> parameter_table_t;
     
     virtual ~Task();
     
@@ -134,12 +161,12 @@ namespace opspace {
     
     /**
        Abstract, implemented by subclasses in order to compute the
-       current task state, the command, and the Jacobian. Given the
-       current joint-space model passed as argument to this method,
-       subclasses have to set the actual_, command_, and jacobian_
-       fields. These will then get retrieved by the ServoBehavior
-       instance to assemble joint torque commands according to the
-       task hierarchy.
+       current task state, the command acceleration, and the
+       Jacobian. Given the current joint-space model passed as
+       argument to this method, subclasses have to set the actual_,
+       command_, and jacobian_ fields. These will then get retrieved
+       according to the task hierarchy and assembled into joint torque
+       commands using dynamically consistent nullspace projection.
        
        \note Make sure your subclass sets the actual_, command_, and
        jacobian_ fields in the implementation of this method.
@@ -150,16 +177,16 @@ namespace opspace {
     Vector const & getCommand() const  { return command_; }
     Matrix const & getJacobian() const { return jacobian_; }
     
-    TaskParameter * lookupParameter(std::string const & name);
-    TaskParameter const * lookupParameter(std::string const & name) const;
+    Parameter * lookupParameter(std::string const & name);
+    Parameter const * lookupParameter(std::string const & name) const;
     
-    TaskParameter * lookupParameter(std::string const & name, task_param_type_t type);
-    TaskParameter const * lookupParameter(std::string const & name, task_param_type_t type) const;
+    Parameter * lookupParameter(std::string const & name, task_param_type_t type);
+    Parameter const * lookupParameter(std::string const & name, task_param_type_t type) const;
     
-    virtual Status checkInteger(TaskParameter const * param, int value) const;
-    virtual Status checkReal(TaskParameter const * param, double value) const;
-    virtual Status checkVector(TaskParameter const * param, Vector const & value) const;
-    virtual Status checkMatrix(TaskParameter const * param, Matrix const & value) const;
+    virtual Status check(int const * param, int value) const               { Status ok; return ok; }
+    virtual Status check(double const * param, double value) const         { Status ok; return ok; }
+    virtual Status check(Vector const * param, Vector const & value) const { Status ok; return ok; }
+    virtual Status check(Matrix const * param, Matrix const & value) const { Status ok; return ok; }
     
     parameter_table_t & getParameterTable()             { return parameter_table_; }
     parameter_table_t const & getParameterTable() const { return parameter_table_; }
@@ -167,10 +194,12 @@ namespace opspace {
     void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
     
   protected:
-    typedef std::map<std::string, TaskParameter *> parameter_lookup_t;
+    typedef std::map<std::string, Parameter *> parameter_lookup_t;
     
-    TaskParameter * defineParameter(std::string const & name,
-				    task_param_type_t type);
+    IntegerParameter * declareParameter(std::string const & name, int * integer);
+    RealParameter * declareParameter(std::string const & name, double * real);
+    VectorParameter * declareParameter(std::string const & name, Vector * vector);
+    MatrixParameter * declareParameter(std::string const & name, Matrix * matrix);
     
     std::string const name_;
     Vector actual_;
@@ -178,12 +207,6 @@ namespace opspace {
     Matrix jacobian_;
     parameter_table_t parameter_table_;
     parameter_lookup_t parameter_lookup_;
-    
-    TaskParameter * goal_;
-    TaskParameter * kp_;
-    TaskParameter * kd_;
-    TaskParameter * vmax_;
-    TaskParameter * amax_;
   };
   
 }
