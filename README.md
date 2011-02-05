@@ -2,7 +2,7 @@ Operational-Space Task Library for Human-Centered Robotics, UT Austin
 =====================================================================
 
 This is a subtree of the [Whole-Body Control for Human-Centered
-Robotics[utaustin-wbc] project. Please check that out, and read [this
+Robotics][utaustin-wbc] project. Please check that out, and read [this
 tutorial][tut] to understand what `git-subtree` can do for us, and how
 to use it for development.
 
@@ -29,10 +29,11 @@ Quick'n'Dirty git-subtree instructions
 
 4. After you've made some changes to opspace while working on the
    umbrella project, use a separate umbrella branch to push them back
-   to the opspace master:
+   to the opspace master. E.g. with a disposable branch called `foo`:
 
     git subtree split -P opspace -b foo
     git push opspace foo:master
+    git branch -D foo
 
 5. Feel free to improvise and update this file... using `git-subtree`
    instead of `git-submodule` is an experiment motivated by some
