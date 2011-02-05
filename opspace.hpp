@@ -40,6 +40,14 @@ namespace opspace {
   using jspace::Matrix;
   using jspace::Vector;
   
+  /**
+     This pseudo-inverse is based on SVD, followed by threshlding on
+     the singular values.
+  */
+  void pseudoInverse(Matrix const & matrix,
+		     double sigmaThreshold,
+		     Matrix & invMatrix);
+  
   void computeTaskMatrices(Matrix const * nullspace_in,
 			   Matrix const * jacobian,
 			   Matrix const & invMassInertia,

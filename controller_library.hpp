@@ -77,8 +77,8 @@ namespace opspace {
     
     virtual Status setCycleTime(double dt_seconds);
     virtual Status setEndEffector(taoDNode const * end_effector);
-    virtual Status setControlPoint(Vector const & controlPoint);
-    virtual Status getControlPoint(Vector & controlPoint) const;
+    virtual Status setControlPoint(Vector const & control_point);
+    virtual Status getControlPoint(Vector & control_point) const;
     virtual Status setMaxvel(Vector const & maxvel);
     virtual Status getMaxvel(Vector & maxvel) const;
     virtual Status setMaxacc(Vector const & maxacc);
@@ -88,8 +88,6 @@ namespace opspace {
     struct level_s {
       level_s();
       ~level_s();
-      
-      void init(size_t ndof, double dt_seconds);
       
       TypeIOTGCursor * cursor;
       Vector goal;
@@ -104,9 +102,12 @@ namespace opspace {
     
     double dt_seconds_;
     taoDNode const * end_effector_;
-    Vector control_point_;
+    mutable Vector control_point_;
+    Vector actual_;
     level_s task_;
     level_s posture_;
+    
+    Status updateActual(Model const & model);
   };
   
 }
