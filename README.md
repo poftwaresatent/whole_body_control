@@ -6,13 +6,13 @@ Robotics[utaustin-wbc] project. Please check that out, and read [this
 tutorial][tut] to understand what `git-subtree` can do for us, and how
 to use it for development.
 
-utaustin-wbc: https://github.com/poftwaresatent/utaustin-wbc
-tut: http://psionides.jogger.pl/2010/02/04/sharing-code-between-projects-with-git-subtree/
+[utaustin-wbc]: https://github.com/poftwaresatent/utaustin-wbc
+[tut]: http://psionides.jogger.pl/2010/02/04/sharing-code-between-projects-with-git-subtree/
 
 Quick'n'Dirty git-subtree instructions
 --------------------------------------
 
-1. Install [git-subtree][https://github.com/apenwarr/git-subtree] and
+1. Install [git-subtree](https://github.com/apenwarr/git-subtree) and
    read its man page.
 
 2. To pull this into an umbrella project, do something like this
