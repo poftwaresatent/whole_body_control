@@ -611,7 +611,7 @@ void load_controllers() {
   controller_lib.insert(make_pair("op_planar", ctrl));
   
   ros::NodeHandle nn("~");
-  std::string const prefix("opspace_task_posture_controller");
+  std::string const prefix("/opspace_task_posture_controller");
   ctrl.reset(create_task_posture_controller(nn, prefix));
   if ( ! ctrl) {
     ROS_WARN ("failed to create task/posture controller");
