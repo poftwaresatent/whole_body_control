@@ -1,0 +1,17 @@
+<launch>
+  
+  <!-- Robot Description -->
+  <param name="robot_description" textfile="/etc/ros/urdf/robot.xml" />
+  
+  <!-- Robot Analyzer -->
+  <rosparam command="load" file="$(find pr2_bringup)/config/pr2_analyzers.yaml" ns="diag_agg" />
+  
+  <!-- Robot bringup
+       NOTE that this will end up using
+       pr2_controller_configuration/pr2_default_controllers.launch for
+       launching controllers, so the arms controllers have to be
+       removed from there in order to be able to run WBC instead.
+  -->
+  <include file="$(find pr2_bringup)/pr2.launch" />
+  
+</launch> 
