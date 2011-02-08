@@ -166,6 +166,8 @@ int main(int argc, char*argv[])
   
   ros::Publisher state_pub(nn.advertise<ControllerState>("state", 100));
   ControllerState state_msg;
+  ros::WallTime state_pub_time(ros::WallTime::now());
+  ros::WallDuration state_pub_delay(0.05); // XXXX hardcoded 20Hz
   
   jspace::Vector tau(ndof);
   
@@ -237,28 +239,33 @@ int main(int argc, char*argv[])
       ros::shutdown();
       break;
     }
-
-    //////////////////////////////////////////////////
-    // Blast out some internal data for visualization and debugging
     
-    controller->getGoal(dbg_goal);
-    controller->getActual(dbg_actual);
-    OpspacePlanarController const * opc(dynamic_cast<OpspacePlanarController const *>(controller));
-    if (opc) {
-      opc->getDebug(dbg_velocity, state_msg.ext_name, dbg_ext);
+    ros::WallTime const wall_now(ros::WallTime::now());
+    if (wall_now >= state_pub_time) {
+      state_pub_time = wall_now + state_pub_delay;
+      
+      //////////////////////////////////////////////////
+      // Blast out some internal data for visualization and debugging
+      
+      controller->getGoal(dbg_goal);
+      controller->getActual(dbg_actual);
+      OpspacePlanarController const * opc(dynamic_cast<OpspacePlanarController const *>(controller));
+      if (opc) {
+	opc->getDebug(dbg_velocity, state_msg.ext_name, dbg_ext);
+      }
+      else {
+	dbg_velocity = jspace_state.velocity_;
+	state_msg.ext_name.clear();
+	dbg_ext.resize(0);
+      }
+      jspace::convert(dbg_goal, state_msg.goal);
+      jspace::convert(dbg_actual, state_msg.position);
+      jspace::convert(dbg_velocity, state_msg.velocity);
+      jspace::convert(tau, state_msg.command);
+      jspace::convert(dbg_ext, state_msg.ext_value);
+      
+      state_pub.publish(state_msg);
     }
-    else {
-      dbg_velocity = jspace_state.velocity_;
-      state_msg.ext_name.clear();
-      dbg_ext.resize(0);
-    }
-    jspace::convert(dbg_goal, state_msg.goal);
-    jspace::convert(dbg_actual, state_msg.position);
-    jspace::convert(dbg_velocity, state_msg.velocity);
-    jspace::convert(tau, state_msg.command);
-    jspace::convert(dbg_ext, state_msg.ext_value);
-    
-    state_pub.publish(state_msg);
     
     ros::spinOnce();
     
