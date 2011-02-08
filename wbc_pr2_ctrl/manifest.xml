@@ -19,6 +19,7 @@
   <depend package="wbc_core"/>
   <depend package="wbc_urdf"/>
   <depend package="wbc_msgs"/>
+  <depend package="wbc_opspace"/>
   <depend package="rosconsole"/>
   <depend package="pr2_controller_interface"/>
   <depend package="pluginlib"/>
