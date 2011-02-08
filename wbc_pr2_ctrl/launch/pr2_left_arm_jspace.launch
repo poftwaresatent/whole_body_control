@@ -1,7 +1,5 @@
 <launch>
   <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/pr2_left_arm_wbc.yaml" />
-  
-  <!--      args="-s $(find wbc_pr2_ctrl)/config/pr2_left_arm_wbc.sai.xml" -->
   <node
       pkg="wbc_pr2_ctrl"
       type="jspace_servo"
