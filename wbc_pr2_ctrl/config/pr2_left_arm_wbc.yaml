@@ -29,7 +29,7 @@ wbc_pr2_ctrl:
 opspace_task_posture_controller:
   dt_seconds:     0.002
   end_effector:   l_wrist_roll_link
-  control_point:  [   0.25,  0.0,   0.0 ]
+  control_point:  [   0.0,   0.0,   0.0 ]
   task_goal:      [   0.5,   0.0,   1.0 ]
   task_kp:        [ 100.0, 100.0, 100.0 ]
   task_kd:        [   3.0,   3.0,   3.0 ]
