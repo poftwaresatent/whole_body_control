@@ -8,7 +8,7 @@
     (simulated or real).
   </description>
   <author>Maintained by Roland Philippsen</author>
-  <license>LGPLv3</license>  
+  <license>mostly LGPLv3, also some other open-source licenses</license>  
   <review status="unreviewed" notes=""/>
   <url>http://stanford-wbc.sourceforge.net/</url>
   <depend stack="common" /> <!-- pluginlib -->
