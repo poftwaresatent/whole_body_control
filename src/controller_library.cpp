@@ -35,7 +35,7 @@
 
 #include <opspace/controller_library.hpp>
 #include <opspace/opspace.hpp>
-#include <reflexxes_otg/TypeIOTG.h>
+#include <opspace/TypeIOTGCursor.hpp>
 #include <jspace/Model.hpp>
 #include <tao/dynamics/taoDNode.h>
 #include <tao/dynamics/taoJoint.h>
@@ -43,62 +43,6 @@
 namespace opspace {
 
   using jspace::Matrix;
-  
-  
-  /**
-     \todo Move this somewhere more visible, e.g. into reflexxes_otg
-     or some util directory underneath the utaustin-wbc project or so.
-  */
-  class TypeIOTGCursor
-  {
-  public:
-    TypeIOTGCursor(size_t ndof, double dt_seconds)
-      : otg_(ndof, dt_seconds)
-    {
-      pos_clean_ = Vector::Zero(ndof);
-      vel_clean_ = Vector::Zero(ndof);
-      pos_dirty_ = Vector::Zero(ndof);
-      vel_dirty_ = Vector::Zero(ndof);
-      selection_.resize(ndof);
-      for (size_t ii(0); ii < ndof; ++ii) {
-	selection_[ii] = true;
-      }
-    }
-    
-    int next(Vector const & maxvel,
-	     Vector const & maxacc,
-	     Vector const & goal)
-    {
-      int const result(otg_.GetNextMotionState_Position(pos_clean_.data(),
-							vel_clean_.data(),
-							maxvel.data(),
-							maxacc.data(),
-							goal.data(),
-							selection_.data(),
-							pos_dirty_.data(),
-							vel_dirty_.data()));
-      if (0 <= result) {
-	pos_clean_ = pos_dirty_;
-	vel_clean_ = vel_dirty_;
-      }
-      return result;
-    }
-    
-    inline Vector & position()             { return pos_clean_; }
-    inline Vector const & position() const { return pos_clean_; }
-    inline Vector & velocity()             { return vel_clean_; }
-    inline Vector const & velocity() const { return vel_clean_; }
-    
-  protected:
-    typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> boolvec_t;
-    
-    TypeIOTG otg_;
-    boolvec_t selection_;
-    Vector pos_clean_;
-    Vector vel_clean_;
-    Vector pos_dirty_;
-    Vector vel_dirty_;
-  };
   
   
   struct task_posture_info_getter_s

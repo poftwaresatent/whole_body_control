@@ -320,4 +320,41 @@ namespace opspace {
     return ii->second;
   }
   
+  
+  Status Task::
+  check(int const * param, int value) const
+  {
+    Status ok;
+    return ok;
+  }
+
+
+  Status Task::
+  check(double const * param, double value) const
+  {
+    Status ok;
+    return ok;
+  }
+
+  
+  Status Task::
+  check(Vector const * param, Vector const & value) const
+  {
+    Status ok;
+    return ok;
+  }
+  
+  
+  Status Task::
+  check(Matrix const * param, Matrix const & value) const
+  {
+    Status ok; return ok;
+  }
+
+
+  void Task::
+  dbg(std::ostream & os, std::string const & title, std::string const & prefix) const
+  {
+  }
+  
 }

@@ -48,40 +48,4 @@ namespace opspace {
 		     double sigmaThreshold,
 		     Matrix & invMatrix);
   
-  void computeTaskMatrices(Matrix const * nullspace_in,
-			   Matrix const * jacobian,
-			   Matrix const & invMassInertia,
-			   Matrix & lambda,
-			   Matrix & jstar,
-			   Matrix * nullspace_out);
-  
-  class TaskAccumulator
-  {
-  public:
-    explicit TaskAccumulator(/** \note This reference needs to stay
-				 valid for the lifetime of the
-				 TaskAccumulator. */
-			     Matrix const & invMassInertia);
-    virtual ~TaskAccumulator();
-    
-    size_t addTask(Vector const & acceleration, Matrix const & jacobian);
-    
-    Vector const & getFinalCommand() const { return command_; }
-    size_t getNLevels() const { return lambda_table_.size(); }
-    Matrix const * getLambda(size_t level) const;
-    Matrix const * getJstar(size_t level) const;
-    Matrix const * getNullspace(size_t level) const;
-    
-  protected:
-    typedef std::vector<Matrix *> matrix_table_t;
-    
-    Matrix const & invMassInertia_;
-    int const ndof_;
-    
-    Vector command_;
-    matrix_table_t lambda_table_;
-    matrix_table_t jstar_table_;
-    matrix_table_t nullspace_table_;
-  };
-  
 }
