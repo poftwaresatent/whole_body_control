@@ -1,9 +1,9 @@
 /*
  * Whole-Body Control for Human-Centered Robotics http://www.me.utexas.edu/~hcrl/
  *
- * Copyright (c) 2010 University of Texas at Austin. All rights reserved.
+ * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
- * Authors: Roland Philippsen and Luis Sentis
+ * Authors: Roland Philippsen
  *
  * BSD license:
  * Redistribution and use in source and binary forms, with or without
@@ -33,19 +33,41 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <jspace/wrap_eigen.hpp>
+#ifndef OPSPACE_TASK_FACTORY_HPP
+#define OPSPACE_TASK_FACTORY_HPP
+
+#include <yaml-cpp/yaml.h>
+#include <jspace/Status.hpp>
+
 
 namespace opspace {
   
-  using jspace::Matrix;
-  using jspace::Vector;
+  using jspace::Status;
   
-  /**
-     This pseudo-inverse is based on SVD, followed by threshlding on
-     the singular values.
-  */
-  void pseudoInverse(Matrix const & matrix,
-		     double sigmaThreshold,
-		     Matrix & invMatrix);
+  class Task;
+  
+  class TaskFactory
+  {
+  public:
+    typedef std::vector<Task *> task_table_t;
+
+    explicit TaskFactory(std::ostream * dbg = 0) : dbg_(dbg) {}
+    
+    Status parseString(std::string const & yaml_string);
+    Status parseFile(std::string const & yaml_filename);
+    Status parseStream(std::istream & yaml_istream);
+    
+    task_table_t const & getTaskTable() const;
+    
+    void dump(std::ostream & os,
+	      std::string const & title,
+	      std::string const & prefix) const;
+    
+  protected:
+    std::ostream * dbg_;
+    task_table_t task_table_;
+  };
   
 }
+
+#endif // OPSPACE_TASK_FACTORY_HPP

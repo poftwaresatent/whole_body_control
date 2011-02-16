@@ -1,9 +1,9 @@
 /*
  * Whole-Body Control for Human-Centered Robotics http://www.me.utexas.edu/~hcrl/
  *
- * Copyright (c) 2010 University of Texas at Austin. All rights reserved.
+ * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
- * Authors: Roland Philippsen and Luis Sentis
+ * Author: Roland Philippsen
  *
  * BSD license:
  * Redistribution and use in source and binary forms, with or without
@@ -33,19 +33,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <jspace/wrap_eigen.hpp>
+#include <opspace/TypeIOTGCursor.hpp>
 
 namespace opspace {
   
-  using jspace::Matrix;
-  using jspace::Vector;
   
-  /**
-     This pseudo-inverse is based on SVD, followed by threshlding on
-     the singular values.
-  */
-  void pseudoInverse(Matrix const & matrix,
-		     double sigmaThreshold,
-		     Matrix & invMatrix);
+  TypeIOTGCursor::
+  TypeIOTGCursor(size_t ndof, double dt_seconds)
+    : ndof_(ndof),
+      dt_seconds_(dt_seconds),
+      otg_(ndof, dt_seconds)
+  {
+    pos_clean_ = Vector::Zero(ndof);
+    vel_clean_ = Vector::Zero(ndof);
+    pos_dirty_ = Vector::Zero(ndof);
+    vel_dirty_ = Vector::Zero(ndof);
+    selection_.resize(ndof);
+    for (size_t ii(0); ii < ndof; ++ii) {
+      selection_[ii] = true;
+    }
+  }
+  
+  
+  int TypeIOTGCursor::
+  next(Vector const & maxvel,
+       Vector const & maxacc,
+       Vector const & goal)
+  {
+    int const result(otg_.GetNextMotionState_Position(pos_clean_.data(),
+						      vel_clean_.data(),
+						      maxvel.data(),
+						      maxacc.data(),
+						      goal.data(),
+						      selection_.data(),
+						      pos_dirty_.data(),
+						      vel_dirty_.data()));
+    if (0 <= result) {
+      pos_clean_ = pos_dirty_;
+      vel_clean_ = vel_dirty_;
+    }
+    return result;
+  }
   
 }

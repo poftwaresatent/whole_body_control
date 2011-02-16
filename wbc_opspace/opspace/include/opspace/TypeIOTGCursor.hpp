@@ -1,9 +1,9 @@
 /*
  * Whole-Body Control for Human-Centered Robotics http://www.me.utexas.edu/~hcrl/
  *
- * Copyright (c) 2010 University of Texas at Austin. All rights reserved.
+ * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
- * Authors: Roland Philippsen and Luis Sentis
+ * Author: Roland Philippsen
  *
  * BSD license:
  * Redistribution and use in source and binary forms, with or without
@@ -33,19 +33,46 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef OPSPACE_TYPE_I_OTG_CURSOR_HPP
+#define OPSPACE_TYPE_I_OTG_CURSOR_HPP
+
 #include <jspace/wrap_eigen.hpp>
+#include <reflexxes_otg/TypeIOTG.h>
 
 namespace opspace {
   
-  using jspace::Matrix;
   using jspace::Vector;
   
-  /**
-     This pseudo-inverse is based on SVD, followed by threshlding on
-     the singular values.
-  */
-  void pseudoInverse(Matrix const & matrix,
-		     double sigmaThreshold,
-		     Matrix & invMatrix);
+  
+  class TypeIOTGCursor
+  {
+  public:
+    size_t const ndof_;
+    double const dt_seconds_;
+    
+    TypeIOTGCursor(size_t ndof,
+		   double dt_seconds);
+    
+    int next(Vector const & maxvel,
+	     Vector const & maxacc,
+	     Vector const & goal);
+    
+    inline Vector & position()             { return pos_clean_; }
+    inline Vector const & position() const { return pos_clean_; }
+    inline Vector & velocity()             { return vel_clean_; }
+    inline Vector const & velocity() const { return vel_clean_; }
+    
+  protected:
+    typedef Eigen::Matrix<bool, Eigen::Dynamic, 1> boolvec_t;
+    
+    TypeIOTG otg_;
+    boolvec_t selection_;
+    Vector pos_clean_;
+    Vector vel_clean_;
+    Vector pos_dirty_;
+    Vector vel_dirty_;
+  };
   
 }
+
+#endif // OPSPACE_TYPE_I_OTG_CURSOR_HPP
