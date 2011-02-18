@@ -36,13 +36,14 @@
 #include <jspace/wrap_eigen.hpp>
 
 namespace opspace {
-  
+
   using jspace::Matrix;
-  using jspace::Vector;
   
   /**
      This pseudo-inverse is based on SVD, followed by threshlding on
-     the singular values.
+     the singular values. This is a bit simplistic, but we have found
+     that it works allright for our use cases with a sigmaThreshold of
+     1e-4 or 1e-3.
   */
   void pseudoInverse(Matrix const & matrix,
 		     double sigmaThreshold,

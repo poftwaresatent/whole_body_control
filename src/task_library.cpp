@@ -118,6 +118,7 @@ namespace opspace {
   Status PDTask::
   computePDCommand(Vector const & curpos,
 		   Vector const & curvel,
+		   bool component_wise_saturation,
 		   Vector & command)
   {
     Status st;
@@ -127,13 +128,30 @@ namespace opspace {
     }
     else {
       command = kp_.cwise() * (goalpos_ - curpos);
-      // component-wise velocity saturation, beware of div by zero
-      for (int ii(0); ii < command.rows(); ++ii) {
-	if ((maxvel_[ii] > 1e-4) && (kd_[ii] > 1e-4)) {
-	  double const sat(fabs((command[ii] / maxvel_[ii]) / kd_[ii]));
-	  if (sat > 1.0) {
-	    command[ii] /= sat;
+      if (component_wise_saturation) {
+	for (int ii(0); ii < command.rows(); ++ii) {
+	  // beware of div by zero
+	  if ((maxvel_[ii] > 1e-4) && (kd_[ii] > 1e-4)) {
+	    double const sat(fabs((command[ii] / maxvel_[ii]) / kd_[ii]));
+	    if (sat > 1.0) {
+	      command[ii] /= sat;
+	    }
 	  }
+	}
+      }
+      else {
+	double saturation(0.0);
+	for (int ii(0); ii < command.rows(); ++ii) {
+	  // beware of div by zero
+	  if ((maxvel_[ii] > 1e-4) && (kd_[ii] > 1e-4)) {
+	    double const sat(fabs((command[ii] / maxvel_[ii]) / kd_[ii]));
+	    if (sat > saturation) {
+	      saturation = sat;
+	    }
+	  }
+	}
+	if (saturation > 1.0) {
+	  command /= saturation;
 	}
       }
       command += kd_.cwise() * (goalvel_ - curvel);
@@ -326,10 +344,6 @@ namespace opspace {
       return Status(false, "trajectory generation error");
     }
     
-    //
-    // XXXX to do: (see also PDTask) implement PD velocity saturation
-    // at maxvel_ (in addition to the velocity-limited trajectory)
-    //
     command
       = kp_.cwise() * (cursor_->position() - curpos)
       + kd_.cwise() * (cursor_->velocity() - curvel);

@@ -38,9 +38,21 @@
 namespace opspace {
 
 
+  /**
+     Semi-abstract base class for operational space controllers. This
+     base class handles the registration of tasks, and subclasses have
+     to provide the computeCommand() method. Optionally, they can also
+     override init().
+  */
   class Controller
   {
   public:
+    /**
+       Utility structure for keeping track of which task instances
+       should be deleted at destruction time of the controller. Yes,
+       we could also use smart pointers... that's a separate
+       discussion.
+    */
     struct task_info_s {
       task_info_s(Task * tt, bool co)
 	: task(tt), controller_owned(co) {}
@@ -56,14 +68,29 @@ namespace opspace {
     
     std::string const & getName() const { return name_; }
     
-    /** \note Transfers ownership of the task object if you set
-	controller_owned to true. Controller-owned tasks get deleted
-	in the Controller destructor. */
+    /**
+       Append a task instance to the hierarchy managed by this
+       controller. Transfers ownership of the task object if you set
+       controller_owned to true. Controller-owned tasks get deleted in
+       the Controller destructor.
+    */
     task_info_s const * appendTask(Task * task, bool controller_owned);
     
     task_table_t const & getTaskTable() const { return task_table_; };
     
+    /**
+       The default implementation simply loops over the task table and
+       calls Task::init() on all of them, returning an error if one of
+       them fails to init. On success, it also sets the initialized_
+       flag to true, so that subclasses can use that information if
+       desired.
+    */
     virtual Status init(Model const & model);
+    
+    /**
+       Abstract method that has to be implemented in order to update
+       all tasks and turn their commands into desired joint torques.
+     */
     virtual Status computeCommand(Model const & model, Vector & gamma) = 0;
     
   protected:
@@ -74,6 +101,11 @@ namespace opspace {
   };
   
   
+  /**
+     A controller implementation based on "Samir's cheatsheet" ... not
+     thoroughly tested yet, but if it turns out to work correctly, it
+     would probably be faster than the LController.
+  */
   class SController
     : public Controller
   {
@@ -84,6 +116,11 @@ namespace opspace {
   };
   
   
+  /**
+     "The" reference controller based on original code that Luis
+     developed during his thesis. Performs dynamically consistent
+     nullspace projection magic.
+  */
   class LController
     : public Controller
   {
@@ -94,6 +131,11 @@ namespace opspace {
   };
   
   
+  /**
+     Just a test controller in case you know you have exactly two
+     tasks, with the lower-level one being a full jointspace posture
+     task. Will probably be completely removed "real soon now".
+   */
   class TPController
     : public Controller
   {

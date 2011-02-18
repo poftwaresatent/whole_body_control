@@ -42,20 +42,66 @@ namespace opspace {
   
   class TypeIOTGCursor;
   
-  
+
+  /**
+     Base class for tasks with proportional-derivative control. It
+     provides a reusable implementation for the parameters and
+     algorithm of a PD controller with velocity saturation.
+     
+     Parameters:
+     - goalpos (vector): desired position
+     - goalvel (vector): desired velocity
+     - kp (vector): proportional gain
+     - kd (vector): derivative gain
+     - maxvel (vector): velocity saturation limit
+     
+     Subclasses should call initPDTask() from within their init()
+     method, and computePDCommand() from their computeCommand().
+   */  
   class PDTask
     : public Task
   {
   public:
+    /**
+       Verifies that kp, kd, and maxvel are non-negative. If
+       initialized, also verifies the vector dimension for kp, kd,
+       maxvel, goalpos, and goalvel.
+       
+       \return Failure if any of the mentioned checks fail, and
+       success otherwise.
+    */
     virtual Status check(Vector const * param, Vector const & value) const;
     
   protected:
     explicit PDTask(std::string const & name);
     
+    /**
+       Initialize the goalpos to initpos and the goalvel to zero. Also
+       performs sanity checks on kp, kd, and maxvel. If you pass
+       allow_scalar_to_vector=true, then any one-dimensional parameter
+       values get converted to N-dimensional vectors by filling them
+       with N copies of the value. E.g. if kp=[100.0] and initpos is
+       3-dimensional, kp would end up as [100.0, 100.0, 100.0].
+       
+       \return Success if everything went well, failure otherwise.
+    */
     Status initPDTask(Vector const & initpos,
 		      bool allow_scalar_to_vector);
+    
+    /**
+       Compute velocity-saturated PD command. This boils down to
+       driving the task to achieving goalpos with goalvel.
+       
+       Velocity saturation can be component_wise or not. In the former
+       case, each component is scaled according to its saturation
+       term. In the latter case, the most saturated component
+       determines the scaling of the entire vector.
+       
+       \return Success if everything went well, failure otherwise.
+    */
     Status computePDCommand(Vector const & curpos,
 			    Vector const & curvel,
+			    bool component_wise_saturation,
 			    Vector & command);
     
     bool initialized_;
@@ -67,6 +113,15 @@ namespace opspace {
   };
   
   
+  /**
+     A test task which drives a subset of DOF to zero using
+     non-saturated PD control.
+     
+     Parameters:
+     - selection (vector): values > 0.5 switch on the corresponding DOF
+     - kp (vector): proportional gain
+     - kd (vector): derivative gain
+  */
   class SelectedJointPostureTask
     : public Task
   {
@@ -87,13 +142,43 @@ namespace opspace {
   };
   
   
+  /**
+     Base class for acceleration-bounded trajectory tasks. Uses a PD
+     control law to follow a trajectory generated using the
+     reflexxes_otg library,
+     
+     \todo This should be a subclass of PDTask in order to take
+     advantage of the velocity saturation provided by
+     PDTask::computePDCommand(), and to reduce code duplication for
+     parameter handling.
+     
+     Parameters:
+     - dt_seconds (real): iteration timestep, for trajectory generation
+     - goal (vector): goal position (trajectory end point)
+     - kp (vector): proportional gain
+     - kd (vector): derivative gain
+     - maxvel (vector): maximum velocity of generated trajectory
+     - maxacc (vector): maximum acceleration of generated trajectory
+     
+     Subclasses should call initTrajectoryTask() from their init(),
+     and computeTrajectoryCommand() from their computeCommand().
+  */
   class TrajectoryTask
     : public Task
   {
   public:
     virtual ~TrajectoryTask();
     
+    /**
+       Checks that dt_seconds is positive.
+    */
     virtual Status check(double const * param, double value) const;
+    
+    /**
+       If initialized, checks the validity of goal, kp, kd, maxvel,
+       maxacc. Also sets goal_changed_=true in case a new (valid) goal
+       was specified.
+    */
     virtual Status check(Vector const * param, Vector const & value) const;
     
     virtual void dbg(std::ostream & os,
@@ -103,8 +188,27 @@ namespace opspace {
   protected:
     explicit TrajectoryTask(std::string const & name);
     
+    /**
+       Initializes the trajectory to be at the current position with
+       zero velocity. Also does some sanity checking and optional
+       conversion of parameters. If you pass
+       allow_scalar_to_vector=true, then single-dimensional parameters
+       get blown up to the right size. This is convenient e.g. to set
+       a uniform kp for all degrees of freedom.
+    */
     Status initTrajectoryTask(Vector const & initpos,
 			      bool allow_scalar_to_vector);
+    
+    /**
+       Computes the command for following the trajectory. If the goal
+       has been changed since the last time this method was called,
+       then it re-initializes the trajectory cursor to generate a
+       trajectory to the new goal. Otherwise it just advances the
+       cursor by dt_seconds and servos to that position and velocity.
+       
+       \todo (see also PDTask) implement PD velocity saturation
+       at maxvel_ (in addition to the velocity-limited trajectory)
+    */
     Status computeTrajectoryCommand(Vector const & curpos,
 				    Vector const & curvel,
 				    Vector & command);
@@ -120,6 +224,17 @@ namespace opspace {
   };
   
   
+  /**
+     Cartesian position trajectory task. Servos a control point,
+     specified with respect to a given end_effector link, to the goal
+     position.
+     
+     \note This task is always three dimensional.
+     
+     Parameters (see also TrajectoryTask for inherited parameters):
+     - end_effector_id (integer): identifier of the end effector link
+     - control_point (vector): reference point wrt end effector frame
+  */
   class PositionTask
     : public TrajectoryTask
   {
@@ -137,6 +252,13 @@ namespace opspace {
   };
   
   
+  /**
+     Joint-space posture trajectory task. Servos the joint position
+     towards a desired posture using acceleration-bounded
+     trajectories.
+     
+     Parameters: inherited from TrajectoryTask.
+  */
   class PostureTask
     : public TrajectoryTask
   {
