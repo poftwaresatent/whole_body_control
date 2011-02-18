@@ -1,0 +1,12 @@
+/**
+   \namespace opspace Contains the operational-space tasks and related classes.
+   \namespace jspace Contains the joint-space dynamics model and related classes.
+   \namespace sfl For code copy-pasted from the Sunflower mobile robot library.
+   \namespace wbcnet For code copy-pasted from the WBC networking library.
+   \namespace std Standard C++ library and STL.
+   
+   \mainpage Documentation: UT Austin Whole-Body Operational Space Control
+   
+   \verbinclude README.md
+   
+*/
