@@ -11,6 +11,7 @@
   <url>https://github.com/poftwaresatent/utaustin_wbc_opspace</url>
   <depend package="reflexxes_otg"/>
   <depend package="wbc_core"/>
+  <depend package="yaml_cpp"/>
   <export>
     <cpp cflags="-I${prefix}/opspace/include"
 	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_opspace" />
