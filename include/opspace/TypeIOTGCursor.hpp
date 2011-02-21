@@ -80,6 +80,14 @@ namespace opspace {
     int next(Vector const & maxvel,
 	     Vector const & maxacc,
 	     Vector const & goal);
+
+    /**
+       In case of one-dimensional cursor, this is easier to
+       use. Returns -1000 in case the dimension is not 1.
+    */
+    int next(double maxvel,
+	     double maxacc,
+	     double goal);
     
     inline Vector & position()             { return pos_clean_; }
     inline Vector const & position() const { return pos_clean_; }
