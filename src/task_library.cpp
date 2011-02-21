@@ -493,4 +493,192 @@ namespace opspace {
     return computeTrajectoryCommand(actual_, model.getState().velocity_, command_);
   }
   
+  
+  JointLimitTask::
+  JointLimitTask(std::string const & name)
+    : Task(name),
+      dt_seconds_(-1)
+  {
+    declareParameter("dt_seconds", &dt_seconds_);
+    declareParameter("upper_stop_deg", &upper_stop_deg_);
+    declareParameter("upper_trigger_deg", &upper_trigger_deg_);
+    declareParameter("lower_stop_deg", &lower_stop_deg_);
+    declareParameter("lower_trigger_deg", &lower_trigger_deg_);
+    declareParameter("kp", &kp_);
+    declareParameter("kd", &kd_);
+    declareParameter("maxvel", &maxvel_);
+    declareParameter("maxacc", &maxacc_);
+  }
+  
+  
+  JointLimitTask::
+  ~JointLimitTask()
+  {
+    for (size_t ii(0); ii < cursor_.size(); ++ii) {
+      delete cursor_[ii];
+    }
+  }
+  
+  
+  Status JointLimitTask::
+  check(Vector const * param, Vector const & value) const
+  {
+    if ((param == &kp_) || (param == &kd_) || (param == &maxvel_) || (param == &maxacc_)) {
+      for (size_t ii(0); ii < value.rows(); ++ii) {
+	if (0 > value[ii]) {
+	  return Status(false, "gains and limits must be >= 0");
+	}
+      }
+    }
+    if ( ! cursor_.empty()) {	// we are initialized
+      if ((param == &kp_) || (param == &kd_) || (param == &maxvel_) || (param == &maxacc_)) {
+	if (cursor_.size() != value.rows()) {
+	  return Status(false, "invalid dimension");
+	}
+      }
+    }
+    return Status();
+  }
+  
+  
+  Status JointLimitTask::
+  check(double const * param, double const & value) const
+  {
+    if ((param == &dt_seconds_) && (0 >= value)) {
+      return Status(false, "dt_seconds must be > 0");
+    }
+    return Status();
+  }
+  
+  
+  Status JointLimitTask::
+  init(Model const & model)
+  {
+    if (dt_seconds_ <= 0) {
+      return Status(false, "dt_seconds must be positive");
+    }
+    size_t const ndof(model.getNDOF());
+    if (upper_stop_deg_.rows() != ndof) {
+      return Status(false, "upper_stop dimension mismatch");
+    }
+    if (upper_trigger_deg_.rows() != ndof) {
+      return Status(false, "upper_trigger dimension mismatch");
+    }
+    if (lower_stop_deg_.rows() != ndof) {
+      return Status(false, "lower_stop dimension mismatch");
+    }
+    if (lower_trigger_deg_.rows() != ndof) {
+      return Status(false, "lower_trigger dimension mismatch");
+    }
+    if (maxvel_.rows() != ndof) {
+      return Status(false, "maxvel dimension mismatch");
+    }
+    if (maxacc_.rows() != ndof) {
+      return Status(false, "maxacc dimension mismatch");
+    }
+    if (kp_.rows() != ndof) {
+      return Status(false, "kp dimension mismatch");
+    }
+    if (kd_.rows() != ndof) {
+      return Status(false, "kd dimension mismatch");
+    }
+    
+    upper_stop_ = M_PI * upper_stop_deg_ / 180.0;
+    upper_trigger_ = M_PI * upper_trigger_deg_ / 180.0;
+    lower_stop_ = M_PI * lower_stop_deg_ / 180.0;
+    lower_trigger_ = M_PI * lower_trigger_deg_ / 180.0;
+    
+    cursor_.assign(ndof, 0);
+    goal_ = Vector::Zero(ndof);
+    jacobian_.resize(0, 0);
+    
+    // builds/updates jacobian, initializes cursors and goals, set actual_
+    updateState(model);
+    
+    Status ok;
+    return ok;
+  }
+  
+  
+  Status JointLimitTask::
+  update(Model const & model)
+  {
+    if (dt_seconds_ <= 0) {
+      return Status(false, "not initialized");
+    }
+    
+    updateState(model);
+    command_.resize(jacobian_.rows());
+    size_t task_index(0);
+    
+    for (size_t joint_index(0); joint_index < cursor_.size(); ++joint_index) {
+      if (cursor_[joint_index]) {
+	if (0 > cursor_[joint_index]->next(maxvel_[joint_index], maxacc_[joint_index], goal_[joint_index])) {
+	  return Status(false, "trajectory generation error");
+	}
+	command_[task_index]
+	  = kp_[joint_index] * (cursor_[joint_index]->position()[0] - actual_[task_index])
+	  + kd_[joint_index] * (cursor_[joint_index]->velocity()[0] - model.getState().velocity_[joint_index]);
+	++task_index;
+      }
+    }
+    
+    Status ok;
+    return ok;
+  }
+  
+  
+  void JointLimitTask::
+  updateState(Model const & model)
+  {
+    size_t const ndof(model.getNDOF());
+    Vector const & jpos(model.getState().position_);
+    bool dimension_changed(false);
+    size_t task_dimension(0);
+    
+    for (size_t ii(0); ii < ndof; ++ii) {
+      if (cursor_[ii]) {
+	++task_dimension;
+      }
+      else {
+	if (jpos[ii] > upper_trigger_[ii]) {
+	  ++task_dimension;
+	  dimension_changed = true;
+	  cursor_[ii] = new TypeIOTGCursor(1, dt_seconds_);
+	  cursor_[ii]->position()[0] = jpos[ii];
+	  cursor_[ii]->velocity()[0] = model.getState().velocity_[ii];
+	  goal_[ii] = upper_stop_[ii];
+	}
+	else if (jpos[ii] < lower_trigger_[ii]) {
+	  ++task_dimension;
+	  dimension_changed = true;
+          cursor_[ii] = new TypeIOTGCursor(1, dt_seconds_);
+          cursor_[ii]->position()[0] = jpos[ii];
+          cursor_[ii]->velocity()[0] = model.getState().velocity_[ii];
+          goal_[ii] = lower_stop_[ii];
+	}
+      }
+    }
+    
+    if (dimension_changed) {
+      jacobian_ = Matrix::Zero(task_dimension, ndof);
+      size_t task_index(0);
+      for (size_t joint_index(0); joint_index < ndof; ++joint_index) {
+	if (cursor_[joint_index]) {
+	  jacobian_.coeffRef(task_index, joint_index) = 1.0;
+	  ++task_index;
+	}
+      }
+    }
+    
+    actual_.resize(task_dimension);
+    size_t task_index(0);
+    for (size_t joint_index(0); joint_index < ndof; ++joint_index) {
+      if (cursor_[joint_index]) {
+	actual_[task_index] = jpos[joint_index];
+	++task_index;
+      }
+    }
+  }
+  
 }

@@ -316,6 +316,101 @@ TEST (controller, odd_full)
 }
 
 
+
+
+TEST (task, jlimit)
+{
+  JointLimitTask jlimit("jlimit");
+  
+  try {
+    Model * puma(get_puma());
+    size_t const ndof(puma->getNDOF());
+    
+    Parameter * param(jlimit.lookupParameter("dt_seconds", TASK_PARAM_TYPE_REAL));
+    ASSERT_NE ((void*)0, param) << "failed to get dt_seconds param";
+    Status st(param->set(0.1));
+    ASSERT_TRUE (st.ok) << "failed to set dt_seconds: " << st.errstr;
+
+    param = jlimit.lookupParameter("upper_stop_deg", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get upper_stop_deg param";
+    Vector foo(30.0 * Vector::Ones(ndof));
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set upper_stop_deg: " << st.errstr;
+
+    param = jlimit.lookupParameter("upper_trigger_deg", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get upper_trigger_deg param";
+    foo = 20.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set upper_trigger_deg: " << st.errstr;
+
+    param = jlimit.lookupParameter("lower_stop_deg", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get lower_stop_deg param";
+    foo = -30.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set lower_stop_deg: " << st.errstr;
+
+    param = jlimit.lookupParameter("lower_trigger_deg", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get lower_trigger_deg param";
+    foo = -20.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set lower_trigger_deg: " << st.errstr;
+
+    param = jlimit.lookupParameter("kp", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get kp param";
+    foo = 100.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set kp: " << st.errstr;
+
+    param = jlimit.lookupParameter("kd", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get kd param";
+    foo = 20.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set kd: " << st.errstr;
+
+    param = jlimit.lookupParameter("maxvel", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get maxvel param";
+    foo = 10.0 * M_PI / 180.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set maxvel: " << st.errstr;
+
+    param = jlimit.lookupParameter("maxacc", TASK_PARAM_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get maxacc param";
+    foo = 25.0 * M_PI / 180.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set maxacc: " << st.errstr;
+    
+    LController ctrl("ctrl", &cerr);
+    ctrl.appendTask(&jlimit, false);
+    
+    State state(ndof, ndof, 0);
+    state.position_ = Vector::Zero(ndof);
+    state.velocity_ = Vector::Zero(ndof);
+    puma->update(state);
+    st = ctrl.init(*puma);
+    EXPECT_TRUE (st.ok) << "failed to init: " << st.errstr;
+    Vector gamma;
+    st = ctrl.computeCommand(*puma, gamma);
+    EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
+    
+    for (size_t ii(0); ii < ndof; ++ii) {
+      if (0 == ii % 2) {
+	state.position_[ii] =  4.0 * M_PI;
+      }
+      else {
+	state.position_[ii] = -4.0 * M_PI;
+      }
+      puma->update(state);
+      st = ctrl.computeCommand(*puma, gamma);
+      EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
+    }
+    
+  }
+  catch (exception const & ee) {
+    ADD_FAILURE () << "exception " << ee.what();
+  }
+}
+
+
 int main(int argc, char ** argv)
 {
   testing::InitGoogleTest(&argc, argv);

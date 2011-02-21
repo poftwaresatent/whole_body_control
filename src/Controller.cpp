@@ -252,6 +252,7 @@ namespace opspace {
     size_t const ndof(model.getNDOF());
     size_t const n_minus_1(task_table_.size() - 1);
     Matrix nstar(Matrix::Identity(ndof, ndof));
+    int first_active_task_index(0); // because tasks can have empty Jacobian
     
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
       
@@ -263,8 +264,16 @@ namespace opspace {
 	pretty_print(jac, *dbg_, "    jac", "      ");
       }
       
+      if ((0 == jac.rows()) || (0 == jac.cols())) {
+	++first_active_task_index; // in case the first few tasks are inactive
+	if (dbg_) {
+	  *dbg_ << "    jacobian is empty, skip this task\n";
+	}
+	continue;
+      }
+      
       Matrix jstar;
-      if (ii == 0) {
+      if (ii == first_active_task_index) {
 	jstar = jac;
       }
       else {
@@ -286,7 +295,7 @@ namespace opspace {
       }
       
       // could add coriolis-centrifugal just like pstar...
-      if (ii == 0) {
+      if (ii == first_active_task_index) {
 	// first time around: initialize gamma
 	gamma = jstar.transpose() * (lstar * task->getCommand() + pstar);
 	if (dbg_) {

@@ -268,6 +268,44 @@ namespace opspace {
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
   };
+
+
+  class JointLimitTask
+    : public Task
+  {
+  public:
+    explicit JointLimitTask(std::string const & name);
+    virtual ~JointLimitTask();
+    
+    virtual Status check(Vector const * param, Vector const & value) const;
+    virtual Status check(double const * param, double const & value) const;
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+    
+  protected:
+    // parameters
+    Vector upper_stop_deg_;
+    Vector upper_trigger_deg_;
+    Vector lower_stop_deg_;
+    Vector lower_trigger_deg_;
+    double dt_seconds_;
+    Vector maxvel_;
+    Vector maxacc_;
+    Vector kp_;
+    Vector kd_;
+    
+    // non-parameters
+    Vector upper_stop_;
+    Vector upper_trigger_;
+    Vector lower_stop_;
+    Vector lower_trigger_;
+    
+    std::vector<TypeIOTGCursor *> cursor_;
+    Vector goal_;
+
+    void updateState(Model const & model);
+
+  };
   
 }
 
