@@ -95,7 +95,9 @@ namespace opspace {
     try {
       YAML::Parser parser(yaml_istream);
       YAML::Node doc;
-      for (parser.GetNextDocument(doc); parser; parser.GetNextDocument(doc)) {
+
+      while (parser.GetNextDocument(doc)) {
+	////      for (parser.GetNextDocument(doc); parser; parser.GetNextDocument(doc)) {
 	for (size_t ii(0); ii < doc.size(); ++ii) {
 	  YAML::Node const & node(doc[ii]);
 	  std::string type, name;
