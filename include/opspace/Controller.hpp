@@ -82,6 +82,11 @@ namespace opspace {
     task_table_t const & getTaskTable() const { return task_table_; };
     
     /**
+       \todo Refactor into full-fledged behavior setup.
+    */
+    task_info_s const * setFallbackTask(Task * task, bool controller_owned);
+    
+    /**
        The default implementation simply loops over the task table and
        calls Task::init() on all of them, returning an error if one of
        them fails to init. On success, it also sets the initialized_
@@ -105,6 +110,7 @@ namespace opspace {
     std::ostream * dbg_;
     task_table_t task_table_;
     bool initialized_;
+    task_info_s * fallback_task_;
   };
   
   
@@ -119,6 +125,7 @@ namespace opspace {
   public:
     explicit LController(std::string const & name, std::ostream * dbg = 0);
     
+    virtual Status init(Model const & model);
     virtual Status computeCommand(Model const & model, Vector & gamma);
     
     virtual void dbg(std::ostream & os,
@@ -128,6 +135,7 @@ namespace opspace {
   protected:
     std::vector<Vector> sv_lstar_;
     std::vector<Vector> sv_jstar_;
+    bool fallback_;
   };
   
 }

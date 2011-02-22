@@ -39,6 +39,7 @@
 // hmm...
 #include <Eigen/LU>
 #include <Eigen/SVD>
+#include <opspace/task_library.hpp>
 
 using jspace::pretty_print;
 
@@ -49,10 +50,12 @@ namespace opspace {
   Controller(std::string const & name, std::ostream * dbg)
     : name_(name),
       dbg_(dbg),
-      initialized_(false)
+      initialized_(false),
+      fallback_task_(0)
   {
   }
   
+
   Controller::
   ~Controller()
   {
@@ -61,6 +64,12 @@ namespace opspace {
 	delete task_table_[ii]->task;
       }
       delete task_table_[ii];
+    }
+    if (fallback_task_) {
+      if (fallback_task_->controller_owned) {
+	delete fallback_task_->task;
+      }
+      delete fallback_task_;
     }
   }
   
@@ -74,6 +83,23 @@ namespace opspace {
     task_info_s * task_info(new task_info_s(task, controller_owned));
     task_table_.push_back(task_info);
     return task_info;
+  }
+  
+  
+  Controller::task_info_s const * Controller::
+  setFallbackTask(Task * task, bool controller_owned)
+  {
+    if (initialized_) {
+      return 0;
+    }
+    if (fallback_task_) {
+      if (fallback_task_->controller_owned) {
+	delete fallback_task_->task;
+      }
+      delete fallback_task_;
+    }
+    fallback_task_ = new task_info_s(task, controller_owned);
+    return fallback_task_;
   }
   
   
@@ -108,8 +134,22 @@ namespace opspace {
 
   LController::
   LController(std::string const & name, std::ostream * dbg)
-    : Controller(name, dbg)
+    : Controller(name, dbg),
+      fallback_(false)
   {
+  }
+  
+  
+  Status LController::
+  init(Model const & model)
+  {
+    if ( ! fallback_task_) {
+      return Status(false, "LController requires a fallback task");
+    }
+    if ( ! dynamic_cast<PostureTask*>(fallback_task_->task)) {
+      return Status(false, "fallback task has to be a posture (for now)");
+    }
+    return Controller::init(model);
   }
   
   
@@ -127,6 +167,23 @@ namespace opspace {
     if ( ! model.getGravity(grav)) {
       return Status(false, "failed to retrieve gravity torques");
     }
+    
+    //////////////////////////////////////////////////
+    // shortcut if we are already in fallback mode
+    if (fallback_) {
+      Status const st(fallback_task_->task->update(model));
+      if ( ! st) {
+	return Status(false, "fallback task failed to update: " + st.errstr);
+      }
+      Matrix aa;
+      if ( ! model.getMassInertia(aa)) {
+	return Status(false, "failed to retrieve mass inertia");
+      }
+      gamma = aa * fallback_task_->task->getCommand() + grav;
+      Status ok;
+      return ok;
+    }
+    //////////////////////////////////////////////////
     
     std::ostringstream msg;
     bool ok(true);
@@ -194,6 +251,31 @@ namespace opspace {
 	// debugging the singularity problem
 	Matrix jjt(jstar * jstar.transpose());
 	sv_jstar_[ii] = Eigen::SVD<Matrix>(jjt).singularValues();
+	// this needs to be more intelligent for full fledged behavior
+	// infrastructure: tasks needs to be classified according to
+	// essential / optional, and if an essential task becomes
+	// singular, switch to a different task set (or a different
+	// behavior altogether?).
+	if (ii != n_minus_1) {
+	  if (sv_jstar_[ii].coeff(sv_jstar_[ii].rows() - 1) < task->getSigmaThreshold()) {
+	    fallback_ = true;
+	    Status st(fallback_task_->task->init(model));
+	    if ( ! st) {
+	      return Status(false, "fallback task failed to initialize: " + st.errstr);
+	    }
+	    st = fallback_task_->task->update(model);
+	    if ( ! st) {
+	      return Status(false, "fallback task failed to update: " + st.errstr);
+	    }
+	    Matrix aa;
+	    if ( ! model.getMassInertia(aa)) {
+	      return Status(false, "failed to retrieve mass inertia");
+	    }
+	    gamma = aa * fallback_task_->task->getCommand() + grav;
+	    Status ok;
+	    return ok;
+	  }
+	}
       }
       
       Matrix lstar;
@@ -263,6 +345,9 @@ namespace opspace {
       pretty_print(sv_jstar_[ii], os, "", prefix + "    ");
       os << prefix << "  L* " << ii << "\n";
       pretty_print(sv_lstar_[ii], os, "", prefix + "    ");
+    }
+    if (fallback_) {
+      os << prefix << "# FALLBACK MODE ENABLED ##########################\n";
     }
   }
   
