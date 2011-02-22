@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/Controller.hpp>
+#include <opspace/other_controllers.hpp>
 #include <opspace/opspace.hpp>
 
 // hmm...
@@ -43,77 +43,16 @@
 using jspace::pretty_print;
 
 namespace opspace {
-  
-  
-  Controller::
-  Controller(std::string const & name, std::ostream * dbg)
-    : name_(name),
-      dbg_(dbg),
-      initialized_(false)
-  {
-  }
-  
-  Controller::
-  ~Controller()
-  {
-    for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      if (task_table_[ii]->controller_owned) {
-	delete task_table_[ii]->task;
-      }
-      delete task_table_[ii];
-    }
-  }
-  
-  
-  Controller::task_info_s const * Controller::
-  appendTask(Task * task, bool controller_owned)
-  {
-    if (initialized_) {
-      return 0;
-    }
-    task_info_s * task_info(new task_info_s(task, controller_owned));
-    task_table_.push_back(task_info);
-    return task_info;
-  }
-  
-  
-  Status Controller::
-  init(Model const & model)
-  {
-    if (initialized_) {
-      return Status(false, "already initialized");
-    }
-    if (task_table_.empty()) {
-      return Status(false, "no tasks to initialize");
-    }
-    std::ostringstream msg;
-    bool ok(true);
-    for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      Task * task(task_table_[ii]->task);
-      Status const st(task->init(model));
-      if ( ! st) {
-	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
-	ok = false;
-      }
-    }
-    if ( ! ok) {
-      return Status(false, "failures during init:\n" + msg.str());
-    }
-    initialized_ = true;
-    
-    Status st;
-    return st;
-  }
 
 
-  LController::
-  LController(std::string const & name, std::ostream * dbg)
+  SController::
+  SController(std::string const & name, std::ostream * dbg)
     : Controller(name, dbg)
   {
   }
   
   
-  Status LController::
+  Status SController::
   computeCommand(Model const & model, Vector & gamma)
   {
     if ( ! initialized_) {
@@ -143,7 +82,215 @@ namespace opspace {
     }
     
     if (dbg_) {
-      *dbg_ << "DEBUG opspace::LController::computeCommand\n";
+      *dbg_ << "DEBUG opspace::SController::computeCommand\n";
+      pretty_print(model.getState().position_, *dbg_, "  jpos", "    ");
+      pretty_print(model.getState().velocity_, *dbg_, "  jvel", "    ");
+      pretty_print(grav, *dbg_, "  grav", "    ");
+      pretty_print(ainv, *dbg_, "  ainv", "    ");
+    }
+    
+    Matrix rangespace;
+    size_t const ndof(model.getNDOF());
+    size_t const n_minus_1(task_table_.size() - 1);
+    
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      
+      Task const * task(task_table_[ii]->task);
+      Matrix const & jac(task->getJacobian());
+      
+      Matrix lambda, jbar;
+      Vector tau;
+      
+      pseudoInverse(jac * ainv * jac.transpose(), 1e-3, lambda);
+
+      jbar = ainv * jac.transpose() * lambda;
+      Matrix const jtjbt(jac.transpose() * jbar.transpose());
+      tau = jac.transpose() * lambda * task->getCommand() + jtjbt * grav;
+      
+      if (dbg_) {
+	Vector const taunog(tau - jtjbt * grav);
+	*dbg_ << "  task [" << ii << "] " << task->getName() << "\n";
+	pretty_print(jac,    *dbg_, "    jac", "      ");
+	pretty_print(lambda, *dbg_, "    lambda", "      ");
+	pretty_print(jbar,   *dbg_, "    jbar", "      ");
+	pretty_print(jtjbt,  *dbg_, "    jac.t * jbar.t", "      ");
+	pretty_print(taunog, *dbg_, "    tau w/o gravity", "      ");
+	pretty_print(tau,    *dbg_, "    tau", "      ");
+      }
+      
+      if (0 == ii) {
+	gamma = tau;
+	rangespace = jtjbt;	// for next task
+      }
+      else {
+	Matrix const nullspace(Matrix::Identity(ndof, ndof) - rangespace);
+	gamma += nullspace * tau;
+	if (ii != n_minus_1) {
+	  rangespace *= jtjbt;	// for next task
+	}
+	if (dbg_) {
+	  Vector const tauproj(nullspace * tau);
+	  pretty_print(nullspace, *dbg_, "    nullspace", "      ");
+	  pretty_print(tauproj,   *dbg_, "    tau projected", "      ");
+	}
+      }
+    }
+    
+    if (dbg_) {
+      pretty_print(gamma, *dbg_, "  gamma", "    ");
+    }
+    
+    Status st;
+    return st;
+  }
+
+
+  TPController::
+  TPController(std::string const & name, std::ostream * dbg)
+    : Controller(name, dbg),
+      task_(0),
+      posture_(0)
+  {
+  }
+  
+  
+  Status TPController::
+  init(Model const & model)
+  {
+    if (2 != task_table_.size()) {
+      return Status(false, "opspace::TPController needs exactly two tasks");
+    }
+    Status st(Controller::init(model));
+    if ( ! st) {
+      return st;
+    }
+    task_ = task_table_[0]->task;
+    posture_ = task_table_[1]->task;
+    if (posture_->getActual().rows() != model.getNDOF()) {
+      return Status(false, "opspace::TPController posture should have NDOF dimensions");
+    }
+    return st;
+  }
+  
+  
+  Status TPController::
+  computeCommand(Model const & model, Vector & gamma)
+  {
+    if ( ! initialized_) {
+      return Status(false, "not initialized");
+    }
+    Matrix ainv;
+    if ( ! model.getInverseMassInertia(ainv)) {
+      return Status(false, "failed to retrieve inverse mass inertia");
+    }
+    Vector grav;
+    if ( ! model.getGravity(grav)) {
+      return Status(false, "failed to retrieve gravity torques");
+    }
+    
+    std::ostringstream msg;
+    bool ok(true);
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      Task * task(task_table_[ii]->task);
+      Status const st(task->update(model));
+      if ( ! st) {
+	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
+	ok = false;
+      }
+    }
+    if ( ! ok) {
+      return Status(false, "failures during task updates:\n" + msg.str());
+    }
+    
+    if (dbg_) {
+      *dbg_ << "DEBUG opspace::TPController::computeCommand\n";
+      pretty_print(model.getState().position_, *dbg_, "  jpos", "    ");
+      pretty_print(model.getState().velocity_, *dbg_, "  jvel", "    ");
+      pretty_print(grav, *dbg_, "  grav", "    ");
+      pretty_print(ainv, *dbg_, "  ainv", "    ");
+    }
+    
+    // task
+    
+    Matrix const & jac_t(task_->getJacobian());
+
+    Matrix invLambda_t(jac_t * ainv * jac_t.transpose());
+    Eigen::SVD<Matrix> svdLambda_t(invLambda_t);
+    svdLambda_t.sort();
+    int const nrows_t(svdLambda_t.singularValues().rows());
+    Matrix Sinv_t(Matrix::Zero(nrows_t, nrows_t));
+    for (int ii(0); ii < nrows_t; ++ii) {
+      if (svdLambda_t.singularValues().coeff(ii) > 1e-3) {
+	Sinv_t.coeffRef(ii, ii) = 1.0 / svdLambda_t.singularValues().coeff(ii);
+      }
+    }
+    Matrix Lambda_t(svdLambda_t.matrixU() * Sinv_t * svdLambda_t.matrixU().transpose());
+    Vector tau_task(jac_t.transpose() * Lambda_t * task_->getCommand());
+    
+    // posture
+    
+    Matrix Jbar(ainv * jac_t.transpose() * Lambda_t);
+    Matrix nullspace(Matrix::Identity(model.getNDOF(), model.getNDOF()) - Jbar * jac_t);
+    Matrix invLambda_p(nullspace * ainv);
+    Eigen::SVD<Matrix> svdLambda_p(invLambda_p);
+    svdLambda_p.sort();
+    int const nrows_p(svdLambda_p.singularValues().rows());
+    Matrix Sinv_p;
+    Sinv_p = Matrix::Zero(nrows_p, nrows_p);
+    for (int ii(0); ii < nrows_p; ++ii) {
+      if (svdLambda_p.singularValues().coeff(ii) > 1e-3) {
+	Sinv_p.coeffRef(ii, ii) = 1.0 / svdLambda_p.singularValues().coeff(ii);
+      }
+    }
+    Matrix Lambda_p(svdLambda_p.matrixU() * Sinv_p * svdLambda_p.matrixU().transpose());
+    Vector tau_posture(nullspace.transpose() * Lambda_p * posture_->getCommand());
+    
+    // sum it up
+    gamma = tau_task + tau_posture + grav;
+    
+    Status st;
+    return st;
+  }
+  
+  
+  LRController::
+  LRController(std::string const & name, std::ostream * dbg)
+    : Controller(name, dbg)
+  {
+  }
+  
+  
+  Status LRController::
+  computeCommand(Model const & model, Vector & gamma)
+  {
+    if ( ! initialized_) {
+      return Status(false, "not initialized");
+    }
+    Matrix ainv;
+    if ( ! model.getInverseMassInertia(ainv)) {
+      return Status(false, "failed to retrieve inverse mass inertia");
+    }
+    Vector grav;
+    if ( ! model.getGravity(grav)) {
+      return Status(false, "failed to retrieve gravity torques");
+    }
+    
+    std::ostringstream msg;
+    bool ok(true);
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      Task * task(task_table_[ii]->task);
+      Status const st(task->update(model));
+      if ( ! st) {
+	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
+	ok = false;
+      }
+    }
+    if ( ! ok) {
+      return Status(false, "failures during task updates:\n" + msg.str());
+    }
+    
+    if (dbg_) {
+      *dbg_ << "DEBUG opspace::LRController::computeCommand\n";
       pretty_print(model.getState().position_, *dbg_, "  jpos", "    ");
       pretty_print(model.getState().velocity_, *dbg_, "  jvel", "    ");
       pretty_print(grav, *dbg_, "  grav", "    ");
@@ -197,7 +344,15 @@ namespace opspace {
       }
       
       Matrix lstar;
-      pseudoInverse(jstar * ainv * jstar.transpose(), task->getSigmaThreshold(), lstar, &sv_lstar_[ii]);
+      {
+	// try regularized inverse
+	Matrix reg(jstar * ainv * jstar.transpose()
+		   + task->getSigmaThreshold() * Matrix::Identity(jstar.rows(), jstar.rows()));
+	lstar = reg.inverse();
+	// still debug lambda eigenvalues
+	sv_lstar_[ii] = Eigen::SVD<Matrix>(lstar).singularValues();
+      }
+      
       Vector pstar;
       pstar = lstar * jstar * ainv * grav; // same would go for coriolis-centrifugal...
       
@@ -249,7 +404,7 @@ namespace opspace {
   }
   
   
-  void LController::
+  void LRController::
   dbg(std::ostream & os,
       std::string const & title,
       std::string const & prefix) const
@@ -257,7 +412,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "Singular values of tasks in LController: `" << name_ << "'\n";
+    os << prefix << "Singular values of tasks in LRController: `" << name_ << "'\n";
     for (size_t ii(0); ii < sv_lstar_.size(); ++ii) {
       os << prefix << "  J* " << ii << "\n";
       pretty_print(sv_jstar_[ii], os, "", prefix + "    ");
@@ -265,5 +420,5 @@ namespace opspace {
       pretty_print(sv_lstar_[ii], os, "", prefix + "    ");
     }
   }
-  
+
 }

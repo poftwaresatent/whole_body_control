@@ -33,6 +33,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef OPSPACE_CONTROLLER_HPP
+#define OPSPACE_CONTROLLER_HPP
+
 #include <opspace/Task.hpp>
 
 namespace opspace {
@@ -106,21 +109,6 @@ namespace opspace {
   
   
   /**
-     A controller implementation based on "Samir's cheatsheet" ... not
-     thoroughly tested yet, but if it turns out to work correctly, it
-     would probably be faster than the LController.
-  */
-  class SController
-    : public Controller
-  {
-  public:
-    explicit SController(std::string const & name, std::ostream * dbg = 0);
-    
-    virtual Status computeCommand(Model const & model, Vector & gamma);
-  };
-  
-  
-  /**
      "The" reference controller based on original code that Luis
      developed during his thesis. Performs dynamically consistent
      nullspace projection magic.
@@ -138,27 +126,10 @@ namespace opspace {
 		     std::string const & prefix) const;
     
   protected:
-    std::vector<Vector> singular_values_;
-  };
-  
-  
-  /**
-     Just a test controller in case you know you have exactly two
-     tasks, with the lower-level one being a full jointspace posture
-     task. Will probably be completely removed "real soon now".
-   */
-  class TPController
-    : public Controller
-  {
-  public:
-    explicit TPController(std::string const & name, std::ostream * dbg = 0);
-    
-    virtual Status init(Model const & model);
-    virtual Status computeCommand(Model const & model, Vector & gamma);
-    
-  protected:
-    Task * task_;
-    Task * posture_;
+    std::vector<Vector> sv_lstar_;
+    std::vector<Vector> sv_jstar_;
   };
   
 }
+
+#endif // OPSPACE_CONTROLLER_HPP
