@@ -93,6 +93,10 @@ namespace opspace {
      */
     virtual Status computeCommand(Model const & model, Vector & gamma) = 0;
     
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const {}
+    
   protected:
     std::string const name_;
     std::ostream * dbg_;
@@ -128,6 +132,13 @@ namespace opspace {
     explicit LController(std::string const & name, std::ostream * dbg = 0);
     
     virtual Status computeCommand(Model const & model, Vector & gamma);
+    
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
+  protected:
+    std::vector<Vector> singular_values_;
   };
   
   

@@ -327,6 +327,12 @@ namespace opspace {
     
     parameter_table_t & getParameterTable()             { return parameter_table_; }
     parameter_table_t const & getParameterTable() const { return parameter_table_; }
+
+    /**
+       SVD cutoff value for pseudo inverse, exists in all tasks
+       because Controller implementations need it.
+    */
+    double getSigmaThreshold() const { return sigma_threshold_; }
     
     void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
     
@@ -366,6 +372,10 @@ namespace opspace {
     Matrix jacobian_;
     parameter_table_t parameter_table_;
     parameter_lookup_t parameter_lookup_;
+    
+    // SVD cutoff value for pseudo inverse, exists in all tasks
+    // because Controller implementations need it.
+    double sigma_threshold_;
   };
   
 }

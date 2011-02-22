@@ -163,6 +163,7 @@ namespace opspace {
       Vector tau;
       
       pseudoInverse(jac * ainv * jac.transpose(), 1e-3, lambda);
+
       jbar = ainv * jac.transpose() * lambda;
       Matrix const jtjbt(jac.transpose() * jbar.transpose());
       tau = jac.transpose() * lambda * task->getCommand() + jtjbt * grav;
@@ -254,6 +255,8 @@ namespace opspace {
     Matrix nstar(Matrix::Identity(ndof, ndof));
     int first_active_task_index(0); // because tasks can have empty Jacobian
     
+    singular_values_.resize(task_table_.size());
+    
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
       
       Task const * task(task_table_[ii]->task);
@@ -269,6 +272,7 @@ namespace opspace {
 	if (dbg_) {
 	  *dbg_ << "    jacobian is empty, skip this task\n";
 	}
+	singular_values_[ii].resize(0);
 	continue;
       }
       
@@ -285,7 +289,7 @@ namespace opspace {
       }
       
       Matrix lstar;
-      pseudoInverse(jstar * ainv * jstar.transpose(), 1e-3, lstar);
+      pseudoInverse(jstar * ainv * jstar.transpose(), task->getSigmaThreshold(), lstar, &singular_values_[ii]);
       Vector pstar;
       pstar = lstar * jstar * ainv * grav; // same would go for coriolis-centrifugal...
       
@@ -334,6 +338,23 @@ namespace opspace {
     
     Status st;
     return st;
+  }
+  
+  
+  void LController::
+  dbg(std::ostream & os,
+      std::string const & title,
+      std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    os << prefix << "LController: `" << name_ << "'\n";
+    for (size_t ii(0); ii < singular_values_.size(); ++ii) {
+      std::ostringstream msg;
+      msg << "sigma[" << ii << "]";
+      pretty_print(singular_values_[ii], os, msg.str(), prefix + "  ");
+    }
   }
   
   

@@ -43,7 +43,8 @@ namespace opspace {
 
   void pseudoInverse(Matrix const & matrix,
 		     double sigmaThreshold,
-		     Matrix & invMatrix)
+		     Matrix & invMatrix,
+		     Vector * opt_sigmaOut)
   {
     Eigen::SVD<Matrix> svd(matrix);
     // not sure if we need to svd.sort()... probably not
@@ -56,6 +57,9 @@ namespace opspace {
       }
     }
     invMatrix = svd.matrixU() * invS * svd.matrixU().transpose();
+    if (opt_sigmaOut) {
+      *opt_sigmaOut = svd.singularValues();
+    }
   }
   
 }

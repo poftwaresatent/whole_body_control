@@ -198,8 +198,10 @@ namespace opspace {
   
   Task::
   Task(std::string const & name)
-    : name_(name)
+    : name_(name),
+      sigma_threshold_(1.0e-2)
   {
+    declareParameter("sigma_threshold", &sigma_threshold_);
   }
   
   

@@ -38,6 +38,7 @@
 namespace opspace {
 
   using jspace::Matrix;
+  using jspace::Vector;
   
   /**
      This pseudo-inverse is based on SVD, followed by threshlding on
@@ -47,6 +48,7 @@ namespace opspace {
   */
   void pseudoInverse(Matrix const & matrix,
 		     double sigmaThreshold,
-		     Matrix & invMatrix);
+		     Matrix & invMatrix,
+		     Vector * opt_sigmaOut = 0);
   
 }
