@@ -681,4 +681,22 @@ namespace opspace {
     }
   }
   
+  
+  void JointLimitTask::
+  dbg(std::ostream & os,
+      std::string const & title,
+      std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    os << prefix << "joint limit task: `" << name_ << "'\n";
+    if (cursor_.empty()) {
+      os << prefix << "  NOT INITIALIZED\n";
+    }
+    pretty_print(actual_, os, "actual", prefix + "  ");
+    pretty_print(goal_, os, "goal", prefix + "  ");
+    pretty_print(jacobian_, os, "jacobian", prefix + "  ");
+  }
+
 }

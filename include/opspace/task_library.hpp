@@ -282,6 +282,10 @@ namespace opspace {
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
     
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
   protected:
     // parameters
     Vector upper_stop_deg_;
