@@ -616,8 +616,15 @@ namespace opspace {
 	if (0 > cursor_[joint_index]->next(maxvel_[joint_index], maxacc_[joint_index], goal_[joint_index])) {
 	  return Status(false, "trajectory generation error");
 	}
+	double com(kp_[joint_index] * (cursor_[joint_index]->position()[0] - actual_[task_index]));
+	if ((maxvel_[joint_index] > 1e-4) && (kd_[joint_index] > 1e-4)) {
+	  double const sat(fabs((com / maxvel_[joint_index]) / kd_[joint_index]));
+	  if (sat > 1.0) {
+	    com /= sat;
+	  }
+	}
 	command_[task_index]
-	  = kp_[joint_index] * (cursor_[joint_index]->position()[0] - actual_[task_index])
+	  = com
 	  + kd_[joint_index] * (cursor_[joint_index]->velocity()[0] - model.getState().velocity_[joint_index]);
 	++task_index;
       }
