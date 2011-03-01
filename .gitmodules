@@ -1,3 +1,0 @@
-[submodule "wbc_core/src"]
-	path = wbc_core/src
-	url = git://github.com/poftwaresatent/stanford_wbc.git
