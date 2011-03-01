@@ -47,6 +47,12 @@ namespace opspace {
   class Task;
   
   /**
+     \todo Replace this with some sort of plugin-based approach.
+  */
+  Task * createTask(std::string const & type, std::string const & name);
+  
+  
+  /**
      Utility for creating Task instances based on type names. Mostly
      (currently: exclusively) used for parsing YAML files that specify
      tasks. For the moment, we use a hardcoded mapping from type names
