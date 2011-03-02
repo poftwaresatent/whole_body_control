@@ -38,6 +38,7 @@
 
 #include <yaml-cpp/yaml.h>
 #include <jspace/Status.hpp>
+#include <boost/shared_ptr.hpp>
 
 
 namespace opspace {
@@ -67,9 +68,6 @@ namespace opspace {
      ordered simply by the order in which specifications where
      encountered.
      
-     \note The TaskFactory never deletes any of the Task instances it
-     creates during parsing. You are responsible for doing that.
-     
      The YAML format is quite simple, of course: you specify a list of
      dictionaries. Each list item specifies a task. The required
      dictionary keys are `type' and `name'. All the others get looked
@@ -97,7 +95,7 @@ namespace opspace {
   class TaskFactory
   {
   public:
-    typedef std::vector<Task *> task_table_t;
+    typedef std::vector<boost::shared_ptr<Task> > task_table_t;
     
     /**
        If you pass a non-zero dbg parameter, the TaskFactory will

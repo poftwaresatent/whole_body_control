@@ -90,7 +90,7 @@ namespace opspace {
   parseStream(std::istream & yaml_istream)
   {
     Status st;
-    Task * task(0);
+    boost::shared_ptr<Task> task;
     
     try {
       YAML::Parser parser(yaml_istream);
@@ -104,7 +104,7 @@ namespace opspace {
 	  if ( ! task_parser.task) {
 	    throw std::runtime_error("oops, task_parser_s::task is zero");
 	  }
-	  task = task_parser.task;
+	  task.reset(task_parser.task);
 	  task_table_.push_back(task);
 	}
       }
@@ -113,7 +113,6 @@ namespace opspace {
       if (dbg_) {
 	*dbg_ << "YAML::Exception: " << ee.what() << "\n";
       }
-      delete task;
       st.ok = false;
       st.errstr = ee.what();
     }
@@ -121,7 +120,6 @@ namespace opspace {
       if (dbg_) {
 	*dbg_ << "std::runtime_error: " << ee.what() << "\n";
       }
-      delete task;
       st.ok = false;
       st.errstr = ee.what();
     }
