@@ -38,10 +38,17 @@ Some Notes About git-subtree
 We've stopped using `git-submodule` for the `wbc_core/src` directory
 and have replaced it with an in-tree copy via [git-subtree][]. This
 should make it possible to merge changes across projects that use the
-upstream [Stanford WBC][wbc] codebase, if you follow these guidelines:
+upstream [Stanford WBC][stanford-wbc] codebase. Similarly, the
+`wbc_opspace/opspace` directory is an in-tree copy of [UT Austin
+WBC][utaustin-wbc].
+
+Here are the instructions for [Stanford WBC][stanford-wbc]. Adapt the
+URLs and paths when pushing/pulling upstream [UT Autsin
+WBC][utaustin-wbc].
 
 [git-subtree]: https://github.com/apenwarr/git-subtree
-[wbc]: https://github.com/poftwaresatent/stanford_wbc
+[stanford-wbc]: https://github.com/poftwaresatent/stanford_wbc
+[utaustin-wbc]: https://github.com/poftwaresatent/utaustin_wbc_opspace
 
 - **Do not mix** commits to `wbc_core/src` with commits to other
   locations of the `whole_body_control` stack. Well, this is not a
