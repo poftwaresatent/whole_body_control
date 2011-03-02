@@ -57,26 +57,6 @@ namespace opspace {
   
   
   /**
-     Just a test controller in case you know you have exactly two
-     tasks, with the lower-level one being a full jointspace posture
-     task. Will probably be completely removed "real soon now".
-   */
-  class TPController
-    : public Controller
-  {
-  public:
-    explicit TPController(std::string const & name, std::ostream * dbg = 0);
-    
-    virtual Status init(Model const & model);
-    virtual Status computeCommand(Model const & model, Vector & gamma);
-    
-  protected:
-    Task * task_;
-    Task * posture_;
-  };
-  
-  
-  /**
      Quick test for using algebraic regularization for lambda... does
      not work though (yet).
   */

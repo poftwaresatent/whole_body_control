@@ -37,6 +37,7 @@
 #define OPSPACE_CONTROLLER_HPP
 
 #include <opspace/Task.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace opspace {
 
@@ -50,41 +51,30 @@ namespace opspace {
   class Controller
   {
   public:
-    /**
-       Utility structure for keeping track of which task instances
-       should be deleted at destruction time of the controller. Yes,
-       we could also use smart pointers... that's a separate
-       discussion.
-    */
-    struct task_info_s {
-      task_info_s(Task * tt, bool co)
-	: task(tt), controller_owned(co) {}
-      
-      Task * task;
-      bool controller_owned;
-    };
-    
-    typedef std::vector<task_info_s *> task_table_t;
+    typedef std::vector<boost::shared_ptr<Task> > task_table_t;
     
     explicit Controller(std::string const & name, std::ostream * dbg = 0);
-    virtual ~Controller();
+    virtual ~Controller() {}
     
     std::string const & getName() const { return name_; }
     
     /**
        Append a task instance to the hierarchy managed by this
-       controller. Transfers ownership of the task object if you set
-       controller_owned to true. Controller-owned tasks get deleted in
-       the Controller destructor.
+       controller.
+       
+       \return True on success (false if we have already been
+       initialized).
     */
-    task_info_s const * appendTask(Task * task, bool controller_owned);
+    bool appendTask(boost::shared_ptr<Task> task);
     
     task_table_t const & getTaskTable() const { return task_table_; };
     
     /**
        \todo Refactor into full-fledged behavior setup.
+
+       \return true on success (false if we are already initialized)
     */
-    task_info_s const * setFallbackTask(Task * task, bool controller_owned);
+    bool setFallbackTask(boost::shared_ptr<Task> task);
     
     /**
        The default implementation simply loops over the task table and
@@ -110,7 +100,7 @@ namespace opspace {
     std::ostream * dbg_;
     task_table_t task_table_;
     bool initialized_;
-    task_info_s * fallback_task_;
+    boost::shared_ptr<Task> fallback_task_;
   };
   
   

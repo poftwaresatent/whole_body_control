@@ -70,7 +70,7 @@ namespace opspace {
     std::ostringstream msg;
     bool ok(true);
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      Task * task(task_table_[ii]->task);
+      Task * task(task_table_[ii].get());
       Status const st(task->update(model));
       if ( ! st) {
 	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
@@ -95,7 +95,7 @@ namespace opspace {
     
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
       
-      Task const * task(task_table_[ii]->task);
+      Task const * task(task_table_[ii].get());
       Matrix const & jac(task->getJacobian());
       
       Matrix lambda, jbar;
@@ -143,114 +143,6 @@ namespace opspace {
     Status st;
     return st;
   }
-
-
-  TPController::
-  TPController(std::string const & name, std::ostream * dbg)
-    : Controller(name, dbg),
-      task_(0),
-      posture_(0)
-  {
-  }
-  
-  
-  Status TPController::
-  init(Model const & model)
-  {
-    if (2 != task_table_.size()) {
-      return Status(false, "opspace::TPController needs exactly two tasks");
-    }
-    Status st(Controller::init(model));
-    if ( ! st) {
-      return st;
-    }
-    task_ = task_table_[0]->task;
-    posture_ = task_table_[1]->task;
-    if (posture_->getActual().rows() != model.getNDOF()) {
-      return Status(false, "opspace::TPController posture should have NDOF dimensions");
-    }
-    return st;
-  }
-  
-  
-  Status TPController::
-  computeCommand(Model const & model, Vector & gamma)
-  {
-    if ( ! initialized_) {
-      return Status(false, "not initialized");
-    }
-    Matrix ainv;
-    if ( ! model.getInverseMassInertia(ainv)) {
-      return Status(false, "failed to retrieve inverse mass inertia");
-    }
-    Vector grav;
-    if ( ! model.getGravity(grav)) {
-      return Status(false, "failed to retrieve gravity torques");
-    }
-    
-    std::ostringstream msg;
-    bool ok(true);
-    for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      Task * task(task_table_[ii]->task);
-      Status const st(task->update(model));
-      if ( ! st) {
-	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
-	ok = false;
-      }
-    }
-    if ( ! ok) {
-      return Status(false, "failures during task updates:\n" + msg.str());
-    }
-    
-    if (dbg_) {
-      *dbg_ << "DEBUG opspace::TPController::computeCommand\n";
-      pretty_print(model.getState().position_, *dbg_, "  jpos", "    ");
-      pretty_print(model.getState().velocity_, *dbg_, "  jvel", "    ");
-      pretty_print(grav, *dbg_, "  grav", "    ");
-      pretty_print(ainv, *dbg_, "  ainv", "    ");
-    }
-    
-    // task
-    
-    Matrix const & jac_t(task_->getJacobian());
-
-    Matrix invLambda_t(jac_t * ainv * jac_t.transpose());
-    Eigen::SVD<Matrix> svdLambda_t(invLambda_t);
-    svdLambda_t.sort();
-    int const nrows_t(svdLambda_t.singularValues().rows());
-    Matrix Sinv_t(Matrix::Zero(nrows_t, nrows_t));
-    for (int ii(0); ii < nrows_t; ++ii) {
-      if (svdLambda_t.singularValues().coeff(ii) > 1e-3) {
-	Sinv_t.coeffRef(ii, ii) = 1.0 / svdLambda_t.singularValues().coeff(ii);
-      }
-    }
-    Matrix Lambda_t(svdLambda_t.matrixU() * Sinv_t * svdLambda_t.matrixU().transpose());
-    Vector tau_task(jac_t.transpose() * Lambda_t * task_->getCommand());
-    
-    // posture
-    
-    Matrix Jbar(ainv * jac_t.transpose() * Lambda_t);
-    Matrix nullspace(Matrix::Identity(model.getNDOF(), model.getNDOF()) - Jbar * jac_t);
-    Matrix invLambda_p(nullspace * ainv);
-    Eigen::SVD<Matrix> svdLambda_p(invLambda_p);
-    svdLambda_p.sort();
-    int const nrows_p(svdLambda_p.singularValues().rows());
-    Matrix Sinv_p;
-    Sinv_p = Matrix::Zero(nrows_p, nrows_p);
-    for (int ii(0); ii < nrows_p; ++ii) {
-      if (svdLambda_p.singularValues().coeff(ii) > 1e-3) {
-	Sinv_p.coeffRef(ii, ii) = 1.0 / svdLambda_p.singularValues().coeff(ii);
-      }
-    }
-    Matrix Lambda_p(svdLambda_p.matrixU() * Sinv_p * svdLambda_p.matrixU().transpose());
-    Vector tau_posture(nullspace.transpose() * Lambda_p * posture_->getCommand());
-    
-    // sum it up
-    gamma = tau_task + tau_posture + grav;
-    
-    Status st;
-    return st;
-  }
   
   
   LRController::
@@ -278,7 +170,7 @@ namespace opspace {
     std::ostringstream msg;
     bool ok(true);
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      Task * task(task_table_[ii]->task);
+      Task * task(task_table_[ii].get());
       Status const st(task->update(model));
       if ( ! st) {
 	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
@@ -307,7 +199,7 @@ namespace opspace {
     
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
       
-      Task const * task(task_table_[ii]->task);
+      Task const * task(task_table_[ii].get());
       Matrix const & jac(task->getJacobian());
       
       if (dbg_) {

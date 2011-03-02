@@ -42,6 +42,7 @@
 #include <opspace/task_library.hpp>
 
 using jspace::pretty_print;
+using boost::shared_ptr;
 
 namespace opspace {
   
@@ -50,56 +51,30 @@ namespace opspace {
   Controller(std::string const & name, std::ostream * dbg)
     : name_(name),
       dbg_(dbg),
-      initialized_(false),
-      fallback_task_(0)
+      initialized_(false)
   {
   }
   
-
-  Controller::
-  ~Controller()
-  {
-    for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      if (task_table_[ii]->controller_owned) {
-	delete task_table_[ii]->task;
-      }
-      delete task_table_[ii];
-    }
-    if (fallback_task_) {
-      if (fallback_task_->controller_owned) {
-	delete fallback_task_->task;
-      }
-      delete fallback_task_;
-    }
-  }
   
-  
-  Controller::task_info_s const * Controller::
-  appendTask(Task * task, bool controller_owned)
+  bool Controller::
+  appendTask(shared_ptr<Task> task)
   {
     if (initialized_) {
-      return 0;
+      return false;
     }
-    task_info_s * task_info(new task_info_s(task, controller_owned));
-    task_table_.push_back(task_info);
-    return task_info;
+    task_table_.push_back(task);
+    return true;
   }
   
   
-  Controller::task_info_s const * Controller::
-  setFallbackTask(Task * task, bool controller_owned)
+  bool Controller::
+  setFallbackTask(shared_ptr<Task> task)
   {
     if (initialized_) {
-      return 0;
+      return false;
     }
-    if (fallback_task_) {
-      if (fallback_task_->controller_owned) {
-	delete fallback_task_->task;
-      }
-      delete fallback_task_;
-    }
-    fallback_task_ = new task_info_s(task, controller_owned);
-    return fallback_task_;
+    fallback_task_ = task;
+    return true;
   }
   
   
@@ -115,7 +90,7 @@ namespace opspace {
     std::ostringstream msg;
     bool ok(true);
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      Task * task(task_table_[ii]->task);
+      Task * task(task_table_[ii].get());
       Status const st(task->init(model));
       if ( ! st) {
 	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
@@ -146,7 +121,7 @@ namespace opspace {
     if ( ! fallback_task_) {
       return Status(false, "LController requires a fallback task");
     }
-    if ( ! dynamic_cast<PostureTask*>(fallback_task_->task)) {
+    if ( ! dynamic_cast<PostureTask*>(fallback_task_.get())) {
       return Status(false, "fallback task has to be a posture (for now)");
     }
     return Controller::init(model);
@@ -171,7 +146,7 @@ namespace opspace {
     //////////////////////////////////////////////////
     // shortcut if we are already in fallback mode
     if (fallback_) {
-      Status const st(fallback_task_->task->update(model));
+      Status const st(fallback_task_->update(model));
       if ( ! st) {
 	return Status(false, "fallback task failed to update: " + st.errstr);
       }
@@ -179,7 +154,7 @@ namespace opspace {
       if ( ! model.getMassInertia(aa)) {
 	return Status(false, "failed to retrieve mass inertia");
       }
-      gamma = aa * fallback_task_->task->getCommand() + grav;
+      gamma = aa * fallback_task_->getCommand() + grav;
       Status ok;
       return ok;
     }
@@ -188,7 +163,7 @@ namespace opspace {
     std::ostringstream msg;
     bool ok(true);
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      Task * task(task_table_[ii]->task);
+      Task * task(task_table_[ii].get());
       Status const st(task->update(model));
       if ( ! st) {
 	msg << "  task[" << ii << "] `" << task->getName() << "': " << st.errstr << "\n";
@@ -217,7 +192,7 @@ namespace opspace {
     
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
       
-      Task const * task(task_table_[ii]->task);
+      Task const * task(task_table_[ii].get());
       Matrix const & jac(task->getJacobian());
       
       if (dbg_) {
@@ -259,11 +234,11 @@ namespace opspace {
 	if (ii != n_minus_1) {
 	  if (sv_jstar_[ii].coeff(sv_jstar_[ii].rows() - 1) < task->getSigmaThreshold()) {
 	    fallback_ = true;
-	    Status st(fallback_task_->task->init(model));
+	    Status st(fallback_task_->init(model));
 	    if ( ! st) {
 	      return Status(false, "fallback task failed to initialize: " + st.errstr);
 	    }
-	    st = fallback_task_->task->update(model);
+	    st = fallback_task_->update(model);
 	    if ( ! st) {
 	      return Status(false, "fallback task failed to update: " + st.errstr);
 	    }
@@ -271,7 +246,7 @@ namespace opspace {
 	    if ( ! model.getMassInertia(aa)) {
 	      return Status(false, "failed to retrieve mass inertia");
 	    }
-	    gamma = aa * fallback_task_->task->getCommand() + grav;
+	    gamma = aa * fallback_task_->getCommand() + grav;
 	    Status ok;
 	    return ok;
 	  }
