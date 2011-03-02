@@ -28,13 +28,66 @@ Installation
    - cd ~/ros/stacks
    - git clone git://github.com/poftwaresatent/whole_body_control.git
 
-3. use `git submodule` to pull in the core Stanford_WBC library code
-   - cd whole_body_control
-   - git submodule init
-   - git submodule update
-
-4. build it using `rosmake`
+3. build it using `rosmake`
    - rosmake
+
+
+Some Notes About git-subtree
+----------------------------
+
+We've stopped using `git-submodule` for the `wbc_core/src` directory
+and have replaced it with an in-tree copy via [git-subtree][]. This
+should make it possible to merge changes across projects that use the
+upstream [Stanford WBC][wbc] codebase, if you follow these guidelines:
+
+[git-subtree]: https://github.com/apenwarr/git-subtree
+[wbc]: https://github.com/poftwaresatent/stanford_wbc
+
+- **Do not mix** commits to `wbc_core/src` with commits to other
+  locations of the `whole_body_control` stack. Well, this is not a
+  super strict requirement, but it avoids confusing spurious
+  commits upstream...
+
+- In order to **pull updates** from upstream, follow these steps:
+
+  1. If you don't have it yet, check out (and optionally "install")
+     [git-subtree][].
+
+  2. If you don't yet have the upstream remote in your clone, add it
+     like this (adapt the URL to suit your needs, in this example we
+     use read-only access):
+
+            git remote add stanford_wbc git://github.com/poftwaresatent/stanford_wbc.git
+
+  3. Fetch the upstream changes and merge them into `wbc_core/src`
+     using `git-subtree`:
+
+            git fetch stanford_wbc
+            git subtree merge -P wbc_core/src stanford_wbc/master
+
+     Here we assume you have `git-subtree` properly
+     installed. Otherwise, replace "`git subtree`" with
+     "`/path/to/git-subtree.sh`" in the command above.
+
+- In order to **push changes** upstream, follow these steps:
+
+  1. If you don't have it yet, check out (and optionally "install")
+     [git-subtree][]
+
+  2. If you don't yet have the upstream remote in your clone, add it
+     like this (here we'll need write access, so maybe adapt the URL
+     to point to a fork):
+
+            git remote add stanford_wbc git@github.com:poftwaresatent/stanford_wbc.git
+
+  3. Use a temporary branch to split out the changes and push them upstream:
+
+            git subtree split -P wbc_core/src -b foo
+            git push stanford_wbc foo:master
+            git branch -D foo
+
+    Again, this assumes you have properly installed
+    `git-subtree`. Otherwise, say "`/path/to/git-subtree.sh`" instead.
 
 
 Stack Contents
