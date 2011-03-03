@@ -36,9 +36,12 @@
 #include <opspace/parse_yaml.hpp>
 #include <opspace/TaskFactory.hpp>
 #include <opspace/Task.hpp>
+#include <opspace/Behavior.hpp>
 #include <stdexcept>
 
 using jspace::pretty_print;
+using boost::shared_ptr;
+
 
 namespace opspace {
   
@@ -48,6 +51,17 @@ namespace opspace {
     : type("void"),
       name(""),
       task(0),
+      dbg(optional_dbg_os)
+  {
+  }
+  
+  
+  behavior_parser_s::
+  behavior_parser_s(TaskFactory const & tfac_, std::ostream * optional_dbg_os)
+    : tfac(tfac_),
+      type("void"),
+      name(""),
+      behavior(0),
       dbg(optional_dbg_os)
   {
   }
@@ -182,5 +196,72 @@ namespace opspace {
     } // end for (YAML::Iterator ... )
   }
   
+  
+  void operator >> (YAML::Node const & node, behavior_parser_s & behavior)
+  {
+    behavior.behavior = 0;		// in case type or name is undefined
+    if (behavior.dbg) {
+      *behavior.dbg << "DEBUG opspace::operator>>(YAML::Node &, behavior_parser_s &)\n"
+		<< "  reading type and name\n";
+    }
+    node["type"] >> behavior.type;
+    node["name"] >> behavior.name;
+
+    if (behavior.dbg) {
+      *behavior.dbg << "  type = " << behavior.type << "  name = " << behavior.name << "\n";
+    }
+    behavior.behavior = createBehavior(behavior.type, behavior.name);
+    if ( ! behavior.behavior) {
+      throw std::runtime_error("createBehavior(`" + behavior.type + "', `" + behavior.name + "') failed");
+    }
+    
+    if (behavior.dbg) {
+      *behavior.dbg << "  created behavior `" << behavior.name << "' of type " << behavior.type << "\n"
+		    << "    parsing tasks:\n";
+    }
+    for (YAML::Iterator it(node.begin()); it != node.end(); ++it) {
+      std::string key;
+      it.first() >> key;
+      if (("type" == key) || ("name" == key)) {
+	continue;
+      }
+      
+      YAML::Node const & slots(it.second());
+      
+      if (YAML::CT_MAP != slots.GetType()) {
+	throw std::runtime_error("entry for `" + key + "' is not a map");
+      }
+      
+      for (YAML::Iterator slot_it(slots.begin()); slot_it != slots.end(); ++slot_it) {
+	std::string slot_name;
+	slot_it.first() >> slot_name;
+	std::string task_name;
+	slot_it.second() >> task_name;
+	
+	shared_ptr<TaskSlotAPI> slot(behavior.behavior->lookupSlot(key, slot_name));
+	if ( ! slot) {
+	  throw std::runtime_error("behavior `" + behavior.name + "' has no slot `" + key + "' / `"
+				   + slot_name + "'");
+	}
+	
+	shared_ptr<Task> task(behavior.tfac.findTask(task_name));
+	if ( ! task) {
+	  throw std::runtime_error("no task instance `" + task_name + "' for behavior `" + behavior.name
+				   + "' slot `" + key + "' / `" + slot_name + "'");
+	}
+	
+	Status const st(slot->assign(task));
+	if ( ! st) {
+	  throw std::runtime_error("oops assigning task instance `" + task_name + "' to behavior `" + behavior.name
+				   + "' slot `" + key + "' / `" + slot_name + "': " + st.errstr);
+	}
+	
+	if (behavior.dbg) {
+	  *behavior.dbg << "  assigned task instance `" << task_name << "' to slot `" << slot_name
+			<< "' of state `" << key << " in behavior `" << behavior.name << "'\n";
+	}
+      }
+    }
+  }
   
 }

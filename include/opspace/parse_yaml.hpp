@@ -44,6 +44,9 @@ namespace opspace {
   using jspace::Vector;
   class Task;
   class Parameter;
+  class TaskFactory;
+  class Behavior;
+  
   
   struct task_parser_s {
     explicit task_parser_s(std::ostream * optional_dbg_os = 0);
@@ -68,10 +71,24 @@ namespace opspace {
   };
   
   
+  struct behavior_parser_s {
+    behavior_parser_s(TaskFactory const & tfac, std::ostream * optional_dbg_os = 0);
+    
+    TaskFactory const & tfac;
+    std::string type;
+    std::string name;
+    
+    Behavior * behavior;
+
+    std::ostream * dbg;
+  };
+  
+  
   void operator >> (YAML::Node const & node, Vector & vector);
   
   void operator >> (YAML::Node const & node, task_parser_s & task);
   
+  void operator >> (YAML::Node const & node, behavior_parser_s & behavior);
   
 }
 

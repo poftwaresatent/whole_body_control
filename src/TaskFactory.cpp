@@ -34,6 +34,7 @@
  */
 
 #include <opspace/TaskFactory.hpp>
+#include <opspace/Behavior.hpp>
 #include <opspace/task_library.hpp>
 #include <opspace/parse_yaml.hpp>
 #include <fstream>
@@ -151,5 +152,33 @@ namespace opspace {
       (*it)->dump(os, "", prefix + "  ");
     }
   }
+
   
+  /**
+     \todo Would be nice to use a std::map and also detect duplicate
+     names, which should be errors...
+   */
+  boost::shared_ptr<Task> TaskFactory::
+  findTask(std::string const & name)
+    const
+  {
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      if (name == task_table_[ii]->getName()) {
+	return task_table_[ii];
+      }
+    }
+    return boost::shared_ptr<Task>();
+  }
+  
+  
+  Behavior * createBehavior(std::string const & type, std::string const & name)
+  {
+    if ("opspace::TPBehavior" == type) {
+      return new opspace::TPBehavior(name);
+    }
+    return 0;
+  }
+  
+  
+
 }

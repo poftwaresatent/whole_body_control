@@ -46,11 +46,14 @@ namespace opspace {
   using jspace::Status;
   
   class Task;
+  class Behavior;
   
   /**
      \todo Replace this with some sort of plugin-based approach.
   */
   Task * createTask(std::string const & type, std::string const & name);
+  
+  Behavior * createBehavior(std::string const & type, std::string const & name);
   
   
   /**
@@ -128,6 +131,8 @@ namespace opspace {
        deleted by TaskFactory.
     */
     task_table_t const & getTaskTable() const;
+    
+    boost::shared_ptr<Task> findTask(std::string const & name) const;
     
     /**
        Write a human-readable (hopefully, anyway) description of all

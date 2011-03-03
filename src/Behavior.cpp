@@ -56,12 +56,19 @@ namespace opspace {
   }
   
   
-  void Behavior::
-  declareTask(std::string const & state_name,
-	      std::string const & task_name,
-	      shared_ptr<Task> * task)
+  boost::shared_ptr<TaskSlotAPI> Behavior::
+  lookupSlot(std::string const & state_name, std::string const & task_name)
   {
-    state_map_[state_name][task_name] = task;
+    shared_ptr<TaskSlotAPI> slot;
+    state_map_t::iterator ism(state_map_.find(state_name));
+    if (ism == state_map_.end()) {
+      return slot;
+    }
+    task_slot_map_t::iterator isd(ism->second.find(task_name));
+    if (isd != ism->second.end()) {
+      slot = isd->second;
+    }
+    return slot;
   }
   
   
@@ -70,21 +77,18 @@ namespace opspace {
     : Behavior(name),
       task_set_(2)
   {
-    declareTask("default", "eepos", &task_set_[0]);
-    declareTask("default", "posture", &task_set_[1]);
+    declareSlot("default", "eepos", task_set_[0]);
+    declareSlot("default", "posture", task_set_[1]);
   }
   
   
   Status TPBehavior::
   init(Model const & model)
   {
-    if ( ! lookupTask<PositionTask>("default", "eepos")) {
-      return Status(false, "default/eepos must be a PositionTask");
-    }
-    if ( ! lookupTask<PostureTask>("default", "posture")) {
-      return Status(false, "default/posture must be a PostureTask");
-    }
     for (size_t ii(0); ii < task_set_.size(); ++ii) {
+      if ( ! task_set_[ii]) {
+	return Status(false, "missing slot assignment");
+      }
       Status const st(task_set_[ii]->init(model));
       if ( ! st) {
 	return st;

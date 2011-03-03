@@ -42,6 +42,45 @@
 
 namespace opspace {
   
+  
+  class TaskSlotAPI
+  {
+  public:
+    std::string const state_name_;
+    std::string const slot_name_;
+    
+    TaskSlotAPI(std::string const & state_name,
+		std::string const & slot_name,
+		boost::shared_ptr<Task> & instance)
+      : state_name_(state_name), slot_name_(slot_name), instance_(instance) {}
+    
+    virtual ~TaskSlotAPI() {}
+    
+    virtual Status assign(boost::shared_ptr<Task> task) { return Status(false, "type mismatch"); }
+    
+  protected:
+    boost::shared_ptr<Task> & instance_;
+  };
+  
+  
+  template<typename task_subtype>
+  class TaskSlot
+    : public TaskSlotAPI
+  {
+  public:
+    TaskSlot(std::string const & state_name, std::string const & task_name, boost::shared_ptr<Task> & instance)
+      : TaskSlotAPI(state_name, task_name, instance) {}
+    
+    virtual Status assign(boost::shared_ptr<Task> task) {
+      if (dynamic_cast<task_subtype *>(task.get())) {
+	instance_ = task;
+	return Status();
+      }
+      return Status(false, "type mismatch or null task");
+    }
+  };
+  
+  
   class Behavior
   {
   public:
@@ -55,36 +94,28 @@ namespace opspace {
     inline std::string const & getName() const { return name_; }
     inline task_set_t const * getTaskSet() { return active_task_set_; }
     
-    /** Just say task_type = Task if you don't care about the exact subclass... */
-    template<typename task_type>
-    task_type * lookupTask(std::string const & state_name, std::string const & task_name)
-    {
-      state_map_t::iterator ism(state_map_.find(state_name));
-      if (ism == state_map_.end()) {
-	return 0;
-      }
-      state_desc_t::iterator isd(ism->second.find(task_name));
-      if (isd == ism->second.end()) {
-	return 0;
-      }
-      return dynamic_cast<task_type*>(isd->second->get());
-    }
+    boost::shared_ptr<TaskSlotAPI> lookupSlot(std::string const & state_name, std::string const & task_name);
     
   protected:
     Behavior(std::string const & name);
-  
-    void declareTask(std::string const & state_name,
-		     std::string const & task_name,
-		     boost::shared_ptr<Task> * task);
-
+    
+    template<typename task_subtype>
+    void declareSlot(std::string const & state_name,
+		     std::string const & slot_name,
+		     boost::shared_ptr<task_subtype> task)
+    {
+      boost::shared_ptr<TaskSlotAPI> slot(new TaskSlot<task_subtype>(state_name, slot_name, task));
+      state_map_[state_name][slot_name] = slot;
+    }
+    
     std::string const name_;
     
     /** Has to be set by subclasses in the update() method. */
     task_set_t const * active_task_set_;
     
   private:
-    typedef std::map<std::string, boost::shared_ptr<Task> *> state_desc_t;
-    typedef std::map<std::string, state_desc_t> state_map_t;
+    typedef std::map<std::string, boost::shared_ptr<TaskSlotAPI> > task_slot_map_t;
+    typedef std::map<std::string, task_slot_map_t> state_map_t;
     state_map_t state_map_;
   };
   
