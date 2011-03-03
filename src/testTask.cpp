@@ -77,7 +77,7 @@ TEST (task, basics)
   st = odd.init(*puma);
   EXPECT_FALSE (st.ok) << "init before selection setting should have failed";
   
-  Parameter * selection(odd.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR));
+  Parameter * selection(odd.lookupParameter("selection", PARAMETER_TYPE_VECTOR));
   ASSERT_NE ((void*)0, selection) << "failed to retrieve selection parameter";
   
   Vector sel(Vector::Zero(puma->getNDOF()));
@@ -99,7 +99,7 @@ static shared_ptr<Task> create_sel_jp_task(string const & name, Vector const & s
   throw(runtime_error)
 {
   SelectedJointPostureTask * task(new SelectedJointPostureTask(name));
-  Parameter * sel_p(task->lookupParameter("selection", TASK_PARAM_TYPE_VECTOR));
+  Parameter * sel_p(task->lookupParameter("selection", PARAMETER_TYPE_VECTOR));
   if ( ! sel_p) {
     delete task;
     throw runtime_error("failed to retrieve selection parameter");
@@ -306,54 +306,54 @@ TEST (task, jlimit)
     Model * puma(get_puma());
     size_t const ndof(puma->getNDOF());
     
-    Parameter * param(jlimit->lookupParameter("dt_seconds", TASK_PARAM_TYPE_REAL));
+    Parameter * param(jlimit->lookupParameter("dt_seconds", PARAMETER_TYPE_REAL));
     ASSERT_NE ((void*)0, param) << "failed to get dt_seconds param";
     Status st(param->set(0.1));
     ASSERT_TRUE (st.ok) << "failed to set dt_seconds: " << st.errstr;
 
-    param = jlimit->lookupParameter("upper_stop_deg", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("upper_stop_deg", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get upper_stop_deg param";
     Vector foo(30.0 * Vector::Ones(ndof));
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set upper_stop_deg: " << st.errstr;
 
-    param = jlimit->lookupParameter("upper_trigger_deg", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("upper_trigger_deg", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get upper_trigger_deg param";
     foo = 20.0 * Vector::Ones(ndof);
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set upper_trigger_deg: " << st.errstr;
 
-    param = jlimit->lookupParameter("lower_stop_deg", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("lower_stop_deg", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get lower_stop_deg param";
     foo = -30.0 * Vector::Ones(ndof);
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set lower_stop_deg: " << st.errstr;
 
-    param = jlimit->lookupParameter("lower_trigger_deg", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("lower_trigger_deg", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get lower_trigger_deg param";
     foo = -20.0 * Vector::Ones(ndof);
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set lower_trigger_deg: " << st.errstr;
 
-    param = jlimit->lookupParameter("kp", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("kp", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get kp param";
     foo = 100.0 * Vector::Ones(ndof);
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set kp: " << st.errstr;
 
-    param = jlimit->lookupParameter("kd", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("kd", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get kd param";
     foo = 20.0 * Vector::Ones(ndof);
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set kd: " << st.errstr;
 
-    param = jlimit->lookupParameter("maxvel", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("maxvel", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get maxvel param";
     foo = 10.0 * M_PI / 180.0 * Vector::Ones(ndof);
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set maxvel: " << st.errstr;
 
-    param = jlimit->lookupParameter("maxacc", TASK_PARAM_TYPE_VECTOR);
+    param = jlimit->lookupParameter("maxacc", PARAMETER_TYPE_VECTOR);
     ASSERT_NE ((void*)0, param) << "failed to get maxacc param";
     foo = 25.0 * M_PI / 180.0 * Vector::Ones(ndof);
     st = param->set(foo);

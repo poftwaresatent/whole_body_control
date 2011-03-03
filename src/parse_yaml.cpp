@@ -125,7 +125,7 @@ namespace opspace {
       }
       else {
 	
-	if (TASK_PARAM_TYPE_INTEGER == param->type_) {
+	if (PARAMETER_TYPE_INTEGER == param->type_) {
 	  if (YAML::CT_SCALAR != value.GetType()) {
 	    throw std::runtime_error("parameter `" + key + "' of task '" + task.name
 				     + "` should be scalar (integer)");
@@ -142,7 +142,7 @@ namespace opspace {
 	  }
 	}
 	
-	else if (TASK_PARAM_TYPE_REAL == param->type_) {
+	else if (PARAMETER_TYPE_REAL == param->type_) {
 	  if (YAML::CT_SCALAR != value.GetType()) {
 	    throw std::runtime_error("parameter `" + key + "' of task '" + task.name
 				     + "` should be scalar (real)");
@@ -159,7 +159,7 @@ namespace opspace {
 	  }
 	}
 	
-	else if (TASK_PARAM_TYPE_VECTOR == param->type_) {
+	else if (PARAMETER_TYPE_VECTOR == param->type_) {
 	  if (YAML::CT_SEQUENCE != value.GetType()) {
 	    throw std::runtime_error("parameter `" + key + "' of task '" + task.name
 				     + "` should be sequence (vector)");
@@ -176,7 +176,7 @@ namespace opspace {
 	  }
 	}
 	
-	else if (TASK_PARAM_TYPE_MATRIX == param->type_) {
+	else if (PARAMETER_TYPE_MATRIX == param->type_) {
 	  throw std::runtime_error("setting parameter `" + key + "' of task '" + task.name
 				   + "` requires MATRIX type which is not (yet) supported");
 	}

@@ -8,6 +8,7 @@ include_directories (
 
 add_library (opspace SHARED
   src/opspace.cpp
+  src/Parameter.cpp
   src/Task.cpp
   src/TaskFactory.cpp
   src/TypeIOTGCursor.cpp
