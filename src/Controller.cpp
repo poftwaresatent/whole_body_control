@@ -119,7 +119,9 @@ namespace opspace {
   init(Model const & model)
   {
     if ( ! fallback_task_) {
-      return Status(false, "LController requires a fallback task");
+      PostureTask * pt(new PostureTask("LController_fallback_posture"));
+      pt->quickSetup(50, 5, 1, 2);
+      fallback_task_.reset(pt);
     }
     if ( ! dynamic_cast<PostureTask*>(fallback_task_.get())) {
       return Status(false, "fallback task has to be a posture (for now)");

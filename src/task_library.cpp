@@ -494,6 +494,16 @@ namespace opspace {
   }
   
   
+  void PostureTask::
+  quickSetup(double kp, double kd, double maxvel, double maxacc)
+  {
+    kp_ = kp * Vector::Ones(1);
+    kd_ = kd * Vector::Ones(1);
+    maxvel_ = maxvel * Vector::Ones(1);
+    maxacc_ = maxacc * Vector::Ones(1);
+  }
+  
+  
   JointLimitTask::
   JointLimitTask(std::string const & name)
     : Task(name),
@@ -704,6 +714,124 @@ namespace opspace {
     pretty_print(actual_, os, "actual", prefix + "  ");
     pretty_print(goal_, os, "goal", prefix + "  ");
     pretty_print(jacobian_, os, "jacobian", prefix + "  ");
+  }
+
+
+  OrientationTask::
+  OrientationTask(std::string const & name)
+    : Task(name),
+      end_effector_id_(-1),
+      kp_(50),
+      kd_(5),
+      maxvel_(0.5)
+  {
+    declareParameter("end_effector_id", &end_effector_id_);
+    declareParameter("kp", &kp_);
+    declareParameter("kd", &kd_);
+    declareParameter("maxvel", &maxvel_);
+  }
+  
+  
+  Status OrientationTask::
+  init(Model const & model)
+  {
+    if (0 > end_effector_id_) {
+      return Status(false, "I need an end effector ID please");
+    }
+    if ( ! updateActual(model)) {
+      return Status(false, "invalid end effector ID or failure to compute Jacobian");
+    }
+    goal_x_ = actual_x_;
+    goal_y_ = actual_y_;
+    goal_z_ = actual_z_;
+    Status ok;
+    return ok;
+  }
+  
+  
+  taoDNode const * OrientationTask::
+  updateActual(Model const & model)
+  {
+    taoDNode * ee_node(model.getNode(end_effector_id_));
+    if ( ! ee_node) {
+      return 0;
+    }
+    
+    jspace::Transform ee_transform;
+    model.computeGlobalFrame(ee_node, Vector::Zero(3), ee_transform);
+    Matrix Jfull;
+    if ( ! model.computeJacobian(ee_node,
+				 ee_transform.translation()[0],
+				 ee_transform.translation()[1],
+				 ee_transform.translation()[2],
+				 Jfull)) {
+      return 0;
+    }
+    
+    jacobian_ = Jfull.block(3, 0, 3, Jfull.cols());
+    
+    actual_x_ = ee_transform.linear().block(0, 0, 3, 1);
+    actual_y_ = ee_transform.linear().block(0, 1, 3, 1);
+    actual_z_ = ee_transform.linear().block(0, 2, 3, 1);
+
+    actual_.resize(9);
+    actual_.block(0, 0, 3, 1) = goal_x_;
+    actual_.block(3, 0, 3, 1) = goal_y_;
+    actual_.block(6, 0, 3, 1) = goal_z_;
+    
+    velocity_ = jacobian_ * model.getState().velocity_;
+    
+    return ee_node;
+  }
+  
+  
+  Status OrientationTask::
+  update(Model const & model)
+  {
+    if ( ! updateActual(model)) {
+      return Status(false, "invalid end effector ID");
+    }
+    delta_ = actual_x_.cross(goal_x_) + actual_y_.cross(goal_y_) + actual_z_.cross(goal_z_);
+    delta_ *= -0.5;
+    
+    command_ = -delta_ * kp_;
+    if ((maxvel_ > 1e-4) && (kd_ > 1e-4)) {
+      double const sat(fabs((command_.norm() / maxvel_) / kd_));
+      if (sat > 1.0) {
+	command_ /= sat;
+      }
+    }
+    
+    command_ -= velocity_ * kd_;
+    
+    Status ok;
+    return ok;
+  }
+  
+  
+  void OrientationTask::
+  dbg(std::ostream & os,
+      std::string const & title,
+      std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    os << prefix << "orientation task: `" << name_ << "'\n";
+    pretty_print(velocity_, os, "velocity", prefix + "  ");
+    pretty_print(goal_x_, os, "goal_x", prefix + "  ");
+    pretty_print(goal_y_, os, "goal_y", prefix + "  ");
+    pretty_print(goal_z_, os, "goal_z", prefix + "  ");
+    Vector foo(3);
+    foo << goal_x_.norm(), goal_y_.norm(), goal_z_.norm();
+    pretty_print(foo, os, "length of goal unit vectors", prefix + "  ");
+    pretty_print(actual_x_, os, "actual_x", prefix + "  ");
+    pretty_print(actual_y_, os, "actual_y", prefix + "  ");
+    pretty_print(actual_z_, os, "actual_z", prefix + "  ");
+    foo << actual_x_.norm(), actual_y_.norm(), actual_z_.norm();
+    pretty_print(foo, os, "length of actual unit vectors", prefix + "  ");
+    pretty_print(delta_, os, "delta", prefix + "  ");
+    pretty_print(command_, os, "command", prefix + "  ");
   }
 
 }

@@ -267,6 +267,11 @@ namespace opspace {
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
+    
+    /**
+       \todo Maybe move this (or something similar) to the superclass?
+    */
+    void quickSetup(double kp, double kd, double maxvel, double maxacc);
   };
 
 
@@ -308,8 +313,40 @@ namespace opspace {
     Vector goal_;
 
     void updateState(Model const & model);
-
   };
+  
+  
+  class OrientationTask
+    : public Task
+  {
+  public:
+    explicit OrientationTask(std::string const & name);
+    
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+    
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
+  protected:
+    taoDNode const * updateActual(Model const & model);
+    
+    //    Vector goal_;		// direction cosines
+    Eigen::Vector3d goal_x_;
+    Eigen::Vector3d goal_y_;
+    Eigen::Vector3d goal_z_;
+    Eigen::Vector3d actual_x_;
+    Eigen::Vector3d actual_y_;
+    Eigen::Vector3d actual_z_;
+    Vector velocity_;		// instantaneous omega
+    Vector delta_;		// instantaneous angular difference
+    int end_effector_id_;
+    double kp_;
+    double kd_;
+    double maxvel_;
+  };
+
   
 }
 

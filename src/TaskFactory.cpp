@@ -63,6 +63,9 @@ namespace opspace {
     if ("opspace::JointLimitTask" == type) {
       return new opspace::JointLimitTask(name);
     }
+    if ("opspace::OrientationTask" == type) {
+      return new opspace::OrientationTask(name);
+    }
     return 0;
   }
   
