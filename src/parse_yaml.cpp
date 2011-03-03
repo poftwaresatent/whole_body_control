@@ -258,7 +258,7 @@ namespace opspace {
 	
 	if (behavior.dbg) {
 	  *behavior.dbg << "  assigned task instance `" << task_name << "' to slot `" << slot_name
-			<< "' of state `" << key << " in behavior `" << behavior.name << "'\n";
+			<< "' of state `" << key << "' in behavior `" << behavior.name << "'\n";
 	}
       }
     }

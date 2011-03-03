@@ -26,6 +26,8 @@ target_link_libraries (hello_world opspace)
 if (HAVE_GTEST)
   add_executable (testTask src/testTask.cpp)
   target_link_libraries (testTask opspace jspace_test gtest)
+  add_executable (testBehaviorFactory src/testBehaviorFactory.cpp)
+  target_link_libraries (testBehaviorFactory opspace jspace_test gtest)
 endif (HAVE_GTEST)
 
 add_executable (testTaskFactory src/testTaskFactory.cpp)
