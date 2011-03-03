@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
- * Authors: Roland Philippsen and Luis Sentis
+ * Author: Roland Philippsen
  *
  * BSD license:
  * Redistribution and use in source and binary forms, with or without
@@ -36,14 +36,12 @@
 #ifndef OPSPACE_PARAMETER_HPP
 #define OPSPACE_PARAMETER_HPP
 
-// #include <jspace/Model.hpp>
 #include <jspace/Status.hpp>
 #include <jspace/wrap_eigen.hpp>
 
 namespace opspace {
   
   
-  // using jspace::Model;
   using jspace::Status;
   using jspace::Vector;
   using jspace::Matrix;

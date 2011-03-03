@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
- * Authors: Roland Philippsen and Luis Sentis
+ * Author: Roland Philippsen
  *
  * BSD license:
  * Redistribution and use in source and binary forms, with or without
