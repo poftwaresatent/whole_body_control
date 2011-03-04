@@ -116,7 +116,7 @@ namespace opspace {
       shake_position_(Vector::Zero(3)),
       shake_posture_(Vector::Zero(7)), // XXXX hardcoded for dreamer
       shake_distance_(0.0),
-      shake_distance_threshold_(0.05),
+      shake_distance_threshold_(0.08),
       shake_count_(0),
       shake_count_threshold_(700),
       wave_position_left_(Vector::Zero(3)),
