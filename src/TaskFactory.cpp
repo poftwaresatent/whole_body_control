@@ -177,6 +177,9 @@ namespace opspace {
     if ("opspace::TPBehavior" == type) {
       return new opspace::TPBehavior(name);
     }
+    if ("opspace::HelloGoodbyeBehavior" == type) {
+      return new opspace::HelloGoodbyeBehavior(name);
+    }
     return 0;
   }
   

@@ -98,7 +98,6 @@ namespace opspace {
   {
   public:
     typedef std::vector<Task *> task_table_t;
-    typedef std::vector<Vector> sv_table_t;
     
     virtual ~Behavior();
     

@@ -58,23 +58,58 @@ namespace opspace {
     PostureTask * posture_;
     task_table_t task_table_;
   };
-  
-  
-  // class CleanBoardBehavior
-  //   : public Behavior
-  // {
-  // public:
-  //   CleanBoardBehavior(std::string const & name)
-  //     : Behavior(name),
-  //   {
-  //     declareTask("approach_board", "eepos", ???);
-  //     declareTask("approach_board", "eeori", ???);
-  //     declareTask("approach_board", "posture", ???);
-  //     declareTask("wipe", "eepos", ???);
-  //     declareTask("wipe", "eeori", ???);
-  //     declareTask("wipe", "eeforce", ???);
-  //     declareTask("wipe", "posture", ???);
-  //   }
+
+
+  class HelloGoodbyeBehavior
+    : public Behavior
+  {
+  public:
+    HelloGoodbyeBehavior(std::string const & name);
+    
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+    virtual task_table_t const * getTaskTable();
+    virtual Status checkJStarSV(Task const * task, Vector const & sv);
+    
+    void dbg(std::ostream & os,
+	     std::string const & title,
+	     std::string const & prefix) const;
+    
+  protected:
+    enum {
+      STATE_START,
+      STATE_SHAKE,
+      STATE_WAVE_LEFT,
+      STATE_WAVE_RIGHT,
+      STATE_RETURN
+    } state_;
+    
+    //    OrientationTask * shake_eeori_;
+    PositionTask * shake_eepos_;
+    PostureTask * shake_posture_;
+    task_table_t shake_;
+    
+    PositionTask * wave_eepos_;
+    PostureTask * wave_posture_;
+    task_table_t wave_;
+    
+    Parameter * shake_eepos_goal_;
+    Parameter * wave_eepos_goal_;
+    
+    Vector shake_position_;
+    double shake_distance_;
+    double shake_distance_threshold_;
+    size_t shake_count_;
+    size_t shake_count_threshold_;
+    
+    Vector wave_position_left_;
+    Vector wave_position_right_;
+    double wave_distance_left_;
+    double wave_distance_right_;
+    double wave_distance_threshold_;
+    size_t wave_count_;
+    size_t wave_count_threshold_;
+  };
   
 }
 
