@@ -118,7 +118,7 @@ namespace opspace {
       shake_distance_(0.0),
       shake_distance_threshold_(0.05),
       shake_count_(0),
-      shake_count_threshold_(1000),
+      shake_count_threshold_(700),
       wave_position_left_(Vector::Zero(3)),
       wave_position_right_(Vector::Zero(3)),
       wave_posture_(Vector::Zero(7)), // XXXX hardcoded for dreamer
@@ -126,7 +126,7 @@ namespace opspace {
       wave_distance_right_(0.0),
       wave_distance_threshold_(0.1),
       wave_count_(0),
-      wave_count_threshold_(5)
+      wave_count_threshold_(6)
   {
     //    declareSlot("shake", "orientation", &shake_eeori_);
     declareSlot("shake", "position", &shake_eepos_task_);
