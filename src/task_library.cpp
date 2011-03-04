@@ -174,7 +174,8 @@ namespace opspace {
   
   
   Status SelectedJointPostureTask::
-  init(Model const & model) {
+  init(Model const & model)
+  {
     size_t const ndof(model.getNDOF());
     active_joints_.clear();	// in case we get called multiple times
     for (size_t ii(0); ii < selection_.rows(); ++ii) {
@@ -482,6 +483,7 @@ namespace opspace {
   init(Model const & model)
   {
     jacobian_ = Matrix::Identity(model.getNDOF(), model.getNDOF());
+    actual_ = model.getState().position_;
     return initTrajectoryTask(model.getState().position_, true);
   }
   

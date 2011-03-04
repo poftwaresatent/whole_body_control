@@ -106,19 +106,22 @@ namespace opspace {
     : Behavior(name),
       state_(STATE_START),
       //      shake_eeori_(0),
-      shake_eepos_(0),
-      shake_posture_(0),
-      wave_eepos_(0),
-      wave_posture_(0),
+      shake_eepos_task_(0),
+      shake_posture_task_(0),
+      wave_eepos_task_(0),
+      wave_posture_task_(0),
       shake_eepos_goal_(0),
       wave_eepos_goal_(0),
+      wave_posture_goal_(0),
       shake_position_(Vector::Zero(3)),
+      shake_posture_(Vector::Zero(7)), // XXXX hardcoded for dreamer
       shake_distance_(0.0),
-      shake_distance_threshold_(0.1),
+      shake_distance_threshold_(0.05),
       shake_count_(0),
-      shake_count_threshold_(200),
+      shake_count_threshold_(1000),
       wave_position_left_(Vector::Zero(3)),
       wave_position_right_(Vector::Zero(3)),
+      wave_posture_(Vector::Zero(7)), // XXXX hardcoded for dreamer
       wave_distance_left_(0.0),
       wave_distance_right_(0.0),
       wave_distance_threshold_(0.1),
@@ -126,10 +129,10 @@ namespace opspace {
       wave_count_threshold_(5)
   {
     //    declareSlot("shake", "orientation", &shake_eeori_);
-    declareSlot("shake", "position", &shake_eepos_);
-    declareSlot("shake", "posture", &shake_posture_);
-    declareSlot("wave", "position", &wave_eepos_);
-    declareSlot("wave", "posture", &wave_posture_);
+    declareSlot("shake", "position", &shake_eepos_task_);
+    declareSlot("shake", "posture", &shake_posture_task_);
+    declareSlot("wave", "position", &wave_eepos_task_);
+    declareSlot("wave", "posture", &wave_posture_task_);
   }
   
   
@@ -141,34 +144,51 @@ namespace opspace {
       return st;
     }
     
-    shake_eepos_goal_ = shake_eepos_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    shake_eepos_goal_ = shake_eepos_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
     if ( ! shake_eepos_goal_) {
       st.ok = false;
       st.errstr = "no appropriate goal parameter in shake position task";
       return st;
     }
-
-    wave_eepos_goal_ = wave_eepos_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    
+    shake_posture_goal_ = shake_posture_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    if ( ! shake_posture_goal_) {
+      st.ok = false;
+      st.errstr = "no appropriate goal parameter in shake posture task";
+      return st;
+    }
+    
+    wave_eepos_goal_ = wave_eepos_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
     if ( ! wave_eepos_goal_) {
       st.ok = false;
       st.errstr = "no appropriate goal parameter in wave position task";
       return st;
     }
     
+    wave_posture_goal_ = wave_posture_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    if ( ! wave_posture_goal_) {
+      st.ok = false;
+      st.errstr = "no appropriate goal parameter in wave position task";
+      return st;
+    }
+    
     //    shake_.push_back(shake_eeori_);
-    shake_.push_back(shake_eepos_);
-    shake_.push_back(shake_posture_);
-    wave_.push_back(wave_eepos_);
-    wave_.push_back(wave_posture_);
+    shake_task_table_.push_back(shake_eepos_task_);
+    shake_task_table_.push_back(shake_posture_task_);
+    wave_task_table_.push_back(wave_eepos_task_);
+    wave_task_table_.push_back(wave_posture_task_);
     
     state_ = STATE_START;
-    shake_position_ = shake_eepos_->getActual();
-    wave_position_left_ = shake_position_;
-    wave_position_left_[1] -= 0.1;
-    //    wave_position_left_[2] += 0.3;
-    wave_position_right_ = shake_position_;
-    wave_position_right_[1] += 0.1;
-    //    wave_position_right_[2] += 0.3;
+    shake_position_ = shake_eepos_task_->getActual();
+    shake_posture_ = shake_posture_task_->getActual();
+    if (7 != shake_posture_.rows()) {
+      st.ok = false;
+      st.errstr = "shake posture is not 7 dimensional";
+      return st;
+    }
+    wave_position_left_ <<  0.30, -0.07, 0.17;
+    wave_position_right_ << 0.29, -0.33, 0.20;
+    wave_posture_ <<        1.24, 0.06, -0.53, 1.87, -0.10, -0.24, 0.14;
     
     return st;
   }
@@ -179,24 +199,24 @@ namespace opspace {
   {
     Status st;
     
-    for (size_t ii(0); ii < shake_.size(); ++ii) {
-      st = shake_[ii]->update(model);
+    for (size_t ii(0); ii < shake_task_table_.size(); ++ii) {
+      st = shake_task_table_[ii]->update(model);
       if ( ! st) {
 	return st;
       }
     }
-    for (size_t ii(0); ii < wave_.size(); ++ii) {
-      st = wave_[ii]->update(model);
+    for (size_t ii(0); ii < wave_task_table_.size(); ++ii) {
+      st = wave_task_table_[ii]->update(model);
       if ( ! st) {
 	return st;
       }
     }
     
-    Vector const shake_delta(shake_position_ - shake_eepos_->getActual());
+    Vector const shake_delta(shake_position_ - shake_eepos_task_->getActual());
     shake_distance_ = shake_delta.norm();
-    Vector const wave_delta_left(wave_position_left_ - wave_eepos_->getActual());
+    Vector const wave_delta_left(wave_position_left_ - wave_eepos_task_->getActual());
     wave_distance_left_ = wave_delta_left.norm();
-    Vector const wave_delta_right(wave_position_right_ - wave_eepos_->getActual());
+    Vector const wave_delta_right(wave_position_right_ - wave_eepos_task_->getActual());
     wave_distance_right_ = wave_delta_right.norm();
     
     switch (state_) {
@@ -218,7 +238,13 @@ namespace opspace {
 	  st = wave_eepos_goal_->set(wave_position_left_);
 	  if ( ! st) {
 	    st.ok = false;
-	    st.errstr = "failed to set position goal for wave (left)";
+	    st.errstr = "failed to set position goal for wave (left): " + st.errstr;
+	    return st;
+	  }
+	  st = wave_posture_goal_->set(wave_posture_);
+	  if ( ! st) {
+	    st.ok = false;
+	    st.errstr = "failed to set posture goal for wave: " + st.errstr;
 	    return st;
 	  }
 	  wave_count_ = 0;
@@ -231,13 +257,25 @@ namespace opspace {
       if (wave_distance_left_ < wave_distance_threshold_) {
 	++wave_count_;
 	if (wave_count_ > wave_count_threshold_) {
+	  st = shake_eepos_goal_->set(shake_position_);
+	  if ( ! st) {
+	    st.ok = false;
+	    st.errstr = "failed to set position goal for shake (return from left): " + st.errstr;
+	    return st;
+	  }
+	  st = shake_posture_goal_->set(shake_posture_);
+	  if ( ! st) {
+	    st.ok = false;
+	    st.errstr = "failed to set posture goal for shake (return from left): " + st.errstr;
+	    return st;
+	  }
 	  state_ = STATE_RETURN;
 	}
 	else {
 	  st = wave_eepos_goal_->set(wave_position_right_);
 	  if ( ! st) {
 	    st.ok = false;
-	    st.errstr = "failed to set position goal for wave (right)";
+	    st.errstr = "failed to set position goal for wave (right): " + st.errstr;
 	    return st;
 	  }
 	  state_ = STATE_WAVE_RIGHT;
@@ -249,13 +287,25 @@ namespace opspace {
       if (wave_distance_right_ < wave_distance_threshold_) {
 	++wave_count_;
 	if (wave_count_ > wave_count_threshold_) {
+	  st = shake_eepos_goal_->set(shake_position_);
+	  if ( ! st) {
+	    st.ok = false;
+	    st.errstr = "failed to set position goal for shake (return from right): " + st.errstr;
+	    return st;
+	  }
+	  st = shake_posture_goal_->set(shake_posture_);
+	  if ( ! st) {
+	    st.ok = false;
+	    st.errstr = "failed to set posture goal for shake (return from right): " + st.errstr;
+	    return st;
+	  }
 	  state_ = STATE_RETURN;
 	}
 	else {
 	  st = wave_eepos_goal_->set(wave_position_left_);
 	  if ( ! st) {
 	    st.ok = false;
-	    st.errstr = "failed to set position goal for wave (left)";
+	    st.errstr = "failed to set position goal for wave (left): " + st.errstr;
 	    return st;
 	  }
 	  state_ = STATE_WAVE_LEFT;
@@ -284,10 +334,10 @@ namespace opspace {
     case STATE_START:
     case STATE_SHAKE:
     case STATE_RETURN:
-      return &shake_;
+      return &shake_task_table_;
     case STATE_WAVE_LEFT:
     case STATE_WAVE_RIGHT:
-      return &wave_;
+      return &wave_task_table_;
     }
     return 0;
   }
@@ -298,8 +348,8 @@ namespace opspace {
   {
     if (//(task == shake_eeori_)
 	//||
-	(task == shake_eepos_)
-	|| (task == wave_eepos_))
+	(task == shake_eepos_task_)
+	|| (task == wave_eepos_task_))
       {
 	if (sv.rows() != 3) {
 	  return Status(false, "dimension mismatch");

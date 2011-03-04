@@ -85,18 +85,21 @@ namespace opspace {
     } state_;
     
     //    OrientationTask * shake_eeori_;
-    PositionTask * shake_eepos_;
-    PostureTask * shake_posture_;
-    task_table_t shake_;
+    PositionTask * shake_eepos_task_;
+    PostureTask * shake_posture_task_;
+    task_table_t shake_task_table_;
     
-    PositionTask * wave_eepos_;
-    PostureTask * wave_posture_;
-    task_table_t wave_;
+    PositionTask * wave_eepos_task_;
+    PostureTask * wave_posture_task_;
+    task_table_t wave_task_table_;
     
     Parameter * shake_eepos_goal_;
+    Parameter * shake_posture_goal_;
     Parameter * wave_eepos_goal_;
+    Parameter * wave_posture_goal_;
     
     Vector shake_position_;
+    Vector shake_posture_;
     double shake_distance_;
     double shake_distance_threshold_;
     size_t shake_count_;
@@ -104,6 +107,7 @@ namespace opspace {
     
     Vector wave_position_left_;
     Vector wave_position_right_;
+    Vector wave_posture_;
     double wave_distance_left_;
     double wave_distance_right_;
     double wave_distance_threshold_;
