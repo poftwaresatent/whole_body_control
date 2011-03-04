@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/Behavior.hpp>
+#include <opspace/behavior_library.hpp>
 #include <opspace/task_library.hpp>
 
 using boost::shared_ptr;
@@ -42,75 +42,61 @@ using boost::shared_ptr;
 namespace opspace {
   
   
-  Behavior::
-  Behavior(std::string const & name)
-    : name_(name)
+  TPBehavior::
+  TPBehavior(std::string const & name)
+    : Behavior(name)
   {
+    declareSlot("default", "eepos", &eepos_);
+    declareSlot("default", "posture", &posture_);
   }
   
   
-  Behavior::
-  ~Behavior()
-  {
-  }
-  
-  
-  Status Behavior::
+  Status TPBehavior::
   init(Model const & model)
   {
-    bool ok(true);
-
-    {
-      std::ostringstream msg;
-      msg << "missing task instances:\n";
-      for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-	for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	  if ( ! it->second->getInstance()) {
-	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << is->first << "'\n";
-	  }
-	}
-      }
-      if ( ! ok) {
-	return Status(false, msg.str());
-      }
+    Status st(Behavior::init(model));
+    if ( ! st) {
+      return st;
     }
-    
-    {
-      std::ostringstream msg;
-      msg << "failed task initializations:\n";
-      for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-	for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	  Status const st(it->second->getInstance()->init(model));
-	  if ( ! st) {
-	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << is->first
-		<< "': " << st.errstr << "\n";
-	  }
-	}
-      }
-      if ( ! ok) {
-	return Status(false, msg.str());
-      }
-    }
-    
-    return Status();
+    task_table_.push_back(eepos_);
+    task_table_.push_back(posture_);
+    return st;
   }
   
   
-  boost::shared_ptr<TaskSlotAPI> Behavior::
-  lookupSlot(std::string const & state_name, std::string const & task_name)
+  Status TPBehavior::
+  update(Model const & model)
   {
-    shared_ptr<TaskSlotAPI> slot;
-    state_map_t::iterator ism(state_map_.find(state_name));
-    if (ism == state_map_.end()) {
-      return slot;
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      Status const st(task_table_[ii]->update(model));
+      if ( ! st) {
+	return st;
+      }
     }
-    task_slot_map_t::iterator isd(ism->second.find(task_name));
-    if (isd != ism->second.end()) {
-      slot = isd->second;
-    }
-    return slot;
+    Status ok;
+    return ok;
   }
-
+  
+  
+  Behavior::task_table_t const * TPBehavior::
+  getTaskTable()
+  {
+    return &task_table_;
+  }
+  
+  
+  Status TPBehavior::
+  checkFeasability(sv_table_t const & jstar_sv_table)
+  {
+    Vector const & eepos_sv(jstar_sv_table[0]);
+    if (eepos_sv.rows() < 3) {
+      return Status(false, "dimension mismatch");
+    }
+    if (eepos_sv[2] < eepos_->getSigmaThreshold()) {
+      return Status(false, "singular eepos");
+    }
+    Status ok;
+    return ok;
+  }
+  
 }

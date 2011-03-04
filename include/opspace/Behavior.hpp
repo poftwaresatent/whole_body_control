@@ -50,16 +50,15 @@ namespace opspace {
     std::string const slot_name_;
     
     TaskSlotAPI(std::string const & state_name,
-		std::string const & slot_name,
-		boost::shared_ptr<Task> & instance)
-      : state_name_(state_name), slot_name_(slot_name), instance_(instance) {}
+		std::string const & slot_name)
+      : state_name_(state_name), slot_name_(slot_name) {}
     
     virtual ~TaskSlotAPI() {}
     
-    virtual Status assign(boost::shared_ptr<Task> task) { return Status(false, "type mismatch"); }
+    virtual Status assign(boost::shared_ptr<Task> instance)
+    { return Status(false, "type mismatch"); }
     
-  protected:
-    boost::shared_ptr<Task> & instance_;
+    virtual boost::shared_ptr<Task> getInstance() = 0;
   };
   
   
@@ -68,33 +67,51 @@ namespace opspace {
     : public TaskSlotAPI
   {
   public:
-    TaskSlot(std::string const & state_name, std::string const & task_name, boost::shared_ptr<Task> & instance)
-      : TaskSlotAPI(state_name, task_name, instance) {}
+    TaskSlot(std::string const & state_name,
+	     std::string const & task_name,
+	     task_subtype ** slot)
+      : TaskSlotAPI(state_name, task_name), slot_(slot) {}
     
-    virtual Status assign(boost::shared_ptr<Task> task) {
-      if (dynamic_cast<task_subtype *>(task.get())) {
-	instance_ = task;
-	return Status();
+    virtual Status assign(boost::shared_ptr<Task> instance) {
+      Task * base(instance.get());
+      if ( ! base) {
+	return Status(false, "null instance");
       }
-      return Status(false, "type mismatch or null task");
+      task_subtype * raw(dynamic_cast<task_subtype *>(base));
+      if ( ! raw) {
+	return Status(false, "type mismatch");
+      }
+      *slot_ = raw;
+      instance_ = instance;
+      return Status();
     }
+
+    virtual boost::shared_ptr<Task> getInstance() { return instance_; }
+    
+  protected:
+    task_subtype ** slot_;
+    boost::shared_ptr<Task> instance_;
   };
   
   
   class Behavior
   {
   public:
-    typedef std::vector<boost::shared_ptr<Task> > task_set_t;
+    typedef std::vector<Task *> task_table_t;
+    typedef std::vector<Vector> sv_table_t;
     
     virtual ~Behavior();
     
-    virtual Status init(Model const & model) = 0;
     virtual Status update(Model const & model) = 0;
+    virtual task_table_t const * getTaskTable() = 0;
+    
+    virtual Status init(Model const & model);
+    virtual Status checkFeasability(sv_table_t const & sv_table) { Status ok; return ok; }
     
     inline std::string const & getName() const { return name_; }
-    inline task_set_t const * getTaskSet() { return active_task_set_; }
     
-    boost::shared_ptr<TaskSlotAPI> lookupSlot(std::string const & state_name, std::string const & task_name);
+    boost::shared_ptr<TaskSlotAPI> lookupSlot(std::string const & state_name,
+					      std::string const & task_name);
     
   protected:
     Behavior(std::string const & name);
@@ -102,53 +119,20 @@ namespace opspace {
     template<typename task_subtype>
     void declareSlot(std::string const & state_name,
 		     std::string const & slot_name,
-		     boost::shared_ptr<task_subtype> task)
+		     task_subtype ** slot)
     {
-      boost::shared_ptr<TaskSlotAPI> slot(new TaskSlot<task_subtype>(state_name, slot_name, task));
-      state_map_[state_name][slot_name] = slot;
+      boost::shared_ptr<TaskSlotAPI>
+	slot_api(new TaskSlot<task_subtype>(state_name, slot_name, slot));
+      state_map_[state_name][slot_name] = slot_api;
     }
     
     std::string const name_;
-    
-    /** Has to be set by subclasses in the update() method. */
-    task_set_t const * active_task_set_;
     
   private:
     typedef std::map<std::string, boost::shared_ptr<TaskSlotAPI> > task_slot_map_t;
     typedef std::map<std::string, task_slot_map_t> state_map_t;
     state_map_t state_map_;
   };
-  
-  
-  class TPBehavior
-    : public Behavior
-  {
-  public:
-    TPBehavior(std::string const & name);
-    
-    virtual Status init(Model const & model);
-    virtual Status update(Model const & model);
-    
-  protected:
-    task_set_t task_set_;
-  };
-  
-  
-  // class CleanBoardBehavior
-  //   : public Behavior
-  // {
-  // public:
-  //   CleanBoardBehavior(std::string const & name)
-  //     : Behavior(name),
-  //   {
-  //     declareTask("approach_board", "eepos", ???);
-  //     declareTask("approach_board", "eeori", ???);
-  //     declareTask("approach_board", "posture", ???);
-  //     declareTask("wipe", "eepos", ???);
-  //     declareTask("wipe", "eeori", ???);
-  //     declareTask("wipe", "eeforce", ???);
-  //     declareTask("wipe", "posture", ???);
-  //   }
   
 }
 

@@ -15,6 +15,7 @@ add_library (opspace SHARED
   src/Controller.cpp
   src/controller_library.cpp
   src/task_library.cpp
+  src/behavior_library.cpp
   src/other_controllers.cpp
   src/parse_yaml.cpp
   src/Behavior.cpp

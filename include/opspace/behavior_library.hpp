@@ -33,84 +33,49 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef OPSPACE_BEHAVIOR_LIBRARY_HPP
+#define OPSPACE_BEHAVIOR_LIBRARY_HPP
+
 #include <opspace/Behavior.hpp>
 #include <opspace/task_library.hpp>
 
-using boost::shared_ptr;
-
-
 namespace opspace {
   
-  
-  Behavior::
-  Behavior(std::string const & name)
-    : name_(name)
-  {
-  }
-  
-  
-  Behavior::
-  ~Behavior()
-  {
-  }
-  
-  
-  Status Behavior::
-  init(Model const & model)
-  {
-    bool ok(true);
 
-    {
-      std::ostringstream msg;
-      msg << "missing task instances:\n";
-      for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-	for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	  if ( ! it->second->getInstance()) {
-	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << is->first << "'\n";
-	  }
-	}
-      }
-      if ( ! ok) {
-	return Status(false, msg.str());
-      }
-    }
-    
-    {
-      std::ostringstream msg;
-      msg << "failed task initializations:\n";
-      for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-	for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	  Status const st(it->second->getInstance()->init(model));
-	  if ( ! st) {
-	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << is->first
-		<< "': " << st.errstr << "\n";
-	  }
-	}
-      }
-      if ( ! ok) {
-	return Status(false, msg.str());
-      }
-    }
-    
-    return Status();
-  }
-  
-  
-  boost::shared_ptr<TaskSlotAPI> Behavior::
-  lookupSlot(std::string const & state_name, std::string const & task_name)
+  class TPBehavior
+    : public Behavior
   {
-    shared_ptr<TaskSlotAPI> slot;
-    state_map_t::iterator ism(state_map_.find(state_name));
-    if (ism == state_map_.end()) {
-      return slot;
-    }
-    task_slot_map_t::iterator isd(ism->second.find(task_name));
-    if (isd != ism->second.end()) {
-      slot = isd->second;
-    }
-    return slot;
-  }
-
+  public:
+    TPBehavior(std::string const & name);
+    
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+    virtual task_table_t const * getTaskTable();
+    virtual Status checkFeasability(sv_table_t const & sv_table);
+    
+  protected:
+    PositionTask * eepos_;
+    PostureTask * posture_;
+    task_table_t task_table_;
+  };
+  
+  
+  // class CleanBoardBehavior
+  //   : public Behavior
+  // {
+  // public:
+  //   CleanBoardBehavior(std::string const & name)
+  //     : Behavior(name),
+  //   {
+  //     declareTask("approach_board", "eepos", ???);
+  //     declareTask("approach_board", "eeori", ???);
+  //     declareTask("approach_board", "posture", ???);
+  //     declareTask("wipe", "eepos", ???);
+  //     declareTask("wipe", "eeori", ???);
+  //     declareTask("wipe", "eeforce", ???);
+  //     declareTask("wipe", "posture", ???);
+  //   }
+  
 }
+
+#endif // OPSPACE_BEHAVIOR_LIBRARY_HPP

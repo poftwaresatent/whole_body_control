@@ -36,6 +36,7 @@
 #include <opspace/TaskFactory.hpp>
 #include <opspace/Behavior.hpp>
 #include <opspace/task_library.hpp>
+#include <opspace/behavior_library.hpp>
 #include <opspace/parse_yaml.hpp>
 #include <fstream>
 #include <stdexcept>
