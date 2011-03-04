@@ -40,8 +40,8 @@
 #include <boost/shared_ptr.hpp>
 
 namespace opspace {
-
-
+  
+  
   /**
      Semi-abstract base class for operational space controllers. This
      base class handles the registration of tasks, and subclasses have

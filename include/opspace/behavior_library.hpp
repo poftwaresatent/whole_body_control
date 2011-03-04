@@ -51,7 +51,7 @@ namespace opspace {
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
     virtual task_table_t const * getTaskTable();
-    virtual Status checkFeasability(sv_table_t const & sv_table);
+    virtual Status checkJStarSV(Task const * task, Vector const & sv);
     
   protected:
     PositionTask * eepos_;

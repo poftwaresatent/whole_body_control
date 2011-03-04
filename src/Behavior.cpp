@@ -67,7 +67,7 @@ namespace opspace {
 	for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
 	  if ( ! it->second->getInstance()) {
 	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << is->first << "'\n";
+	    msg << "  state `" << is->first << "' task `" << it->first << "'\n";
 	  }
 	}
       }
@@ -84,7 +84,7 @@ namespace opspace {
 	  Status const st(it->second->getInstance()->init(model));
 	  if ( ! st) {
 	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << is->first
+	    msg << "  state `" << is->first << "' task `" << it->first
 		<< "': " << st.errstr << "\n";
 	  }
 	}
@@ -112,5 +112,28 @@ namespace opspace {
     }
     return slot;
   }
-
+  
+  
+  void Behavior::
+  dbg(std::ostream & os,
+      std::string const & title,
+      std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    os << prefix << "behavior " << name_ << "\n";
+    for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
+      for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
+	Task const * task(it->second->getInstance().get());
+	if (task) {
+	  task->dbg(os, "  " + is->first + "/" + it->first, prefix + "    ");
+	}
+	else {
+	  os << prefix << "  " << is->first << "/" << it->first << " is NULL\n";
+	}
+      }
+    }
+  }
+  
 }

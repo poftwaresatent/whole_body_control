@@ -33,71 +33,48 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/behavior_library.hpp>
-#include <opspace/task_library.hpp>
+#ifndef OPSPACE_CONTROLLER_NG_HPP
+#define OPSPACE_CONTROLLER_NG_HPP
 
-using boost::shared_ptr;
-
+#include <opspace/Behavior.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace opspace {
   
   
-  TPBehavior::
-  TPBehavior(std::string const & name)
-    : Behavior(name)
+  class ControllerNG
   {
-    declareSlot("default", "eepos", &eepos_);
-    declareSlot("default", "posture", &posture_);
-  }
-  
-  
-  Status TPBehavior::
-  init(Model const & model)
-  {
-    Status st(Behavior::init(model));
-    if ( ! st) {
-      return st;
-    }
-    task_table_.push_back(eepos_);
-    task_table_.push_back(posture_);
-    return st;
-  }
-  
-  
-  Status TPBehavior::
-  update(Model const & model)
-  {
-    for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      Status const st(task_table_[ii]->update(model));
-      if ( ! st) {
-	return st;
-      }
-    }
-    Status ok;
-    return ok;
-  }
-  
-  
-  Behavior::task_table_t const * TPBehavior::
-  getTaskTable()
-  {
-    return &task_table_;
-  }
-  
-  
-  Status TPBehavior::
-  checkJStarSV(Task const * task, Vector const & sv)
-  {
-    if (task == eepos_) {
-      if (sv.rows() != 3) {
-	return Status(false, "eepos dimension mismatch");
-      }
-      if (sv[2] < eepos_->getSigmaThreshold()) {
-	return Status(false, "singular eepos");
-      }
-    }
-    Status ok;
-    return ok;
-  }
-  
+  public:
+    explicit ControllerNG(std::string const & name);
+    virtual ~ControllerNG() {}
+    
+    std::string const & getName() const { return name_; }
+    
+    void setFallbackTask(boost::shared_ptr<Task> task);
+    
+    virtual Status init(Model const & model);
+
+    virtual Status computeCommand(Model const & model,
+				  Behavior & behavior,
+				  Vector & gamma);
+
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
+    Status computeFallback(Model const & model,
+			   bool init_required,
+			   Vector & gamma);
+    
+  protected:
+    std::string const name_;
+    boost::shared_ptr<Task> fallback_task_;
+    std::vector<Vector> sv_lstar_; // stored only for dbg()
+    std::vector<Vector> sv_jstar_; // stored only for dbg()
+    bool fallback_;
+    std::string fallback_reason_;
+  };
+
 }
+
+#endif // OPSPACE_CONTROLLER_NG_HPP

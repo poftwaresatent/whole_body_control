@@ -106,12 +106,16 @@ namespace opspace {
     virtual task_table_t const * getTaskTable() = 0;
     
     virtual Status init(Model const & model);
-    virtual Status checkFeasability(sv_table_t const & sv_table) { Status ok; return ok; }
+    virtual Status checkJStarSV(Task const * task, Vector const & sv) { Status ok; return ok; }
     
     inline std::string const & getName() const { return name_; }
     
     boost::shared_ptr<TaskSlotAPI> lookupSlot(std::string const & state_name,
 					      std::string const & task_name);
+    
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
     
   protected:
     Behavior(std::string const & name);
