@@ -1,0 +1,21 @@
+<package>
+  <description brief="wbc_m3_ctrl">
+    This package is based on the RTAI control code for Dreamer, the
+    Meka M3 humanoid torso of the Human-Centered Robotics Group at the
+    University of Texas at Austin. http://www.me.utexas.edu/~hcrl/
+  </description>
+  <author>Roland Philippsen</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>https://github.com/poftwaresatent/utaustin-wbc</url>
+  <depend package="wbc_opspace"/>
+  <!-- <export> -->
+  <!--   <cpp cflags="-I${prefix}/include" -->
+  <!-- 	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_m3_ctrl" /> -->
+  <!-- </export> -->
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+</package>
+
+
