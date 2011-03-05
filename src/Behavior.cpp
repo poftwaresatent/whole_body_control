@@ -123,6 +123,7 @@ namespace opspace {
       os << title << "\n";
     }
     os << prefix << "behavior " << name_ << "\n";
+    ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
     for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
       for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
 	Task const * task(it->second->getInstance().get());
