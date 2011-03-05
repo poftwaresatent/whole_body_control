@@ -46,6 +46,22 @@ namespace opspace {
 		     Matrix & invMatrix,
 		     Vector * opt_sigmaOut)
   {
+    if ((1 == matrix.rows()) && (1 == matrix.cols())) {
+      // workaround for Eigen2
+      invMatrix.resize(1, 1);
+      if (matrix.coeff(0, 0) > sigmaThreshold) {
+	invMatrix.coeffRef(0, 0) = 1.0 / matrix.coeff(0, 0);
+      }
+      else {
+	invMatrix.coeffRef(0, 0) = 0.0;
+      }
+      if (opt_sigmaOut) {
+	opt_sigmaOut->resize(1);
+	opt_sigmaOut->coeffRef(0) = matrix.coeff(0, 0);
+      }
+      return;
+    }
+    
     Eigen::SVD<Matrix> svd(matrix);
     // not sure if we need to svd.sort()... probably not
     int const nrows(svd.singularValues().rows());

@@ -227,7 +227,13 @@ namespace opspace {
       {
 	// debugging the singularity problem
 	Matrix jjt(jstar * jstar.transpose());
-	sv_jstar_[ii] = Eigen::SVD<Matrix>(jjt).singularValues();
+	if (1 == jjt.rows()) {	// workaround for Eigen2
+	  sv_jstar_[ii].resize(1);
+	  sv_jstar_[ii].coeffRef(0, 0) = jjt.coeff(0, 0);
+	}
+	else {
+	  sv_jstar_[ii] = Eigen::SVD<Matrix>(jjt).singularValues();
+	}
 	// this needs to be more intelligent for full fledged behavior
 	// infrastructure: tasks needs to be classified according to
 	// essential / optional, and if an essential task becomes
