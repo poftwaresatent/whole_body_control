@@ -33,7 +33,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/TaskFactory.hpp>
+#include <opspace/Factory.hpp>
+#include <iostream>
 #include <err.h>
 
 using namespace jspace;
@@ -69,15 +70,15 @@ static char * const yaml_string =
 int main(int argc, char ** argv)
 {
   Status st;  
-  TaskFactory tfac(&cout);
+  Factory factory(&cout);
   
   if (argc > 1) {
     cout << "parsing file `" << argv[1] << "'\n";
-    st = tfac.parseFile(argv[1]);
+    st = factory.parseFile(argv[1]);
   }
   else {
     cout << "parsing yaml_string:\n" << yaml_string;
-    st = tfac.parseString(yaml_string);
+    st = factory.parseString(yaml_string);
   }
   if ( ! st) {
     cout << "oops: " << st.errstr << "\n";

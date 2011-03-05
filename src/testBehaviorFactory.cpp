@@ -35,7 +35,7 @@
 
 #include <gtest/gtest.h>
 #include <opspace/Behavior.hpp>
-#include <opspace/TaskFactory.hpp>
+#include <opspace/Factory.hpp>
 #include <opspace/parse_yaml.hpp>
 #include <jspace/test/model_library.hpp>
 
@@ -99,16 +99,16 @@ TEST (behavior, parse)
   
   Model * puma(get_puma());
 
-  TaskFactory tfac(&cout);
+  Factory factory(&cout);
   Status st;
-  st = tfac.parseString(task_yaml);
+  st = factory.parseString(task_yaml);
   EXPECT_TRUE (st.ok) << st.errstr;
   
   std::istringstream behavior_is(behavior_yaml);
   try {
     YAML::Parser parser(behavior_is);
     YAML::Node doc;
-    behavior_parser_s bp(tfac, &cout);
+    BehaviorParser bp(factory, &cout);
     
     while (parser.GetNextDocument(doc)) {
       for (size_t ii(0); ii < doc.size(); ++ii) {

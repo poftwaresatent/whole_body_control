@@ -33,12 +33,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OPSPACE_TASK_FACTORY_HPP
-#define OPSPACE_TASK_FACTORY_HPP
+#ifndef OPSPACE_FACTORY_HPP
+#define OPSPACE_FACTORY_HPP
 
-#include <yaml-cpp/yaml.h>
 #include <jspace/Status.hpp>
 #include <boost/shared_ptr.hpp>
+#include <vector>
 
 
 namespace opspace {
@@ -57,54 +57,72 @@ namespace opspace {
   
   
   /**
-     Utility for creating Task instances based on type names. Mostly
-     (currently: exclusively) used for parsing YAML files that specify
-     tasks. For the moment, we use a hardcoded mapping from type names
-     to Task subclasses, but it will be really easy to extend this
-     with some sort of plugin approach (we've done it before and have
-     code ready to port, but there are more pressing issues elsewhere
-     for now).
+     Utility for creating Task and Behavior instances based on type
+     names. For the moment, we use a hardcoded mapping from type names
+     to subclasses, but it will be really easy to extend this with
+     some sort of plugin approach.
      
      The idea is to call the parseFoo() methods to feed it with task
-     specifications, and then retrieve them using getTaskTable(). The
-     latter returns a vector of pointers to Task (subclass) instances,
-     ordered simply by the order in which specifications where
-     encountered.
+     and behavior specifications, and then retrieve them using
+     getTaskTable() and/or getBehaviorTable().
      
-     The YAML format is quite simple, of course: you specify a list of
-     dictionaries. Each list item specifies a task. The required
-     dictionary keys are `type' and `name'. All the others get looked
-     up via Task::lookupParameter() and directly specify task
-     parameters.
+     The YAML format is quite simple: you specify a list of
+     dictionaries. When the key is `tasks', then it parses a list of
+     tasks. Similarly, it parses behaviors when the dictionary key is
+     `behaviors'. You can mix and match, but beware that tasks
+     referenced by a behavior must be defined before they can be used.
+     
+     For tasks, the specification is again a list of
+     dictionaries. Each one specifies a task. The required dictionary
+     keys are `type' and `name'. All the others get looked up via
+     Task::lookupParameter() and directly specify task parameters.
+     
+     Behaviors are very similar, except that dictionary values are
+     handled differently depending on whether they are lists or
+     dictionaries: if they are dictionaries, they are treated as state
+     definitions which define which task goes where in the slots
+     provided by the behavior. Otherwise, they are treated as
+     parameter definitions.
      
      An example task YAML file is:
      \verbatim
-     - type: opspace::PositionTask
-       name: eepos
-       dt_seconds: 0.002
-       kp: [ 100.0 ]
-       kd: [  20.0 ]
-       maxvel: [ 0.5 ]
-       maxacc: [ 1.5 ]
-     - type: opspace::PostureTask
-       name: posture
-       dt_seconds: 0.002
-       kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]
-       kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]
-       maxvel: [ 3.1416 ]
-       maxacc: [ 6.2832 ]\n;
+     - tasks:
+       - type: opspace::PositionTask
+         name: eepos
+         dt_seconds: 0.002
+         kp: [ 100.0 ]
+         kd: [  20.0 ]
+         maxvel: [ 0.5 ]
+         maxacc: [ 1.5 ]
+       - type: opspace::PostureTask
+         name: posture
+         dt_seconds: 0.002
+         kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]
+         kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]
+         maxvel: [ 3.1416 ]
+         maxacc: [ 6.2832 ]
+     - behaviors:
+       - type: opspace::TPBehavior
+         name: task_posture
+	 # dictionaries define task slots
+	 default:
+	   eepos: eepos
+	   posture: posture
+	 # key-value pairs define parameters
+	 some_param_name: some_param_value
      \endverbatim
   */
-  class TaskFactory
+  class Factory
   {
   public:
     typedef std::vector<boost::shared_ptr<Task> > task_table_t;
+    typedef std::vector<boost::shared_ptr<Behavior> > behavior_table_t;
     
     /**
-       If you pass a non-zero dbg parameter, the TaskFactory will
+       If you pass a non-zero dbg parameter, the Factory will
        print all sorts of debug information to that stream.
     */
-    explicit TaskFactory(std::ostream * dbg = 0) : dbg_(dbg) {}
+    explicit Factory(std::ostream * dbg = 0) : dbg_(dbg) {}
     
     /**
        Parse a YAML document contained in a string. Retrieve the
@@ -126,18 +144,24 @@ namespace opspace {
     
     /**
        The task table contains pointers to all task instances ever
-       created by this TaskFactory, in the order that they were
-       encountered in the YAML documents. The task instances never get
-       deleted by TaskFactory.
+       created by this Factory, in the order that they were
+       encountered in the YAML documents.
     */
     task_table_t const & getTaskTable() const;
     
+    /**
+       The behavior table contains pointers to all behavior instances
+       ever created by this Factory, in the order that they were
+       encountered in the YAML documents.
+    */
+    behavior_table_t const & getBehaviorTable() const;
+    
     boost::shared_ptr<Task> findTask(std::string const & name) const;
+    boost::shared_ptr<Behavior> findBehavior(std::string const & name) const;
     
     /**
        Write a human-readable (hopefully, anyway) description of all
-       tasks contained in the task table. Ends up calling Task::dump()
-       on all instances of the tasl table.
+       behaviors and tasks contained in the tables.
     */
     void dump(std::ostream & os,
 	      std::string const & title,
@@ -146,8 +170,9 @@ namespace opspace {
   protected:
     std::ostream * dbg_;
     task_table_t task_table_;
+    behavior_table_t behavior_table_;
   };
   
 }
 
-#endif // OPSPACE_TASK_FACTORY_HPP
+#endif // OPSPACE_FACTORY_HPP

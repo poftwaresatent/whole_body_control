@@ -10,7 +10,7 @@ add_library (opspace SHARED
   src/opspace.cpp
   src/Parameter.cpp
   src/Task.cpp
-  src/TaskFactory.cpp
+  src/Factory.cpp
   src/TypeIOTGCursor.cpp
   src/Controller.cpp
   src/ControllerNG.cpp
@@ -33,5 +33,5 @@ if (HAVE_GTEST)
   target_link_libraries (testBehaviorFactory opspace jspace_test gtest)
 endif (HAVE_GTEST)
 
-add_executable (testTaskFactory src/testTaskFactory.cpp)
-target_link_libraries (testTaskFactory opspace)
+add_executable (testFactory src/testFactory.cpp)
+target_link_libraries (testFactory opspace)

@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/TaskFactory.hpp>
+#include <opspace/Factory.hpp>
 #include <opspace/Behavior.hpp>
 #include <opspace/task_library.hpp>
 #include <opspace/behavior_library.hpp>
@@ -47,9 +47,9 @@ namespace opspace {
   
   
   /**
-     \todo A little awkward to define this here but use it in
-     parse_yaml.cpp, which is essentially just called from here. Ah
-     well, long live refactoring...
+     \todo Make this e.g. a non-static member function and use a
+     dictionary of subclass creators in order to support adding
+     name-type mappings at runtime.
   */
   Task * createTask(std::string const & type, std::string const & name)
   {
@@ -72,7 +72,7 @@ namespace opspace {
   }
   
   
-  Status TaskFactory::
+  Status Factory::
   parseString(std::string const & yaml_string)
   {
     std::istringstream is(yaml_string);
@@ -80,7 +80,7 @@ namespace opspace {
   }
   
   
-  Status TaskFactory::
+  Status Factory::
   parseFile(std::string const & yaml_filename)
   {
     std::ifstream is(yaml_filename.c_str());
@@ -89,9 +89,9 @@ namespace opspace {
     }
     return parseStream(is);
   }
-  
 
-  Status TaskFactory::
+
+  Status Factory::
   parseStream(std::istream & yaml_istream)
   {
     Status st;
@@ -100,7 +100,7 @@ namespace opspace {
     try {
       YAML::Parser parser(yaml_istream);
       YAML::Node doc;
-      task_parser_s task_parser(dbg_);
+      TaskParser task_parser(*this, dbg_);
 
       while (parser.GetNextDocument(doc)) {
 	for (size_t ii(0); ii < doc.size(); ++ii) {
@@ -133,14 +133,14 @@ namespace opspace {
   }
   
   
-  TaskFactory::task_table_t const & TaskFactory::
+  Factory::task_table_t const & Factory::
   getTaskTable() const
   {
     return task_table_;
   }
   
   
-  void TaskFactory::
+  void Factory::
   dump(std::ostream & os,
        std::string const & title,
        std::string const & prefix) const
@@ -159,7 +159,7 @@ namespace opspace {
      \todo Would be nice to use a std::map and also detect duplicate
      names, which should be errors...
    */
-  boost::shared_ptr<Task> TaskFactory::
+  boost::shared_ptr<Task> Factory::
   findTask(std::string const & name)
     const
   {
