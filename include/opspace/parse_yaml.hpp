@@ -103,10 +103,12 @@ namespace opspace {
   class TaskTableParser
     : public Parser
   {
+  public:
     TaskTableParser(Factory const & factory,
 		    Factory::task_table_t & task_table,
 		    std::ostream * optional_dbg_os = 0);
     
+    TaskParser task_parser;    
     Factory::task_table_t & task_table;
   };
   
@@ -114,10 +116,12 @@ namespace opspace {
   class BehaviorTableParser
     : public Parser
   {
+  public:
     BehaviorTableParser(Factory const & factory,
 			Factory::behavior_table_t & behavior_table,
 			std::ostream * optional_dbg_os = 0);
     
+    BehaviorParser behavior_parser;    
     Factory::behavior_table_t & behavior_table;
   };  
   

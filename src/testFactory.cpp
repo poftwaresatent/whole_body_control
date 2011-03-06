@@ -45,104 +45,102 @@ using jspace::State;
 using namespace std;
 
 
-TEST (task, parse)
+TEST (parse, tasks_only)
 {
   static char * const yaml_string =
-    "- type: opspace::SelectedJointPostureTask\n"
-    "  name: odd\n"
-    "  selection: [  1.0,  0.0,  1.0,  0.0,  1.0,  0.0 ]\n"
-    "  kp: 100.0\n"
-    "  kd:  20.0\n"
-    "- type: opspace::SelectedJointPostureTask\n"
-    "  name: even\n"
-    "  selection: [  0.0,  1.0,  0.0,  1.0,  0.0,  1.0 ]\n"
-    "  kp: 100.0\n"
-    "  kd:  20.0\n"
-    "- type: opspace::PositionTask\n"
-    "  name: eepos\n"
-    "  dt_seconds: 0.002\n"
-    "  kp: [ 100.0 ]\n"
-    "  kd: [  20.0 ]\n"
-    "  maxvel: [ 0.5 ]\n"
-    "  maxacc: [ 1.5 ]\n"
-    "- type: opspace::PostureTask\n"
-    "  name: posture\n"
-    "  dt_seconds: 0.002\n"
-    "  kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]\n"
-    "  kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
-    "  maxvel: [ 3.1416 ]\n"
-    "  maxacc: [ 6.2832 ]\n";
+    "- tasks:\n"
+    "  - type: opspace::SelectedJointPostureTask\n"
+    "    name: odd\n"
+    "    selection: [  1.0,  0.0,  1.0,  0.0,  1.0,  0.0 ]\n"
+    "    kp: 100.0\n"
+    "    kd:  20.0\n"
+    "  - type: opspace::SelectedJointPostureTask\n"
+    "    name: even\n"
+    "    selection: [  0.0,  1.0,  0.0,  1.0,  0.0,  1.0 ]\n"
+    "    kp: 100.0\n"
+    "    kd:  20.0\n"
+    "  - type: opspace::PositionTask\n"
+    "    name: eepos\n"
+    "    dt_seconds: 0.002\n"
+    "    kp: [ 100.0 ]\n"
+    "    kd: [  20.0 ]\n"
+    "    maxvel: [ 0.5 ]\n"
+    "    maxacc: [ 1.5 ]\n"
+    "  - type: opspace::PostureTask\n"
+    "    name: posture\n"
+    "    dt_seconds: 0.002\n"
+    "    kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]\n"
+    "    kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
+    "    maxvel: [ 3.1416 ]\n"
+    "    maxacc: [ 6.2832 ]\n";
   
-  Factory factory(&cout);
-  Status st;
-  st = factory.parseString(yaml_string);
-  EXPECT_TRUE (st.ok) << st.errstr;
+  try {
+    Factory factory(&cout);
+    Status st;
+    st = factory.parseString(yaml_string);
+    EXPECT_TRUE (st.ok) << st.errstr;
+    EXPECT_FALSE (factory.getTaskTable().empty()) << "task table should not be empty";
+    EXPECT_TRUE (factory.getBehaviorTable().empty()) << "behaviors table should be empty";
+    factory.dump(cout, "*** dump of factory", "* ");
+  }
+  catch (YAML::Exception const & ee) {
+    ADD_FAILURE () << "unexpected YAML::Exception: " << ee.what();
+  }
+  catch (std::runtime_error const & ee) {
+    ADD_FAILURE () << "unexpected std::runtime_error: " << ee.what();
+  }
 }
 
 
-TEST (behavior, parse)
+TEST (parse, tasks_and_behaviors)
 {
-  static char * const task_yaml =
-    "- type: opspace::SelectedJointPostureTask\n"
-    "  name: odd_instance\n"
-    "  selection: [  1.0,  0.0,  1.0,  0.0,  1.0,  0.0 ]\n"
-    "  kp: 100.0\n"
-    "  kd:  20.0\n"
-    "- type: opspace::SelectedJointPostureTask\n"
-    "  name: even_instance\n"
-    "  selection: [  0.0,  1.0,  0.0,  1.0,  0.0,  1.0 ]\n"
-    "  kp: 100.0\n"
-    "  kd:  20.0\n"
-    "- type: opspace::PositionTask\n"
-    "  name: eepos_instance\n"
-    "  dt_seconds: 0.002\n"
-    "  kp: [ 100.0 ]\n"
-    "  kd: [  20.0 ]\n"
-    "  maxvel: [ 0.5 ]\n"
-    "  maxacc: [ 1.5 ]\n"
-    "- type: opspace::PostureTask\n"
-    "  name: posture_instance\n"
-    "  dt_seconds: 0.002\n"
-    "  kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]\n"
-    "  kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
-    "  maxvel: [ 3.1416 ]\n"
-    "  maxacc: [ 6.2832 ]\n";
+  static char * const yaml_string =
+    "- tasks:\n"
+    "  - type: opspace::SelectedJointPostureTask\n"
+    "    name: odd_instance\n"
+    "    selection: [  1.0,  0.0,  1.0,  0.0,  1.0,  0.0 ]\n"
+    "    kp: 100.0\n"
+    "    kd:  20.0\n"
+    "  - type: opspace::SelectedJointPostureTask\n"
+    "    name: even_instance\n"
+    "    selection: [  0.0,  1.0,  0.0,  1.0,  0.0,  1.0 ]\n"
+    "    kp: 100.0\n"
+    "    kd:  20.0\n"
+    "  - type: opspace::PositionTask\n"
+    "    name: eepos_instance\n"
+    "    dt_seconds: 0.002\n"
+    "    kp: [ 100.0 ]\n"
+    "    kd: [  20.0 ]\n"
+    "    maxvel: [ 0.5 ]\n"
+    "    maxacc: [ 1.5 ]\n"
+    "  - type: opspace::PostureTask\n"
+    "    name: posture_instance\n"
+    "    dt_seconds: 0.002\n"
+    "    kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]\n"
+    "    kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
+    "    maxvel: [ 3.1416 ]\n"
+    "    maxacc: [ 6.2832 ]\n"
+    "- behaviors:\n"
+    "  - type: opspace::TPBehavior\n"
+    "    name: tpb\n"
+    "    default:\n"
+    "      eepos: eepos_instance\n"
+    "      posture: posture_instance\n";
   
-  static char * const behavior_yaml =
-    "- type: opspace::TPBehavior\n"
-    "  name: tpb\n"
-    "  default:\n"
-    "    eepos: eepos_instance\n"
-    "    posture: posture_instance\n";
-  
-  Factory factory(&cout);
-  Status st;
-  st = factory.parseString(task_yaml);
-  EXPECT_TRUE (st.ok) << st.errstr;
-  
-  std::istringstream behavior_is(behavior_yaml);
   try {
-    YAML::Parser parser(behavior_is);
-    YAML::Node doc;
-    BehaviorParser bp(factory, &cout);
-    
-    while (parser.GetNextDocument(doc)) {
-      for (size_t ii(0); ii < doc.size(); ++ii) {
-	YAML::Node const & node(doc[ii]);
-	node >> bp;
-	if ( ! bp.behavior) {
-	  throw std::runtime_error("oops, behavior_parser_s::behavior is zero");
-	}
-	delete bp.behavior;
-      }
-    }
+    Factory factory(&cout);
+    Status st;
+    st = factory.parseString(yaml_string);
+    EXPECT_TRUE (st.ok) << st.errstr;
+    EXPECT_FALSE (factory.getTaskTable().empty()) << "task table should not be empty";
+    EXPECT_FALSE (factory.getBehaviorTable().empty()) << "behaviors table should not be empty";
+    factory.dump(cout, "*** dump of factory", "* ");
   }
-  
   catch (YAML::Exception const & ee) {
-    ADD_FAILURE () << "YAML::Exception: " << ee.what();
+    ADD_FAILURE () << "unexpected YAML::Exception: " << ee.what();
   }
   catch (std::runtime_error const & ee) {
-    ADD_FAILURE () << "std::runtime_error: " << ee.what();
+    ADD_FAILURE () << "unexpected std::runtime_error: " << ee.what();
   }
 }
 

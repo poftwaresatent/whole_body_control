@@ -85,6 +85,7 @@ namespace opspace {
 		  Factory::task_table_t & task_table_,
 		  std::ostream * optional_dbg_os)
     : Parser(factory, optional_dbg_os),
+      task_parser(factory, optional_dbg_os),
       task_table(task_table_)
   {
   }
@@ -95,6 +96,7 @@ namespace opspace {
 		      Factory::behavior_table_t & behavior_table_,
 		      std::ostream * optional_dbg_os)
     : Parser(factory, optional_dbg_os),
+      behavior_parser(factory, optional_dbg_os),
       behavior_table(behavior_table_)
   {
   }
@@ -303,6 +305,39 @@ namespace opspace {
 		      << "' of state `" << key << "' in behavior `" << parser.name << "'\n";
 	}
       }
+    }
+  }
+  
+  
+  void operator >> (YAML::Node const & node, TaskTableParser & parser)
+  {
+    for (size_t ii(0); ii < node.size(); ++ii) {
+      YAML::Node const & entry(node[ii]);
+      entry >> parser.task_parser;
+      if ( ! parser.task_parser.task) {
+	throw std::runtime_error("failed to create task instance");
+      }
+      parser.task_table.push_back(shared_ptr<Task>(parser.task_parser.task));
+    }
+  }
+  
+  
+  void operator >> (YAML::Node const & node, BehaviorTableParser & parser)
+  {
+    if (parser.dbg) {
+      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, BehaviorTableParser &)\n"
+		  << "  parsing " << node.size() << " nodes\n";
+    }
+    for (size_t ii(0); ii < node.size(); ++ii) {
+      YAML::Node const & entry(node[ii]);
+      entry >> parser.behavior_parser;
+      if ( ! parser.behavior_parser.behavior) {
+	throw std::runtime_error("failed to create behavior instance");
+      }
+      if (parser.dbg) {
+	parser.behavior_parser.behavior->dump(*parser.dbg, "  adding to table: behavior", "    ");
+      }
+      parser.behavior_table.push_back(shared_ptr<Behavior>(parser.behavior_parser.behavior));
     }
   }
   

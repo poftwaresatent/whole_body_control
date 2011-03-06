@@ -100,17 +100,24 @@ namespace opspace {
     try {
       YAML::Parser parser(yaml_istream);
       YAML::Node doc;
-      TaskParser task_parser(*this, dbg_);
-
+      TaskTableParser task_table_parser(*this, task_table_, dbg_);
+      BehaviorTableParser behavior_table_parser(*this, behavior_table_, dbg_);
+      
       while (parser.GetNextDocument(doc)) {
-	for (size_t ii(0); ii < doc.size(); ++ii) {
-	  YAML::Node const & node(doc[ii]);
-	  node >> task_parser;
-	  if ( ! task_parser.task) {
-	    throw std::runtime_error("oops, task_parser_s::task is zero");
+	for (YAML::Iterator ilist(doc.begin()); ilist != doc.end(); ++ilist) {
+	  for (YAML::Iterator idict(ilist->begin()); idict != ilist->end(); ++idict) {
+	    std::string key;
+	    idict.first() >> key;
+	    if ("tasks" == key) {
+	      idict.second() >> task_table_parser;
+	    }
+	    else if ("behaviors" == key) {
+	      idict.second() >> behavior_table_parser;
+	    }
+	    else {
+	      throw std::runtime_error("invalid key `" + key + "'");
+	    }
 	  }
-	  task.reset(task_parser.task);
-	  task_table_.push_back(task);
 	}
       }
     }
@@ -140,6 +147,13 @@ namespace opspace {
   }
   
   
+  Factory::behavior_table_t const & Factory::
+  getBehaviorTable() const
+  {
+    return behavior_table_;
+  }
+  
+  
   void Factory::
   dump(std::ostream & os,
        std::string const & title,
@@ -148,17 +162,19 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
+    os << prefix << "  tasks:\n";
     for (task_table_t::const_iterator it(task_table_.begin());
 	 it != task_table_.end(); ++it) {
-      (*it)->dump(os, "", prefix + "  ");
+      (*it)->dump(os, "", prefix + "    ");
+    }
+    os << prefix << "  behaviors:\n";
+    for (behavior_table_t::const_iterator it(behavior_table_.begin());
+	 it != behavior_table_.end(); ++it) {
+      (*it)->dump(os, "", prefix + "    ");
     }
   }
 
   
-  /**
-     \todo Would be nice to use a std::map and also detect duplicate
-     names, which should be errors...
-   */
   boost::shared_ptr<Task> Factory::
   findTask(std::string const & name)
     const
@@ -169,6 +185,19 @@ namespace opspace {
       }
     }
     return boost::shared_ptr<Task>();
+  }
+
+  
+  boost::shared_ptr<Behavior> Factory::
+  findBehavior(std::string const & name)
+    const
+  {
+    for (size_t ii(0); ii < behavior_table_.size(); ++ii) {
+      if (name == behavior_table_[ii]->getName()) {
+	return behavior_table_[ii];
+      }
+    }
+    return boost::shared_ptr<Behavior>();
   }
   
   
