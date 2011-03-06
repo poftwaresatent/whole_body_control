@@ -3,7 +3,7 @@
  *
  * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
- * Author: Roland Philippsen
+ * Authors: Roland Philippsen and Luis Sentis
  *
  * BSD license:
  * Redistribution and use in source and binary forms, with or without
@@ -33,57 +33,122 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <gtest/gtest.h>
+#include <opspace/Behavior.hpp>
 #include <opspace/Factory.hpp>
-#include <iostream>
-#include <err.h>
+#include <opspace/parse_yaml.hpp>
+#include <stdexcept>
 
-using namespace jspace;
 using namespace opspace;
+using boost::shared_ptr;
+using jspace::State;
 using namespace std;
 
-static char * const yaml_string =
-  "- type: opspace::SelectedJointPostureTask\n"
-  "  name: odd\n"
-  "  selection: [  1.0,  0.0,  1.0,  0.0,  1.0,  0.0 ]\n"
-  "  kp: 100.0\n"
-  "  kd:  20.0\n"
-  "- type: opspace::SelectedJointPostureTask\n"
-  "  name: even\n"
-  "  selection: [  0.0,  1.0,  0.0,  1.0,  0.0,  1.0 ]\n"
-  "  kp: 100.0\n"
-  "  kd:  20.0\n"
-  "- type: opspace::PositionTask\n"
-  "  name: eepos\n"
-  "  dt_seconds: 0.002\n"
-  "  kp: [ 100.0 ]\n"
-  "  kd: [  20.0 ]\n"
-  "  maxvel: [ 0.5 ]\n"
-  "  maxacc: [ 1.5 ]\n"
-  "- type: opspace::PostureTask\n"
-  "  name: posture\n"
-  "  dt_seconds: 0.002\n"
-  "  kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]\n"
-  "  kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
-  "  maxvel: [ 3.1416 ]\n"
-  "  maxacc: [ 6.2832 ]\n";
+
+TEST (task, parse)
+{
+  static char * const yaml_string =
+    "- type: opspace::SelectedJointPostureTask\n"
+    "  name: odd\n"
+    "  selection: [  1.0,  0.0,  1.0,  0.0,  1.0,  0.0 ]\n"
+    "  kp: 100.0\n"
+    "  kd:  20.0\n"
+    "- type: opspace::SelectedJointPostureTask\n"
+    "  name: even\n"
+    "  selection: [  0.0,  1.0,  0.0,  1.0,  0.0,  1.0 ]\n"
+    "  kp: 100.0\n"
+    "  kd:  20.0\n"
+    "- type: opspace::PositionTask\n"
+    "  name: eepos\n"
+    "  dt_seconds: 0.002\n"
+    "  kp: [ 100.0 ]\n"
+    "  kd: [  20.0 ]\n"
+    "  maxvel: [ 0.5 ]\n"
+    "  maxacc: [ 1.5 ]\n"
+    "- type: opspace::PostureTask\n"
+    "  name: posture\n"
+    "  dt_seconds: 0.002\n"
+    "  kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]\n"
+    "  kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
+    "  maxvel: [ 3.1416 ]\n"
+    "  maxacc: [ 6.2832 ]\n";
   
+  Factory factory(&cout);
+  Status st;
+  st = factory.parseString(yaml_string);
+  EXPECT_TRUE (st.ok) << st.errstr;
+}
+
+
+TEST (behavior, parse)
+{
+  static char * const task_yaml =
+    "- type: opspace::SelectedJointPostureTask\n"
+    "  name: odd_instance\n"
+    "  selection: [  1.0,  0.0,  1.0,  0.0,  1.0,  0.0 ]\n"
+    "  kp: 100.0\n"
+    "  kd:  20.0\n"
+    "- type: opspace::SelectedJointPostureTask\n"
+    "  name: even_instance\n"
+    "  selection: [  0.0,  1.0,  0.0,  1.0,  0.0,  1.0 ]\n"
+    "  kp: 100.0\n"
+    "  kd:  20.0\n"
+    "- type: opspace::PositionTask\n"
+    "  name: eepos_instance\n"
+    "  dt_seconds: 0.002\n"
+    "  kp: [ 100.0 ]\n"
+    "  kd: [  20.0 ]\n"
+    "  maxvel: [ 0.5 ]\n"
+    "  maxacc: [ 1.5 ]\n"
+    "- type: opspace::PostureTask\n"
+    "  name: posture_instance\n"
+    "  dt_seconds: 0.002\n"
+    "  kp: [ 400.0, 400.0, 400.0, 100.0, 100.0, 100.0, 100.0 ]\n"
+    "  kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
+    "  maxvel: [ 3.1416 ]\n"
+    "  maxacc: [ 6.2832 ]\n";
+  
+  static char * const behavior_yaml =
+    "- type: opspace::TPBehavior\n"
+    "  name: tpb\n"
+    "  default:\n"
+    "    eepos: eepos_instance\n"
+    "    posture: posture_instance\n";
+  
+  Factory factory(&cout);
+  Status st;
+  st = factory.parseString(task_yaml);
+  EXPECT_TRUE (st.ok) << st.errstr;
+  
+  std::istringstream behavior_is(behavior_yaml);
+  try {
+    YAML::Parser parser(behavior_is);
+    YAML::Node doc;
+    BehaviorParser bp(factory, &cout);
+    
+    while (parser.GetNextDocument(doc)) {
+      for (size_t ii(0); ii < doc.size(); ++ii) {
+	YAML::Node const & node(doc[ii]);
+	node >> bp;
+	if ( ! bp.behavior) {
+	  throw std::runtime_error("oops, behavior_parser_s::behavior is zero");
+	}
+	delete bp.behavior;
+      }
+    }
+  }
+  
+  catch (YAML::Exception const & ee) {
+    ADD_FAILURE () << "YAML::Exception: " << ee.what();
+  }
+  catch (std::runtime_error const & ee) {
+    ADD_FAILURE () << "std::runtime_error: " << ee.what();
+  }
+}
+
+
 int main(int argc, char ** argv)
 {
-  Status st;  
-  Factory factory(&cout);
-  
-  if (argc > 1) {
-    cout << "parsing file `" << argv[1] << "'\n";
-    st = factory.parseFile(argv[1]);
-  }
-  else {
-    cout << "parsing yaml_string:\n" << yaml_string;
-    st = factory.parseString(yaml_string);
-  }
-  if ( ! st) {
-    cout << "oops: " << st.errstr << "\n";
-  }
-  else {
-    cout << "success\n";
-  }
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS ();
 }
