@@ -15,10 +15,16 @@ set (LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 rosbuild_add_library (wbc_opspace
   opspace/src/opspace.cpp
+  opspace/src/Parameter.cpp
   opspace/src/Task.cpp
-  opspace/src/TaskFactory.cpp
+  opspace/src/Factory.cpp
   opspace/src/TypeIOTGCursor.cpp
   opspace/src/Controller.cpp
+  opspace/src/ControllerNG.cpp
   opspace/src/controller_library.cpp
   opspace/src/task_library.cpp
+  opspace/src/behavior_library.cpp
+  opspace/src/other_controllers.cpp
+  opspace/src/parse_yaml.cpp
+  opspace/src/Behavior.cpp
   )
