@@ -37,6 +37,7 @@
 #define OPSPACE_BEHAVIOR_HPP
 
 #include <opspace/Task.hpp>
+#include <opspace/Parameter.hpp>
 #include <boost/shared_ptr.hpp>
 #include <vector>
 
@@ -95,6 +96,7 @@ namespace opspace {
   
   
   class Behavior
+    : public ParameterReflection
   {
   public:
     typedef std::vector<Task *> task_table_t;
@@ -111,6 +113,10 @@ namespace opspace {
     
     boost::shared_ptr<TaskSlotAPI> lookupSlot(std::string const & state_name,
 					      std::string const & task_name);
+    
+    virtual void dump(std::ostream & os,
+		      std::string const & title,
+		      std::string const & prefix) const;
     
     virtual void dbg(std::ostream & os,
 		     std::string const & title,

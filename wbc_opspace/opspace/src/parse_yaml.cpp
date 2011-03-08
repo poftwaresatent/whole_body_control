@@ -34,7 +34,7 @@
  */
 
 #include <opspace/parse_yaml.hpp>
-#include <opspace/TaskFactory.hpp>
+#include <opspace/Factory.hpp>
 #include <opspace/Task.hpp>
 #include <opspace/Behavior.hpp>
 #include <stdexcept>
@@ -46,24 +46,75 @@ using boost::shared_ptr;
 namespace opspace {
   
   
-  task_parser_s::
-  task_parser_s(std::ostream * optional_dbg_os)
-    : type("void"),
-      name(""),
-      task(0),
+  Parser::
+  Parser(Factory const & factory_, std::ostream * optional_dbg_os)
+    : factory(factory_),
       dbg(optional_dbg_os)
   {
   }
   
   
-  behavior_parser_s::
-  behavior_parser_s(TaskFactory const & tfac_, std::ostream * optional_dbg_os)
-    : tfac(tfac_),
+  Parser::
+  ~Parser()
+  {
+  }
+  
+  
+  TaskParser::
+  TaskParser(Factory const & factory, std::ostream * optional_dbg_os)
+    : Parser(factory, optional_dbg_os),
       type("void"),
       name(""),
-      behavior(0),
-      dbg(optional_dbg_os)
+      task(0)
   {
+  }
+  
+  
+  BehaviorParser::
+  BehaviorParser(Factory const & factory, std::ostream * optional_dbg_os)
+    : Parser(factory, optional_dbg_os),
+      type("void"),
+      name(""),
+      behavior(0)
+  {
+  }
+  
+  
+  TaskTableParser::
+  TaskTableParser(Factory const & factory,
+		  Factory::task_table_t & task_table_,
+		  std::ostream * optional_dbg_os)
+    : Parser(factory, optional_dbg_os),
+      task_parser(factory, optional_dbg_os),
+      task_table(task_table_)
+  {
+  }
+  
+  
+  BehaviorTableParser::
+  BehaviorTableParser(Factory const & factory,
+		      Factory::behavior_table_t & behavior_table_,
+		      std::ostream * optional_dbg_os)
+    : Parser(factory, optional_dbg_os),
+      behavior_parser(factory, optional_dbg_os),
+      behavior_table(behavior_table_)
+  {
+  }
+  
+  
+  static char const * yaml_type_name(YAML::Node const & node)
+  {
+    switch (node.GetType()) {
+    case YAML::CT_NONE:
+      return "NONE";
+    case YAML::CT_SCALAR:
+      return "SCALAR";
+    case YAML::CT_SEQUENCE:
+      return "SEQUENCE";
+    case YAML::CT_MAP:
+      return "MAP";
+    }
+    return "unknown";
   }
   
   
@@ -76,28 +127,27 @@ namespace opspace {
   }
   
   
-  void operator >> (YAML::Node const & node, task_parser_s & task)
+  void operator >> (YAML::Node const & node, TaskParser & parser)
   {
-    task.task = 0;		// in case type or name is undefined
-    task.parsed_params.clear();
-    if (task.dbg) {
-      *task.dbg << "DEBUG opspace::operator>>(YAML::Node &, task_parser_s &)\n"
-		<< "  reading type and name\n";
+    parser.task = 0;		// in case type or name is undefined
+    if (parser.dbg) {
+      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, task_parser_s &)\n"
+		  << "  reading type and name\n";
     }
-    node["type"] >> task.type;
-    node["name"] >> task.name;
+    node["type"] >> parser.type;
+    node["name"] >> parser.name;
 
-    if (task.dbg) {
-      *task.dbg << "  type = " << task.type << "  name = " << task.name << "\n";
+    if (parser.dbg) {
+      *parser.dbg << "  type = " << parser.type << "  name = " << parser.name << "\n";
     }
-    task.task = createTask(task.type, task.name);
-    if ( ! task.task) {
-      throw std::runtime_error("createTask(`" + task.type + "', `" + task.name + "') failed");
+    parser.task = createTask(parser.type, parser.name);
+    if ( ! parser.task) {
+      throw std::runtime_error("createTask(`" + parser.type + "', `" + parser.name + "') failed");
     }
     
-    if (task.dbg) {
-      *task.dbg << "  created task `" << task.name << "' of type " << task.type << "\n"
-		<< "    parsing parameters:\n";
+    if (parser.dbg) {
+      *parser.dbg << "  created task `" << parser.name << "' of type " << parser.type << "\n"
+		  << "    parsing parameters:\n";
     }
     for (YAML::Iterator it(node.begin()); it != node.end(); ++it) {
       std::string key;
@@ -107,89 +157,80 @@ namespace opspace {
       }
       YAML::Node const & value(it.second());
       
-      if (task.dbg) {
-	char const * dbg_type(0);
-	switch (value.GetType()) {
-	case YAML::CT_NONE:     dbg_type = "NONE"; break;
-	case YAML::CT_SCALAR:   dbg_type = "SCALAR"; break;
-	case YAML::CT_SEQUENCE: dbg_type = "SEQUENCE"; break;
-	case YAML::CT_MAP:      dbg_type = "MAP"; break;
-	default: dbg_type = "unknown"; break;
-	}
-	*task.dbg << "    trying `" << key << "' with YAML type " << dbg_type << "\n";
+      if (parser.dbg) {
+	*parser.dbg << "    trying `" << key << "' (YAML type " << yaml_type_name(value) << ")\n";
       }
       
-      Parameter * param(task.task->lookupParameter(key));
+      Parameter * param(parser.task->lookupParameter(key));
       if ( ! param) {
-	throw std::runtime_error("no parameter called `" + key + "' in task '" + task.name + "`");
+	throw std::runtime_error("no parameter called `" + key + "' in task '" + parser.name + "`");
       }
       else {
 	
 	if (PARAMETER_TYPE_INTEGER == param->type_) {
 	  if (YAML::CT_SCALAR != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task '" + task.name
+	    throw std::runtime_error("parameter `" + key + "' of task '" + parser.name
 				     + "` should be scalar (integer)");
 	  }
 	  int integer;
 	  value >> integer;
-	  if (task.dbg) {
-	    *task.dbg << "    setting value " << integer << "\n";
+	  if (parser.dbg) {
+	    *parser.dbg << "    setting value " << integer << "\n";
 	  }
 	  Status const st(param->set(integer));
 	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task '" + task.name
+	    throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
 				     + "` failed: " + st.errstr);
 	  }
 	}
 	
 	else if (PARAMETER_TYPE_REAL == param->type_) {
 	  if (YAML::CT_SCALAR != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task '" + task.name
+	    throw std::runtime_error("parameter `" + key + "' of task '" + parser.name
 				     + "` should be scalar (real)");
 	  }
 	  double real;
 	  value >> real;
-	  if (task.dbg) {
-	    *task.dbg << "    setting value " << real << "\n";
+	  if (parser.dbg) {
+	    *parser.dbg << "    setting value " << real << "\n";
 	  }
 	  Status const st(param->set(real));
 	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task '" + task.name
+	    throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
 				     + "` failed: " + st.errstr);
 	  }
 	}
 	
 	else if (PARAMETER_TYPE_VECTOR == param->type_) {
 	  if (YAML::CT_SEQUENCE != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task '" + task.name
+	    throw std::runtime_error("parameter `" + key + "' of task '" + parser.name
 				     + "` should be sequence (vector)");
 	  }
 	  Vector vector;
 	  value >> vector;
-	  if (task.dbg) {
-	    pretty_print(vector, *task.dbg, "    setting vector", "      ");
+	  if (parser.dbg) {
+	    pretty_print(vector, *parser.dbg, "    setting vector", "      ");
 	  }
 	  Status const st(param->set(vector));
 	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task '" + task.name
+	    throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
 				     + "` failed: " + st.errstr);
 	  }
 	}
 	
 	else if (PARAMETER_TYPE_MATRIX == param->type_) {
-	  throw std::runtime_error("setting parameter `" + key + "' of task '" + task.name
+	  throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
 				   + "` requires MATRIX type which is not (yet) supported");
 	}
 	
 	else {
-	  throw std::runtime_error("setting parameter `" + key + "' of task '" + task.name
+	  throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
 				   + "` invalid or VOID type cannot be set");
 	}
 	
-	if (task.dbg) {
-	  param->dump(*task.dbg, "    ");
+	if (parser.dbg) {
+	  param->dump(*parser.dbg, "    ");
 	}
-	task.parsed_params.push_back(param);
 	
       }	// end "if (param)"
       
@@ -197,27 +238,27 @@ namespace opspace {
   }
   
   
-  void operator >> (YAML::Node const & node, behavior_parser_s & behavior)
+  void operator >> (YAML::Node const & node, BehaviorParser & parser)
   {
-    behavior.behavior = 0;		// in case type or name is undefined
-    if (behavior.dbg) {
-      *behavior.dbg << "DEBUG opspace::operator>>(YAML::Node &, behavior_parser_s &)\n"
-		<< "  reading type and name\n";
+    parser.behavior = 0;		// in case type or name is undefined
+    if (parser.dbg) {
+      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, behavior_parser_s &)\n"
+		  << "  reading type and name\n";
     }
-    node["type"] >> behavior.type;
-    node["name"] >> behavior.name;
+    node["type"] >> parser.type;
+    node["name"] >> parser.name;
 
-    if (behavior.dbg) {
-      *behavior.dbg << "  type = " << behavior.type << "  name = " << behavior.name << "\n";
+    if (parser.dbg) {
+      *parser.dbg << "  type = " << parser.type << "  name = " << parser.name << "\n";
     }
-    behavior.behavior = createBehavior(behavior.type, behavior.name);
-    if ( ! behavior.behavior) {
-      throw std::runtime_error("createBehavior(`" + behavior.type + "', `" + behavior.name + "') failed");
+    parser.behavior = createBehavior(parser.type, parser.name);
+    if ( ! parser.behavior) {
+      throw std::runtime_error("createBehavior(`" + parser.type + "', `" + parser.name + "') failed");
     }
     
-    if (behavior.dbg) {
-      *behavior.dbg << "  created behavior `" << behavior.name << "' of type " << behavior.type << "\n"
-		    << "    parsing tasks:\n";
+    if (parser.dbg) {
+      *parser.dbg << "  created behavior `" << parser.name << "' of type " << parser.type << "\n"
+		  << "    parsing parameters and tasks:\n";
     }
     for (YAML::Iterator it(node.begin()); it != node.end(); ++it) {
       std::string key;
@@ -227,6 +268,9 @@ namespace opspace {
       }
       
       YAML::Node const & slots(it.second());
+      if (parser.dbg) {
+	*parser.dbg << "    trying `" << key << "' (YAML type " << yaml_type_name(slots) << ")\n";
+      }
       
       if (YAML::CT_MAP != slots.GetType()) {
 	throw std::runtime_error("entry for `" + key + "' is not a map");
@@ -238,29 +282,62 @@ namespace opspace {
 	std::string task_name;
 	slot_it.second() >> task_name;
 	
-	shared_ptr<TaskSlotAPI> slot(behavior.behavior->lookupSlot(key, slot_name));
+	shared_ptr<TaskSlotAPI> slot(parser.behavior->lookupSlot(key, slot_name));
 	if ( ! slot) {
-	  throw std::runtime_error("behavior `" + behavior.name + "' has no slot `" + key + "' / `"
+	  throw std::runtime_error("behavior `" + parser.name + "' has no slot `" + key + "' / `"
 				   + slot_name + "'");
 	}
 	
-	shared_ptr<Task> task(behavior.tfac.findTask(task_name));
+	shared_ptr<Task> task(parser.factory.findTask(task_name));
 	if ( ! task) {
-	  throw std::runtime_error("no task instance `" + task_name + "' for behavior `" + behavior.name
+	  throw std::runtime_error("no task instance `" + task_name + "' for behavior `" + parser.name
 				   + "' slot `" + key + "' / `" + slot_name + "'");
 	}
 	
 	Status const st(slot->assign(task));
 	if ( ! st) {
-	  throw std::runtime_error("oops assigning task instance `" + task_name + "' to behavior `" + behavior.name
+	  throw std::runtime_error("oops assigning task instance `" + task_name + "' to behavior `" + parser.name
 				   + "' slot `" + key + "' / `" + slot_name + "': " + st.errstr);
 	}
 	
-	if (behavior.dbg) {
-	  *behavior.dbg << "  assigned task instance `" << task_name << "' to slot `" << slot_name
-			<< "' of state `" << key << "' in behavior `" << behavior.name << "'\n";
+	if (parser.dbg) {
+	  *parser.dbg << "  assigned task instance `" << task_name << "' to slot `" << slot_name
+		      << "' of state `" << key << "' in behavior `" << parser.name << "'\n";
 	}
       }
+    }
+  }
+  
+  
+  void operator >> (YAML::Node const & node, TaskTableParser & parser)
+  {
+    for (size_t ii(0); ii < node.size(); ++ii) {
+      YAML::Node const & entry(node[ii]);
+      entry >> parser.task_parser;
+      if ( ! parser.task_parser.task) {
+	throw std::runtime_error("failed to create task instance");
+      }
+      parser.task_table.push_back(shared_ptr<Task>(parser.task_parser.task));
+    }
+  }
+  
+  
+  void operator >> (YAML::Node const & node, BehaviorTableParser & parser)
+  {
+    if (parser.dbg) {
+      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, BehaviorTableParser &)\n"
+		  << "  parsing " << node.size() << " nodes\n";
+    }
+    for (size_t ii(0); ii < node.size(); ++ii) {
+      YAML::Node const & entry(node[ii]);
+      entry >> parser.behavior_parser;
+      if ( ! parser.behavior_parser.behavior) {
+	throw std::runtime_error("failed to create behavior instance");
+      }
+      if (parser.dbg) {
+	parser.behavior_parser.behavior->dump(*parser.dbg, "  adding to table: behavior", "    ");
+      }
+      parser.behavior_table.push_back(shared_ptr<Behavior>(parser.behavior_parser.behavior));
     }
   }
   

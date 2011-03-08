@@ -115,6 +115,32 @@ namespace opspace {
   
   
   void Behavior::
+  dump(std::ostream & os,
+       std::string const & title,
+       std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    os << prefix << "behavior " << name_ << "\n";
+    ParameterReflection::dump(os, prefix + "  parameters:", prefix + "    ");
+    os << prefix << "  task slots:\n";
+    for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
+      os << prefix << "    " << is->first << ":\n";
+      for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
+	Task const * task(it->second->getInstance().get());
+	if (task) {
+	  os << prefix << "      " << it->first << ": " << task->getName() << "\n";
+	}
+	else {
+	  os << prefix << "      " << it->first << " (empty slot)\n";
+	}
+      }
+    }
+  }
+  
+  
+  void Behavior::
   dbg(std::ostream & os,
       std::string const & title,
       std::string const & prefix) const
@@ -123,6 +149,7 @@ namespace opspace {
       os << title << "\n";
     }
     os << prefix << "behavior " << name_ << "\n";
+    ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
     for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
       for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
 	Task const * task(it->second->getInstance().get());

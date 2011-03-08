@@ -37,24 +37,37 @@
 #define OPSPACE_PARSE_YAML_HPP
 
 #include <yaml-cpp/yaml.h>
+#include <opspace/Factory.hpp>
 #include <jspace/wrap_eigen.hpp>
 
 namespace opspace {
 
   using jspace::Vector;
-  class Task;
-  class Parameter;
-  class TaskFactory;
-  class Behavior;
+  // class Task;
+  // class Parameter;
+  // class Factory;
+  // class Behavior;
   
   
-  struct task_parser_s {
-    explicit task_parser_s(std::ostream * optional_dbg_os = 0);
+  class Parser
+  {
+  public:
+    Parser(Factory const & factory, std::ostream * optional_dbg_os = 0);
+    virtual ~Parser();
+    
+    Factory const & factory;
+    std::ostream * dbg;
+  };
+  
+  
+  class TaskParser
+    : public Parser
+  {
+  public:
+    TaskParser(Factory const & factory, std::ostream * optional_dbg_os = 0);
     
     std::string type;
     std::string name;
-    
-    std::vector<Parameter *> parsed_params;
     
     /** After successfully parsing a YAML node, this contains the
 	pointer to the freshly created task. If something goes wrong,
@@ -64,31 +77,64 @@ namespace opspace {
 	instance.
     */
     Task * task;
-    
-    /** Set this to a non-zero value to receive debug output from the
-	parser. */
-    std::ostream * dbg;
   };
   
   
-  struct behavior_parser_s {
-    behavior_parser_s(TaskFactory const & tfac, std::ostream * optional_dbg_os = 0);
+  class BehaviorParser
+    : public Parser
+  {
+  public:
+    BehaviorParser(Factory const & factory, std::ostream * optional_dbg_os = 0);
     
-    TaskFactory const & tfac;
     std::string type;
     std::string name;
     
+    /** After successfully parsing a YAML node, this contains the
+	pointer to the freshly created behavior. If something goes
+	wrong, behavior will be zero.
+	
+	\note You are responsible for eventually deleting this
+	Behavior instance.
+    */
     Behavior * behavior;
-
-    std::ostream * dbg;
   };
+  
+  
+  class TaskTableParser
+    : public Parser
+  {
+  public:
+    TaskTableParser(Factory const & factory,
+		    Factory::task_table_t & task_table,
+		    std::ostream * optional_dbg_os = 0);
+    
+    TaskParser task_parser;    
+    Factory::task_table_t & task_table;
+  };
+  
+  
+  class BehaviorTableParser
+    : public Parser
+  {
+  public:
+    BehaviorTableParser(Factory const & factory,
+			Factory::behavior_table_t & behavior_table,
+			std::ostream * optional_dbg_os = 0);
+    
+    BehaviorParser behavior_parser;    
+    Factory::behavior_table_t & behavior_table;
+  };  
   
   
   void operator >> (YAML::Node const & node, Vector & vector);
   
-  void operator >> (YAML::Node const & node, task_parser_s & task);
+  void operator >> (YAML::Node const & node, TaskParser & parser);
   
-  void operator >> (YAML::Node const & node, behavior_parser_s & behavior);
+  void operator >> (YAML::Node const & node, BehaviorParser & parser);
+  
+  void operator >> (YAML::Node const & node, TaskTableParser & parser);
+  
+  void operator >> (YAML::Node const & node, BehaviorTableParser & parser);
   
 }
 

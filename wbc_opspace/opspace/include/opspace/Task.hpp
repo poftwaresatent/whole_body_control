@@ -96,16 +96,12 @@ namespace opspace {
      
   */
   class Task
-    : public ParameterChecker
+    : public ParameterReflection
   {
   protected:
     explicit Task(std::string const & name);
     
   public:
-    typedef std::vector<Parameter *> parameter_table_t;
-    
-    virtual ~Task();
-    
     /**
        Abstract, implemented by subclasses in order to initialize the
        task. This is important for stateful tasks, for instance in
@@ -161,55 +157,6 @@ namespace opspace {
        set by subclasses in their update() method.
     */
     Matrix const & getJacobian() const { return jacobian_; }
-    
-    /**
-       \return A pointer to the Parameter subclass instance which
-       represents a certain named parameter of the task, or zero if
-       the name does not match any parameter. You can use
-       getParameterTable() to inspect the list of parameters.
-    */
-    Parameter * lookupParameter(std::string const & name);
-
-    /**
-       \return A const pointer to the Parameter subclass instance
-       which represents a certain named parameter of the task, or zero
-       if the name does not match any parameter. You can use
-       getParameterTable() to inspect the list of parameters.
-    */
-    Parameter const * lookupParameter(std::string const & name) const;
-    
-    /**
-       \return A pointer to the Parameter subclass instance which
-       represents a certain named parameter of the task AND matches
-       the given type, or zero if the name or the type does not
-       match. You can use getParameterTable() to inspect the list of
-       parameters.
-    */
-    Parameter * lookupParameter(std::string const & name, parameter_type_t type);
-
-    /**
-       \return A const pointer to the Parameter subclass instance
-       which represents a certain named parameter of the task AND
-       matches the given type, or zero if the name or the type does
-       not match. You can use getParameterTable() to inspect the list
-       of parameters.
-    */
-    Parameter const * lookupParameter(std::string const & name, parameter_type_t type) const;
-    
-    /** Default implementation for ParameterChecker. Always returns succes. */
-    virtual Status check(int const * param, int value) const;
-    
-    /** Default implementation for ParameterChecker. Always returns succes. */
-    virtual Status check(double const * param, double value) const;
-    
-    /** Default implementation for ParameterChecker. Always returns succes. */
-    virtual Status check(Vector const * param, Vector const & value) const;
-    
-    /** Default implementation for ParameterChecker. Always returns succes. */
-    virtual Status check(Matrix const * param, Matrix const & value) const;
-    
-    parameter_table_t & getParameterTable()             { return parameter_table_; }
-    parameter_table_t const & getParameterTable() const { return parameter_table_; }
 
     /**
        SVD cutoff value for pseudo inverse, exists in all tasks
@@ -217,47 +164,23 @@ namespace opspace {
     */
     double getSigmaThreshold() const { return sigma_threshold_; }
     
-    void dump(std::ostream & os, std::string const & title, std::string const & prefix) const;
+    virtual void dump(std::ostream & os,
+		      std::string const & title,
+		      std::string const & prefix) const;
     
     virtual void dbg(std::ostream & os,
 		     std::string const & title,
 		     std::string const & prefix) const;
     
   protected:
-    typedef std::map<std::string, Parameter *> parameter_lookup_t;
-    
-    /**
-       Used by subclasseto make one of their fields accessible to the
-       outside via the task parameter table. The parameter then
-       becomes available through one of the lookupParameter() and
-       getParameterTable() methods.
-       
-       \note Everyone is granted read access to the parameter. Write
-       access is protected in two ways: the caller needs to have a
-       non-const handle on the Task instance, and the Parameter::set()
-       method will call Task::check() before actually writing a new
-       value into the pointer provided here at declaration time.
-    */
-    IntegerParameter * declareParameter(std::string const & name, int * integer);
-    
-    /** See also declareParameter(std::string const &, int *)... */
-    RealParameter * declareParameter(std::string const & name, double * real);
-
-    /** See also declareParameter(std::string const &, int *)... */
-    VectorParameter * declareParameter(std::string const & name, Vector * vector);
-
-    /** See also declareParameter(std::string const &, int *)... */
-    MatrixParameter * declareParameter(std::string const & name, Matrix * matrix);
-    
     std::string const name_;
     Vector actual_;
     Vector command_;
     Matrix jacobian_;
-    parameter_table_t parameter_table_;
-    parameter_lookup_t parameter_lookup_;
     
-    // SVD cutoff value for pseudo inverse, exists in all tasks
-    // because Controller implementations need it.
+    /** Parameter "sigma_threshold", SVD cutoff value for pseudo
+	inverse. Exists in all tasks because Controller
+	implementations need it. */
     double sigma_threshold_;
   };
   
