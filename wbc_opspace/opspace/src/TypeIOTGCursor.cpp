@@ -75,4 +75,28 @@ namespace opspace {
     return result;
   }
   
+  
+  int TypeIOTGCursor::
+  next(double maxvel,
+       double maxacc,
+       double goal)
+  {
+    if (ndof_ != 1) {
+      return -1000;
+    }
+    int const result(otg_.GetNextMotionState_Position(pos_clean_.data(),
+						      vel_clean_.data(),
+						      &maxvel,
+						      &maxacc,
+						      &goal,
+						      selection_.data(),
+						      pos_dirty_.data(),
+						      vel_dirty_.data()));
+    if (0 <= result) {
+      pos_clean_ = pos_dirty_;
+      vel_clean_ = vel_dirty_;
+    }
+    return result;
+  }
+  
 }

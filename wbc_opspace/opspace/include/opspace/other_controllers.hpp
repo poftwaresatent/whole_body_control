@@ -1,7 +1,7 @@
 /*
  * Whole-Body Control for Human-Centered Robotics http://www.me.utexas.edu/~hcrl/
  *
- * Copyright (c) 2010 University of Texas at Austin. All rights reserved.
+ * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
  * Authors: Roland Philippsen and Luis Sentis
  *
@@ -33,33 +33,50 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/opspace.hpp>
-#include <Eigen/LU>
-#include <Eigen/SVD>
+#ifndef OPSPACE_OTHER_CONTROLLERS_HPP
+#define OPSPACE_OTHER_CONTROLLERS_HPP
 
-using namespace std;
+#include <opspace/Controller.hpp>
 
 namespace opspace {
 
-  void pseudoInverse(Matrix const & matrix,
-		     double sigmaThreshold,
-		     Matrix & invMatrix,
-		     Vector * opt_sigmaOut)
+
+  /**
+     A controller implementation based on "Samir's cheatsheet" ... not
+     thoroughly tested yet, but if it turns out to work correctly, it
+     would probably be faster than the LController.
+  */
+  class SController
+    : public Controller
   {
-    Eigen::SVD<Matrix> svd(matrix);
-    // not sure if we need to svd.sort()... probably not
-    int const nrows(svd.singularValues().rows());
-    Matrix invS;
-    invS = Matrix::Zero(nrows, nrows);
-    for (int ii(0); ii < nrows; ++ii) {
-      if (svd.singularValues().coeff(ii) > sigmaThreshold) {
-	invS.coeffRef(ii, ii) = 1.0 / svd.singularValues().coeff(ii);
-      }
-    }
-    invMatrix = svd.matrixU() * invS * svd.matrixU().transpose();
-    if (opt_sigmaOut) {
-      *opt_sigmaOut = svd.singularValues();
-    }
-  }
+  public:
+    explicit SController(std::string const & name, std::ostream * dbg = 0);
+    
+    virtual Status computeCommand(Model const & model, Vector & gamma);
+  };
   
+  
+  /**
+     Quick test for using algebraic regularization for lambda... does
+     not work though (yet).
+  */
+  class LRController
+    : public Controller
+  {
+  public:
+    explicit LRController(std::string const & name, std::ostream * dbg = 0);
+    
+    virtual Status computeCommand(Model const & model, Vector & gamma);
+    
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
+  protected:
+    std::vector<Vector> sv_lstar_;
+    std::vector<Vector> sv_jstar_;
+  };
+
 }
+
+#endif // OPSPACE_OTHER_CONTROLLERS_HPP

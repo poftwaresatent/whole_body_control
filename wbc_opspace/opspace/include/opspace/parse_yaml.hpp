@@ -1,9 +1,9 @@
 /*
  * Whole-Body Control for Human-Centered Robotics http://www.me.utexas.edu/~hcrl/
  *
- * Copyright (c) 2010 University of Texas at Austin. All rights reserved.
+ * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
- * Authors: Roland Philippsen and Luis Sentis
+ * Authors: Roland Philippsen
  *
  * BSD license:
  * Redistribution and use in source and binary forms, with or without
@@ -33,33 +33,63 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/opspace.hpp>
-#include <Eigen/LU>
-#include <Eigen/SVD>
+#ifndef OPSPACE_PARSE_YAML_HPP
+#define OPSPACE_PARSE_YAML_HPP
 
-using namespace std;
+#include <yaml-cpp/yaml.h>
+#include <jspace/wrap_eigen.hpp>
 
 namespace opspace {
 
-  void pseudoInverse(Matrix const & matrix,
-		     double sigmaThreshold,
-		     Matrix & invMatrix,
-		     Vector * opt_sigmaOut)
-  {
-    Eigen::SVD<Matrix> svd(matrix);
-    // not sure if we need to svd.sort()... probably not
-    int const nrows(svd.singularValues().rows());
-    Matrix invS;
-    invS = Matrix::Zero(nrows, nrows);
-    for (int ii(0); ii < nrows; ++ii) {
-      if (svd.singularValues().coeff(ii) > sigmaThreshold) {
-	invS.coeffRef(ii, ii) = 1.0 / svd.singularValues().coeff(ii);
-      }
-    }
-    invMatrix = svd.matrixU() * invS * svd.matrixU().transpose();
-    if (opt_sigmaOut) {
-      *opt_sigmaOut = svd.singularValues();
-    }
-  }
+  using jspace::Vector;
+  class Task;
+  class Parameter;
+  class TaskFactory;
+  class Behavior;
+  
+  
+  struct task_parser_s {
+    explicit task_parser_s(std::ostream * optional_dbg_os = 0);
+    
+    std::string type;
+    std::string name;
+    
+    std::vector<Parameter *> parsed_params;
+    
+    /** After successfully parsing a YAML node, this contains the
+	pointer to the freshly created task. If something goes wrong,
+	task will be zero.
+	
+	\note You are responsible for eventually deleting this Task
+	instance.
+    */
+    Task * task;
+    
+    /** Set this to a non-zero value to receive debug output from the
+	parser. */
+    std::ostream * dbg;
+  };
+  
+  
+  struct behavior_parser_s {
+    behavior_parser_s(TaskFactory const & tfac, std::ostream * optional_dbg_os = 0);
+    
+    TaskFactory const & tfac;
+    std::string type;
+    std::string name;
+    
+    Behavior * behavior;
+
+    std::ostream * dbg;
+  };
+  
+  
+  void operator >> (YAML::Node const & node, Vector & vector);
+  
+  void operator >> (YAML::Node const & node, task_parser_s & task);
+  
+  void operator >> (YAML::Node const & node, behavior_parser_s & behavior);
   
 }
+
+#endif // OPSPACE_PARSE_YAML_HPP

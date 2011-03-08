@@ -25,6 +25,7 @@ Quick'n'Dirty git-subtree instructions
 
 3. If you later want to pull opspace changes into your umbrella project:
 
+        git fetch opspace
         git subtree merge -P opspace opspace/master
 
 4. After you've made some changes to opspace while working on the

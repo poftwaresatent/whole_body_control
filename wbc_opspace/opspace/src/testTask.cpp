@@ -36,6 +36,7 @@
 #include <gtest/gtest.h>
 #include <opspace/task_library.hpp>
 #include <opspace/Controller.hpp>
+#include <opspace/other_controllers.hpp>
 #include <jspace/test/model_library.hpp>
 #include <err.h>
 
@@ -43,6 +44,7 @@ using jspace::Model;
 using jspace::State;
 using jspace::pretty_print;
 using namespace opspace;
+using boost::shared_ptr;
 using namespace std;
 
 
@@ -75,7 +77,7 @@ TEST (task, basics)
   st = odd.init(*puma);
   EXPECT_FALSE (st.ok) << "init before selection setting should have failed";
   
-  Parameter * selection(odd.lookupParameter("selection", TASK_PARAM_TYPE_VECTOR));
+  Parameter * selection(odd.lookupParameter("selection", PARAMETER_TYPE_VECTOR));
   ASSERT_NE ((void*)0, selection) << "failed to retrieve selection parameter";
   
   Vector sel(Vector::Zero(puma->getNDOF()));
@@ -93,11 +95,11 @@ TEST (task, basics)
 }
 
 
-static SelectedJointPostureTask * create_sel_jp_task(string const & name, Vector const & selection)
+static shared_ptr<Task> create_sel_jp_task(string const & name, Vector const & selection)
   throw(runtime_error)
 {
   SelectedJointPostureTask * task(new SelectedJointPostureTask(name));
-  Parameter * sel_p(task->lookupParameter("selection", TASK_PARAM_TYPE_VECTOR));
+  Parameter * sel_p(task->lookupParameter("selection", PARAMETER_TYPE_VECTOR));
   if ( ! sel_p) {
     delete task;
     throw runtime_error("failed to retrieve selection parameter");
@@ -107,39 +109,30 @@ static SelectedJointPostureTask * create_sel_jp_task(string const & name, Vector
     delete task;
     throw runtime_error("failed to set selection: " + st.errstr);
   }
-  return task;
+  return shared_ptr<Task>(task);
 }
 
 
 static void append_odd_even_tasks(Controller & ctrl, size_t ndof)
   throw(runtime_error)
 {
-  vector<Task*> task;
-  try {
-    Vector sel_odd(Vector::Zero(ndof));
-    Vector sel_even(Vector::Zero(ndof));
-    for (size_t ii(0); ii < ndof; ++ii) {
-      if (0 == (ii % 2)) {
-	sel_even[ii] = 1.0;
-      }
-      else {
-	sel_odd[ii] = 1.0;
-      }
+  vector<shared_ptr<Task> > task;
+  Vector sel_odd(Vector::Zero(ndof));
+  Vector sel_even(Vector::Zero(ndof));
+  for (size_t ii(0); ii < ndof; ++ii) {
+    if (0 == (ii % 2)) {
+      sel_even[ii] = 1.0;
     }
-    task.push_back(create_sel_jp_task("odd", sel_odd));
-    task.push_back(create_sel_jp_task("even", sel_even));
-    for (size_t ii(0); ii < task.size(); ++ii) {
-      if ( ! ctrl.appendTask(task[ii], true)) {
-	throw runtime_error("failed to add task `" + task[ii]->getName() + "'");
-      }
-      task[ii] = 0;	   // avoid double-free in case we throw later
+    else {
+      sel_odd[ii] = 1.0;
     }
   }
-  catch (runtime_error const & ee) {
-    for (size_t ii(0); ii < task.size(); ++ii) {
-      delete task[ii];
+  task.push_back(create_sel_jp_task("odd", sel_odd));
+  task.push_back(create_sel_jp_task("even", sel_even));
+  for (size_t ii(0); ii < task.size(); ++ii) {
+    if ( ! ctrl.appendTask(task[ii])) {
+      throw runtime_error("failed to add task `" + task[ii]->getName() + "'");
     }
-    throw ee;
   }
 }
 
@@ -147,34 +140,25 @@ static void append_odd_even_tasks(Controller & ctrl, size_t ndof)
 static void append_odd_full_tasks(Controller & ctrl, size_t ndof)
   throw(runtime_error)
 {
-  vector<Task*> task;
-  try {
-    Vector sel_odd(Vector::Zero(ndof));
-    Vector sel_full(Vector::Ones(ndof));
-    for (size_t ii(1); ii < ndof; ii += 2) {
-      sel_odd[ii] = 1.0;
-    }
-    task.push_back(create_sel_jp_task("odd", sel_odd));
-    task.push_back(create_sel_jp_task("full", sel_full));
-    for (size_t ii(0); ii < task.size(); ++ii) {
-      if ( ! ctrl.appendTask(task[ii], true)) {
-	throw runtime_error("failed to add task `" + task[ii]->getName() + "'");
-      }
-      task[ii] = 0;	   // avoid double-free in case we throw later
-    }
+  vector<shared_ptr<Task> > task;
+  Vector sel_odd(Vector::Zero(ndof));
+  Vector sel_full(Vector::Ones(ndof));
+  for (size_t ii(1); ii < ndof; ii += 2) {
+    sel_odd[ii] = 1.0;
   }
-  catch (runtime_error const & ee) {
-    for (size_t ii(0); ii < task.size(); ++ii) {
-      delete task[ii];
+  task.push_back(create_sel_jp_task("odd", sel_odd));
+  task.push_back(create_sel_jp_task("full", sel_full));
+  for (size_t ii(0); ii < task.size(); ++ii) {
+    if ( ! ctrl.appendTask(task[ii])) {
+      throw runtime_error("failed to add task `" + task[ii]->getName() + "'");
     }
-    throw ee;
   }
 }
 
 
 TEST (controller, odd_even)
 {
-  Task * jpos(0);
+  shared_ptr<Task> jpos;
   Vector gamma_jpos;
   
   vector<Controller*> ctrl;
@@ -244,7 +228,7 @@ TEST (controller, odd_even)
 
 TEST (controller, odd_full)
 {
-  Task * jpos(0);
+  shared_ptr<Task> jpos;
   Vector gamma_jpos;
   
   vector<Controller*> ctrl;
@@ -272,10 +256,6 @@ TEST (controller, odd_full)
     
     msg.push_back(new ostringstream());
     ctrl.push_back(new LController("Luis", msg.back()));
-    gamma.push_back(Vector::Zero(puma->getNDOF()));
-    
-    msg.push_back(new ostringstream());
-    ctrl.push_back(new TPController("TaskPosture", msg.back()));
     gamma.push_back(Vector::Zero(puma->getNDOF()));
     
     for (size_t ii(0); ii < ctrl.size(); ++ii) {
@@ -312,6 +292,101 @@ TEST (controller, odd_full)
     for (size_t ii(0); ii < msg.size(); ++ii) {
       delete msg[ii];
     }
+  }
+}
+
+
+
+
+TEST (task, jlimit)
+{
+  shared_ptr<JointLimitTask> jlimit(new JointLimitTask("jlimit"));
+  
+  try {
+    Model * puma(get_puma());
+    size_t const ndof(puma->getNDOF());
+    
+    Parameter * param(jlimit->lookupParameter("dt_seconds", PARAMETER_TYPE_REAL));
+    ASSERT_NE ((void*)0, param) << "failed to get dt_seconds param";
+    Status st(param->set(0.1));
+    ASSERT_TRUE (st.ok) << "failed to set dt_seconds: " << st.errstr;
+
+    param = jlimit->lookupParameter("upper_stop_deg", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get upper_stop_deg param";
+    Vector foo(30.0 * Vector::Ones(ndof));
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set upper_stop_deg: " << st.errstr;
+
+    param = jlimit->lookupParameter("upper_trigger_deg", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get upper_trigger_deg param";
+    foo = 20.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set upper_trigger_deg: " << st.errstr;
+
+    param = jlimit->lookupParameter("lower_stop_deg", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get lower_stop_deg param";
+    foo = -30.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set lower_stop_deg: " << st.errstr;
+
+    param = jlimit->lookupParameter("lower_trigger_deg", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get lower_trigger_deg param";
+    foo = -20.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set lower_trigger_deg: " << st.errstr;
+
+    param = jlimit->lookupParameter("kp", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get kp param";
+    foo = 100.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set kp: " << st.errstr;
+
+    param = jlimit->lookupParameter("kd", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get kd param";
+    foo = 20.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set kd: " << st.errstr;
+
+    param = jlimit->lookupParameter("maxvel", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get maxvel param";
+    foo = 10.0 * M_PI / 180.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set maxvel: " << st.errstr;
+
+    param = jlimit->lookupParameter("maxacc", PARAMETER_TYPE_VECTOR);
+    ASSERT_NE ((void*)0, param) << "failed to get maxacc param";
+    foo = 25.0 * M_PI / 180.0 * Vector::Ones(ndof);
+    st = param->set(foo);
+    ASSERT_TRUE (st.ok) << "failed to set maxacc: " << st.errstr;
+    
+    LController ctrl("ctrl", &cerr);
+    ctrl.appendTask(jlimit);
+    
+    State state(ndof, ndof, 0);
+    state.position_ = Vector::Zero(ndof);
+    state.velocity_ = Vector::Zero(ndof);
+    puma->update(state);
+    st = ctrl.init(*puma);
+    EXPECT_TRUE (st.ok) << "failed to init: " << st.errstr;
+    Vector gamma;
+    st = ctrl.computeCommand(*puma, gamma);
+    EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
+    
+    for (size_t ii(0); ii < ndof; ++ii) {
+      if (0 == ii % 2) {
+	state.position_[ii] =  4.0 * M_PI;
+      }
+      else {
+	state.position_[ii] = -4.0 * M_PI;
+      }
+      puma->update(state);
+      st = ctrl.computeCommand(*puma, gamma);
+      EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
+    }
+    
+  }
+  catch (exception const & ee) {
+    ADD_FAILURE () << "exception " << ee.what();
   }
 }
 

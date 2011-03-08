@@ -33,79 +33,101 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef OPSPACE_CONTROLLER_HPP
+#define OPSPACE_CONTROLLER_HPP
+
 #include <opspace/Task.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace opspace {
-
-
+  
+  
+  /**
+     Semi-abstract base class for operational space controllers. This
+     base class handles the registration of tasks, and subclasses have
+     to provide the computeCommand() method. Optionally, they can also
+     override init().
+  */
   class Controller
   {
   public:
-    struct task_info_s {
-      task_info_s(Task * tt, bool co)
-	: task(tt), controller_owned(co) {}
-      
-      Task * task;
-      bool controller_owned;
-    };
-    
-    typedef std::vector<task_info_s *> task_table_t;
+    typedef std::vector<boost::shared_ptr<Task> > task_table_t;
     
     explicit Controller(std::string const & name, std::ostream * dbg = 0);
-    virtual ~Controller();
+    virtual ~Controller() {}
     
     std::string const & getName() const { return name_; }
     
-    /** \note Transfers ownership of the task object if you set
-	controller_owned to true. Controller-owned tasks get deleted
-	in the Controller destructor. */
-    task_info_s const * appendTask(Task * task, bool controller_owned);
+    /**
+       Append a task instance to the hierarchy managed by this
+       controller.
+       
+       \return True on success (false if we have already been
+       initialized).
+    */
+    bool appendTask(boost::shared_ptr<Task> task);
     
     task_table_t const & getTaskTable() const { return task_table_; };
     
+    /**
+       \todo Refactor into full-fledged behavior setup.
+
+       \return true on success (false if we are already initialized)
+    */
+    bool setFallbackTask(boost::shared_ptr<Task> task);
+    
+    /**
+       The default implementation simply loops over the task table and
+       calls Task::init() on all of them, returning an error if one of
+       them fails to init. On success, it also sets the initialized_
+       flag to true, so that subclasses can use that information if
+       desired.
+    */
     virtual Status init(Model const & model);
+    
+    /**
+       Abstract method that has to be implemented in order to update
+       all tasks and turn their commands into desired joint torques.
+     */
     virtual Status computeCommand(Model const & model, Vector & gamma) = 0;
+    
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const {}
     
   protected:
     std::string const name_;
     std::ostream * dbg_;
     task_table_t task_table_;
     bool initialized_;
+    boost::shared_ptr<Task> fallback_task_;
   };
   
   
-  class SController
-    : public Controller
-  {
-  public:
-    explicit SController(std::string const & name, std::ostream * dbg = 0);
-    
-    virtual Status computeCommand(Model const & model, Vector & gamma);
-  };
-  
-  
+  /**
+     "The" reference controller based on original code that Luis
+     developed during his thesis. Performs dynamically consistent
+     nullspace projection magic.
+  */
   class LController
     : public Controller
   {
   public:
     explicit LController(std::string const & name, std::ostream * dbg = 0);
     
-    virtual Status computeCommand(Model const & model, Vector & gamma);
-  };
-  
-  
-  class TPController
-    : public Controller
-  {
-  public:
-    explicit TPController(std::string const & name, std::ostream * dbg = 0);
-    
     virtual Status init(Model const & model);
     virtual Status computeCommand(Model const & model, Vector & gamma);
     
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
   protected:
-    Task * task_;
-    Task * posture_;
+    std::vector<Vector> sv_lstar_;
+    std::vector<Vector> sv_jstar_;
+    bool fallback_;
   };
   
 }
+
+#endif // OPSPACE_CONTROLLER_HPP

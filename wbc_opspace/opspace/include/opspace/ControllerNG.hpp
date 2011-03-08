@@ -1,7 +1,7 @@
 /*
  * Whole-Body Control for Human-Centered Robotics http://www.me.utexas.edu/~hcrl/
  *
- * Copyright (c) 2010 University of Texas at Austin. All rights reserved.
+ * Copyright (c) 2011 University of Texas at Austin. All rights reserved.
  *
  * Authors: Roland Philippsen and Luis Sentis
  *
@@ -33,33 +33,48 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/opspace.hpp>
-#include <Eigen/LU>
-#include <Eigen/SVD>
+#ifndef OPSPACE_CONTROLLER_NG_HPP
+#define OPSPACE_CONTROLLER_NG_HPP
 
-using namespace std;
+#include <opspace/Behavior.hpp>
+#include <boost/shared_ptr.hpp>
 
 namespace opspace {
-
-  void pseudoInverse(Matrix const & matrix,
-		     double sigmaThreshold,
-		     Matrix & invMatrix,
-		     Vector * opt_sigmaOut)
-  {
-    Eigen::SVD<Matrix> svd(matrix);
-    // not sure if we need to svd.sort()... probably not
-    int const nrows(svd.singularValues().rows());
-    Matrix invS;
-    invS = Matrix::Zero(nrows, nrows);
-    for (int ii(0); ii < nrows; ++ii) {
-      if (svd.singularValues().coeff(ii) > sigmaThreshold) {
-	invS.coeffRef(ii, ii) = 1.0 / svd.singularValues().coeff(ii);
-      }
-    }
-    invMatrix = svd.matrixU() * invS * svd.matrixU().transpose();
-    if (opt_sigmaOut) {
-      *opt_sigmaOut = svd.singularValues();
-    }
-  }
   
+  
+  class ControllerNG
+  {
+  public:
+    explicit ControllerNG(std::string const & name);
+    virtual ~ControllerNG() {}
+    
+    std::string const & getName() const { return name_; }
+    
+    void setFallbackTask(boost::shared_ptr<Task> task);
+    
+    virtual Status init(Model const & model);
+
+    virtual Status computeCommand(Model const & model,
+				  Behavior & behavior,
+				  Vector & gamma);
+
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
+    Status computeFallback(Model const & model,
+			   bool init_required,
+			   Vector & gamma);
+    
+  protected:
+    std::string const name_;
+    boost::shared_ptr<Task> fallback_task_;
+    std::vector<Vector> sv_lstar_; // stored only for dbg()
+    std::vector<Vector> sv_jstar_; // stored only for dbg()
+    bool fallback_;
+    std::string fallback_reason_;
+  };
+
 }
+
+#endif // OPSPACE_CONTROLLER_NG_HPP

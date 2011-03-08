@@ -49,7 +49,15 @@ namespace opspace {
   class TypeIOTGCursor;
   struct task_posture_info_getter_s;
   
-  
+
+  /**
+     Temporary wrapper class for trying out task/posture control using
+     the jspace::Controller API.
+     
+     \note This class will be discarded as soon as we're happy with
+     the opspace::Task and opspace::Controller redesign... (real soon
+     nowm seriously).
+   */  
   class TaskPostureController
     : public jspace::Controller
   {

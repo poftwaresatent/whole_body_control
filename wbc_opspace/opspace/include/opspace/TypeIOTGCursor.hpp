@@ -43,7 +43,17 @@ namespace opspace {
   
   using jspace::Vector;
   
-  
+
+  /**
+     Utility for using reflexxes_otg::TypeIOTG. This class wraps a
+     acceleration-bounded trajectory object from the reflexxes_otg
+     library and makes it easier to use, e.g. inside
+     opspace::TrajectoryTask.
+     
+     The idea is that you simply initialize it by setting the starting
+     position() and velocity(), and then repeatedly call next() to
+     advance to the next desired position and velocity.
+  */
   class TypeIOTGCursor
   {
   public:
@@ -53,9 +63,31 @@ namespace opspace {
     TypeIOTGCursor(size_t ndof,
 		   double dt_seconds);
     
+    /**
+       Compute the next desired position() and velocity(). You specify
+       the maximum velocity and acceleration right here, as well as
+       the goal. This allows you to change all these parameters on the
+       fly without needing to mess with the cursor's internal state.
+       
+       If you want to change the starting state of the trajectory,
+       simply assign to position() and velocity(). You typically do
+       that only at (re-)initialization time.
+       
+       \return reflexxes_otg::TypeIOTGResult which is easy to
+       interpret: 0 on success, 1 if we were already at the goal
+       anyway, and negative values on error.
+    */
     int next(Vector const & maxvel,
 	     Vector const & maxacc,
 	     Vector const & goal);
+
+    /**
+       In case of one-dimensional cursor, this is easier to
+       use. Returns -1000 in case the dimension is not 1.
+    */
+    int next(double maxvel,
+	     double maxacc,
+	     double goal);
     
     inline Vector & position()             { return pos_clean_; }
     inline Vector const & position() const { return pos_clean_; }

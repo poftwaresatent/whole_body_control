@@ -40,166 +40,12 @@ using namespace jspace;
 namespace opspace {
   
   
-  Parameter::
-  Parameter(std::string const & name,
-	    task_param_type_t type,
-	    ParameterChecker const * checker)
-    : name_(name),
-      type_(type),
-      checker_(checker)
-  {
-    switch (type) {
-    case TASK_PARAM_TYPE_VOID:
-    case TASK_PARAM_TYPE_INTEGER:
-    case TASK_PARAM_TYPE_REAL:
-    case TASK_PARAM_TYPE_VECTOR:
-    case TASK_PARAM_TYPE_MATRIX:
-      break;
-    default:
-      const_cast<task_param_type_t &>(type_) = TASK_PARAM_TYPE_VOID;
-    }
-  }
-  
-  
-  Parameter::
-  ~Parameter()
-  {
-  }
-  
-  
-  void Parameter::
-  dump(std::ostream & os, std::string const & prefix) const
-  {
-    os << prefix << name_ << " : void\n";
-  }
-  
-  
-  IntegerParameter::
-  IntegerParameter(std::string const & name, ParameterChecker const * checker, int * integer)
-    : Parameter(name, TASK_PARAM_TYPE_INTEGER, checker),
-      integer_(integer)
-  {
-  }
-  
-  
-  Status IntegerParameter::
-  set(int integer)
-  {
-    Status st;
-    if (checker_) {
-      st = checker_->check(integer_, integer);
-      if ( ! st) {
-	return st;
-      }
-    }
-    *integer_ = integer;
-    return st;
-  }
-  
-  
-  void IntegerParameter::
-  dump(std::ostream & os, std::string const & prefix) const
-  {
-    os << prefix << name_ << " : integer = " << *integer_ << "\n";
-  }
-
-
-  RealParameter::
-  RealParameter(std::string const & name, ParameterChecker const * checker, double * real)
-    : Parameter(name, TASK_PARAM_TYPE_REAL, checker),
-      real_(real)
-  {
-  }
-  
-  
-  Status RealParameter::
-  set(double real)
-  {
-    Status st;
-    if (checker_) {
-      st = checker_->check(real_, real);
-      if ( ! st) {
-	return st;
-      }
-    }
-    *real_ = real;
-    return st;
-  }
-  
-  
-  void RealParameter::
-  dump(std::ostream & os, std::string const & prefix) const
-  {
-    os << prefix << name_ << " : real = " << *real_ << "\n";
-  }
-
-
-  VectorParameter::
-  VectorParameter(std::string const & name, ParameterChecker const * checker, Vector * vector)
-    : Parameter(name, TASK_PARAM_TYPE_VECTOR, checker),
-      vector_(vector)
-  {
-  }
-  
-  
-  Status VectorParameter::
-  set(Vector const & vector)
-  {
-    Status st;
-    if (checker_) {
-      st = checker_->check(vector_, vector);
-      if ( ! st) {
-	return st;
-      }
-    }
-    *vector_ = vector;
-    return st;
-  }
-  
-  
-  void VectorParameter::
-  dump(std::ostream & os, std::string const & prefix) const
-  {
-    os << prefix << name_ << " : vector =\n"
-       << prefix << "  " << pretty_string(*vector_) << "\n";
-  }
-
-
-  MatrixParameter::
-  MatrixParameter(std::string const & name, ParameterChecker const * checker, Matrix * matrix)
-    : Parameter(name, TASK_PARAM_TYPE_MATRIX, checker),
-      matrix_(matrix)
-  {
-  }
-  
-  
-  Status MatrixParameter::
-  set(Matrix const & matrix)
-  {
-    Status st;
-    if (checker_) {
-      st = checker_->check(matrix_, matrix);
-      if ( ! st) {
-	return st;
-      }
-    }
-    *matrix_ = matrix;
-    return st;
-  }
-  
-  
-  void MatrixParameter::
-  dump(std::ostream & os, std::string const & prefix) const
-  {
-    os << prefix << name_ << " : matrix =\n"
-       << pretty_string(*matrix_, prefix + "  ") << "\n";
-  }
-  
-  
   Task::
   Task(std::string const & name)
-    : name_(name)
+    : name_(name),
+      sigma_threshold_(1.0e-2)
   {
+    declareParameter("sigma_threshold", &sigma_threshold_);
   }
   
   
@@ -294,7 +140,7 @@ namespace opspace {
   
   
   Parameter * Task::
-  lookupParameter(std::string const & name, task_param_type_t type)
+  lookupParameter(std::string const & name, parameter_type_t type)
   {
     parameter_lookup_t::iterator ii(parameter_lookup_.find(name));
     if (parameter_lookup_.end() == ii) {
@@ -308,7 +154,7 @@ namespace opspace {
   
   
   Parameter const * Task::
-  lookupParameter(std::string const & name, task_param_type_t type) const
+  lookupParameter(std::string const & name, parameter_type_t type) const
   {
     parameter_lookup_t::const_iterator ii(parameter_lookup_.find(name));
     if (parameter_lookup_.end() == ii) {
