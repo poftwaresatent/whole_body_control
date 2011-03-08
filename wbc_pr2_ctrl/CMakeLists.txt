@@ -17,6 +17,9 @@ rosbuild_add_library (wbc_pr2_ctrl
   )
 target_link_libraries (wbc_pr2_ctrl wbc_core wbc_urdf)
 
+rosbuild_add_executable (bin/opspace_servo src/opspace_servo.cpp)
+target_link_libraries (bin/opspace_servo wbc_pr2_ctrl)
+
 rosbuild_add_executable (bin/jspace_servo src/jspace_servo.cpp)
 target_link_libraries (bin/jspace_servo wbc_pr2_ctrl)
 
