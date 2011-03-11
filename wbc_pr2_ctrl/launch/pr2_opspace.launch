@@ -1,0 +1,10 @@
+<launch>
+  <rosparam command="load" file="$(find wbc_pr2_ctrl)/config/pr2_wbc.yaml" />
+  <node
+      pkg="wbc_pr2_ctrl"
+      type="opspace_servo"
+      name="opspace_servo"
+      args=""
+      output="screen">
+  </node>
+</launch>
