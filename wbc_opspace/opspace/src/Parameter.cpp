@@ -553,7 +553,7 @@ namespace opspace {
 	}
       }
       if (progress) {
-	*progress << "DONE\n";
+	*progress << " DONE\n";
       }
     }
     
@@ -582,7 +582,7 @@ namespace opspace {
 	}
       }
       if (progress) {
-	*progress << "DONE\n";
+	*progress << " DONE\n";
       }
     }
     
@@ -611,7 +611,7 @@ namespace opspace {
 	}
       }
       if (progress) {
-	*progress << "DONE\n";
+	*progress << " DONE\n";
       }
     }
     
@@ -640,7 +640,7 @@ namespace opspace {
 	}
       }
       if (progress) {
-	*progress << "DONE\n";
+	*progress << " DONE\n";
       }
     }
     
@@ -678,7 +678,7 @@ namespace opspace {
 	}
       }
       if (progress) {
-	*progress << "DONE\n";
+	*progress << " DONE\n";
       }
     }
     
