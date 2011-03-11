@@ -34,6 +34,7 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <map>
+#include <err.h>
 
 using namespace wbc_pr2_ctrl;
 using namespace opspace;
@@ -82,8 +83,36 @@ static bool get_task_parameter_callback(GetTaskParameter::Request & request,
 
 int main(int argc, char*argv[])
 {
+  //////////////////////////////////////////////////
+  // init
+  
   ros::init(argc, argv, "opspace_servo", ros::init_options::NoSigintHandler);
   ros::NodeHandle nn("~");
+  
+  //////////////////////////////////////////////////
+  // parse options
+  
+  std::string opspace_filename("");
+  
+  for (int ii(1); ii < argc; ++ii) {
+    if ((strlen(argv[ii]) < 2) || ('-' != argv[ii][0])) {
+      errx(EXIT_FAILURE, "problem with option `%s'", argv[ii]);
+    }
+    else
+      switch (argv[ii][1]) {
+	
+      case 'b':
+ 	++ii;
+ 	if (ii >= argc) {
+	  errx(EXIT_FAILURE, "-b requires parameter");
+ 	}
+	opspace_filename = argv[ii];
+ 	break;
+	
+      default:
+	errx(EXIT_FAILURE, "invalid option `%s'", argv[ii]);
+      }
+  }
   
   static bool const unlink_mqueue(true);
   MQRobotAPI robot(unlink_mqueue);
@@ -130,10 +159,10 @@ int main(int argc, char*argv[])
   ROS_INFO ("parsing opspace tasks and behaviors");
   shared_ptr<Behavior> behavior; // for now, just use the first one we encounter
   try {
-    jspace::Status st;
-    std::string opspace_filename("");
-    if ( ! nn.getParam("/wbc_pr2_ctrl/opspace_filename", opspace_filename)) {
-      ROS_WARN ("no /wbc_pr2_ctrl/opspace_filename -- using fallback task/posture behavior");
+    
+    Status st;
+    if (opspace_filename.empty()) {
+      ROS_WARN ("no opspace_filename -- using fallback task/posture behavior");
       st = factory.parseString(opspace_fallback_str);
     }
     else {

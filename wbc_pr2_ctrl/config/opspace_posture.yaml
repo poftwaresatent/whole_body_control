@@ -1,0 +1,25 @@
+- tasks:
+  - type: opspace::PositionTask
+    name: eepos
+    sigma_threshold: 0.00001
+    end_effector_id: 6
+    control_point: [ 0.0, -0.15, 0.0 ]
+    dt_seconds: 0.0025
+    kp: [ 150.0 ]
+    kd: [  20.0 ]
+    maxvel: [ 0.5 ]
+    maxacc: [ 1.0 ]
+  - type: opspace::PostureTask
+    name: posture
+    sigma_threshold: 0.0001
+    dt_seconds: 0.0025
+    kp: [ 100.0 ]
+    kd: [  20.0 ]
+    maxvel: [ 1.6 ]
+    maxacc: [ 3.2 ]
+- behaviors:
+  - type: opspace::TPBehavior
+    name: task_posture
+    default:
+      eepos: eepos
+      posture: posture
