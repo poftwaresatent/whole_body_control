@@ -34,6 +34,7 @@
  */
 
 #include <opspace/Parameter.hpp>
+#include <fstream>
 
 using namespace jspace;
 
@@ -458,6 +459,229 @@ namespace opspace {
     MatrixParameter * entry(new MatrixParameter(name, this, matrix));
     parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
+  }
+  
+  
+  template<typename parameter_t, typename storage_t>
+  bool maybe_append(std::vector<ParameterLog::log_s<parameter_t, storage_t> > & collection,
+		    Parameter const * parameter)
+  {
+    parameter_t const * pp(dynamic_cast<parameter_t const *>(parameter));
+    if (pp) {
+      collection.push_back(ParameterLog::log_s<parameter_t, storage_t>(pp));
+      return true;
+    }
+    return false;
+  }
+  
+  
+  ParameterLog::
+  ParameterLog(std::string const & nn, parameter_lookup_t const & parameter_lookup)
+    : name(nn)
+  {
+    for (parameter_lookup_t::const_iterator ii(parameter_lookup.begin());
+	 ii != parameter_lookup.end(); ++ii) {
+      if (maybe_append(intlog, ii->second)) {
+	continue;
+      }
+      if (maybe_append(strlog, ii->second)) {
+	continue;
+      }
+      if (maybe_append(reallog, ii->second)) {
+	continue;
+      }
+      if (maybe_append(veclog, ii->second)) {
+	continue;
+      }
+      if (maybe_append(mxlog, ii->second)) {
+	continue;
+      }
+    }
+  }
+  
+  
+  void ParameterLog::
+  update()
+  {
+    for (size_t ii(0); ii < intlog.size(); ++ii) {
+      intlog[ii].log.push_back(*intlog[ii].parameter->getInteger());
+    }
+    for (size_t ii(0); ii < strlog.size(); ++ii) {
+      strlog[ii].log.push_back(*strlog[ii].parameter->getString());
+    }
+    for (size_t ii(0); ii < reallog.size(); ++ii) {
+      reallog[ii].log.push_back(*reallog[ii].parameter->getReal());
+    }
+    for (size_t ii(0); ii < veclog.size(); ++ii) {
+      veclog[ii].log.push_back(*veclog[ii].parameter->getVector());
+    }
+    for (size_t ii(0); ii < mxlog.size(); ++ii) {
+      mxlog[ii].log.push_back(*mxlog[ii].parameter->getMatrix());
+    }
+  }
+  
+  
+  void ParameterLog::
+  writeFiles(std::string const & prefix, std::ostream * progress) const
+  {
+    if (progress) {
+      *progress << "writing parameter log: " << name << "\n";
+    }
+    
+    if ( ! intlog.empty()) {
+      if (progress) {
+	*progress << "  integers:";
+      }
+      for (size_t ii(0); ii < intlog.size(); ++ii) {
+	log_s<IntegerParameter, int> const & log(intlog[ii]);
+	if ( ! log.log.empty()) {
+	  if (progress) {
+	    *progress << " " << log.parameter->name_ << "...";
+	  }
+	  std::string const fn(prefix + "-" + name + "-" + log.parameter->name_ + ".dump");
+	  std::ofstream os(fn.c_str());
+	  if (os) {
+	    size_t const nn(log.log.size());
+	    os << "# name: " << name << "\n"
+	       << "# parameter: " << log.parameter->name_ << "\n"
+	       << "# type: integer\n"
+	       << "# size: " << nn << "\n";
+	    for (size_t jj(0); jj < nn; ++jj) {
+	      os << log.log[jj] << "\n";
+	    }
+	  }
+	}
+      }
+      if (progress) {
+	*progress << "DONE\n";
+      }
+    }
+    
+    if ( ! strlog.empty()) {
+      if (progress) {
+	*progress << "  strings:";
+      }
+      for (size_t ii(0); ii < strlog.size(); ++ii) {
+	log_s<StringParameter, std::string> const & log(strlog[ii]);
+	if ( ! log.log.empty()) {
+	  if (progress) {
+	    *progress << " " << log.parameter->name_ << "...";
+	  }
+	  std::string const fn(prefix + "-" + name + "-" + log.parameter->name_ + ".dump");
+	  std::ofstream os(fn.c_str());
+	  if (os) {
+	    size_t const nn(log.log.size());
+	    os << "# name: " << name << "\n"
+	       << "# parameter: " << log.parameter->name_ << "\n"
+	       << "# type: string\n"
+	       << "# size: " << nn << "\n";
+	    for (size_t jj(0); jj < nn; ++jj) {
+	      os << log.log[jj] << "\n";
+	    }
+	  }
+	}
+      }
+      if (progress) {
+	*progress << "DONE\n";
+      }
+    }
+    
+    if ( ! reallog.empty()) {
+      if (progress) {
+	*progress << "  reals:";
+      }
+      for (size_t ii(0); ii < reallog.size(); ++ii) {
+	log_s<RealParameter, double> const & log(reallog[ii]);
+	if ( ! log.log.empty()) {
+	  if (progress) {
+	    *progress << " " << log.parameter->name_ << "...";
+	  }
+	  std::string const fn(prefix + "-" + name + "-" + log.parameter->name_ + ".dump");
+	  std::ofstream os(fn.c_str());
+	  if (os) {
+	    size_t const nn(log.log.size());
+	    os << "# name: " << name << "\n"
+	       << "# parameter: " << log.parameter->name_ << "\n"
+	       << "# type: real\n"
+	       << "# size: " << nn << "\n";
+	    for (size_t jj(0); jj < nn; ++jj) {
+	      os << log.log[jj] << "\n";
+	    }
+	  }
+	}
+      }
+      if (progress) {
+	*progress << "DONE\n";
+      }
+    }
+    
+    if ( ! veclog.empty()) {
+      if (progress) {
+	*progress << "  vectors:";
+      }
+      for (size_t ii(0); ii < veclog.size(); ++ii) {
+	log_s<VectorParameter, Vector> const & log(veclog[ii]);
+	if ( ! log.log.empty()) {
+	  if (progress) {
+	    *progress << " " << log.parameter->name_ << "...";
+	  }
+	  std::string const fn(prefix + "-" + name + "-" + log.parameter->name_ + ".dump");
+	  std::ofstream os(fn.c_str());
+	  if (os) {
+	    size_t const nn(log.log.size());
+	    os << "# name: " << name << "\n"
+	       << "# parameter: " << log.parameter->name_ << "\n"
+	       << "# type: vector\n"
+	       << "# size: " << nn << "\n";
+	    for (size_t jj(0); jj < nn; ++jj) {
+	      jspace::pretty_print(log.log[jj], os, "", "");
+	    }
+	  }
+	}
+      }
+      if (progress) {
+	*progress << "DONE\n";
+      }
+    }
+    
+    if ( ! mxlog.empty()) {
+      if (progress) {
+	*progress << "  matrices:";
+      }
+      for (size_t ii(0); ii < mxlog.size(); ++ii) {
+	log_s<MatrixParameter, Matrix> const & log(mxlog[ii]);
+	if ( ! log.log.empty()) {
+	  if (progress) {
+	    *progress << " " << log.parameter->name_ << "...";
+	  }
+	  std::string const fn(prefix + "-" + name + "-" + log.parameter->name_ + ".dump");
+	  std::ofstream os(fn.c_str());
+	  if (os) {
+	    size_t const nn(log.log.size());
+	    os << "# name: " << name << "\n"
+	       << "# parameter: " << log.parameter->name_ << "\n"
+	       << "# type: matrix\n"
+	       << "# size: " << nn << "\n"
+	       << "# line format: nrows ncols row_0 row_1 ...\n";
+	    for (size_t jj(0); jj < nn; ++jj) {
+	      Matrix const & mx(log.log[jj]);
+	      os << mx.rows() << "  " << mx.cols();
+	      for (int kk(0); kk < mx.rows(); ++kk) {
+		os << "   ";
+		for (int ll(0); ll < mx.cols(); ++ll) {
+		  os << jspace::pretty_string(mx.coeff(kk, ll));
+		}
+	      }
+	      os << "\n";
+	    }
+	  }
+	}
+      }
+      if (progress) {
+	*progress << "DONE\n";
+      }
+    }
+    
   }
   
 }

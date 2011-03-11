@@ -402,9 +402,9 @@ namespace opspace {
     if ( ! cursor_) {
       os << prefix << "  NOT INITIALIZED\n";
     }
-    pretty_print(actual_, os, "actual", prefix + "  ");
-    pretty_print(cursor_->position(), os, "carrot", prefix + "  ");
-    pretty_print(goal_, os, "goal", prefix + "  ");
+    pretty_print(actual_, os, prefix + "  actual", prefix + "    ");
+    pretty_print(cursor_->position(), os, prefix + "  carrot", prefix + "    ");
+    pretty_print(goal_, os, prefix + "  goal", prefix + "    ");
   }
   
   
@@ -714,9 +714,9 @@ namespace opspace {
     if (cursor_.empty()) {
       os << prefix << "  NOT INITIALIZED\n";
     }
-    pretty_print(actual_, os, "actual", prefix + "  ");
-    pretty_print(goal_, os, "goal", prefix + "  ");
-    pretty_print(jacobian_, os, "jacobian", prefix + "  ");
+    pretty_print(actual_, os, prefix + "  actual", prefix + "    ");
+    pretty_print(goal_, os, prefix + "  goal", prefix + "    ");
+    pretty_print(jacobian_, os, prefix + "  jacobian", prefix + "    ");
   }
 
 
@@ -821,20 +821,20 @@ namespace opspace {
       os << title << "\n";
     }
     os << prefix << "orientation task: `" << name_ << "'\n";
-    pretty_print(velocity_, os, "velocity", prefix + "  ");
-    pretty_print(goal_x_, os, "goal_x", prefix + "  ");
-    pretty_print(goal_y_, os, "goal_y", prefix + "  ");
-    pretty_print(goal_z_, os, "goal_z", prefix + "  ");
+    pretty_print(velocity_, os, prefix + "  velocity", prefix + "    ");
+    pretty_print(goal_x_, os, prefix + "  goal_x", prefix + "    ");
+    pretty_print(goal_y_, os, prefix + "  goal_y", prefix + "    ");
+    pretty_print(goal_z_, os, prefix + "  goal_z", prefix + "    ");
     Vector foo(3);
     foo << goal_x_.norm(), goal_y_.norm(), goal_z_.norm();
-    pretty_print(foo, os, "length of goal unit vectors", prefix + "  ");
-    pretty_print(actual_x_, os, "actual_x", prefix + "  ");
-    pretty_print(actual_y_, os, "actual_y", prefix + "  ");
-    pretty_print(actual_z_, os, "actual_z", prefix + "  ");
+    pretty_print(foo, os, prefix + "  length of goal unit vectors", prefix + "    ");
+    pretty_print(actual_x_, os, prefix + "  actual_x", prefix + "    ");
+    pretty_print(actual_y_, os, prefix + "  actual_y", prefix + "    ");
+    pretty_print(actual_z_, os, prefix + "  actual_z", prefix + "    ");
     foo << actual_x_.norm(), actual_y_.norm(), actual_z_.norm();
-    pretty_print(foo, os, "length of actual unit vectors", prefix + "  ");
-    pretty_print(delta_, os, "delta", prefix + "  ");
-    pretty_print(command_, os, "command", prefix + "  ");
+    pretty_print(foo, os, prefix + "  length of actual unit vectors", prefix + "    ");
+    pretty_print(delta_, os, prefix + "  delta", prefix + "    ");
+    pretty_print(command_, os, prefix + "  command", prefix + "    ");
   }
 
 }

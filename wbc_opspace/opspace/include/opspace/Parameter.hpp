@@ -179,7 +179,8 @@ namespace opspace {
      a table of Parameter instances and provides default
      implementations for parameter checker methods.
   */
-  class ParameterReflection {
+  class ParameterReflection
+  {
   public:
     virtual ~ParameterReflection();
     
@@ -266,6 +267,30 @@ namespace opspace {
     parameter_lookup_t parameter_lookup_;
   };
 
+
+  class ParameterLog
+  {
+  public:
+    template<typename parameter_t, typename storage_t>
+    struct log_s {
+      explicit log_s(parameter_t const * pp): parameter(pp) {}
+      parameter_t const * parameter;
+      std::vector<storage_t> log;
+    };
+    
+    ParameterLog(std::string const & name, parameter_lookup_t const & parameter_lookup);
+    
+    void update();
+    void writeFiles(std::string const & prefix, std::ostream * progress) const;
+    
+    std::string const name;
+    std::vector<log_s<IntegerParameter, int> > intlog;
+    std::vector<log_s<StringParameter, std::string> > strlog;
+    std::vector<log_s<RealParameter, double> > reallog;
+    std::vector<log_s<VectorParameter, Vector> > veclog;
+    std::vector<log_s<MatrixParameter, Matrix> > mxlog;
+  };
+  
 }
 
 #endif // OPSPACE_PARAMETER_HPP
