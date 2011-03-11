@@ -67,7 +67,7 @@ namespace opspace {
   {
     if ( ! fallback_task_) {
       PostureTask * pt(new PostureTask("ControllerNG_fallback_posture"));
-      pt->quickSetup(50, 5, 1, 2);
+      pt->quickSetup(0.01, 50, 5, 1, 2);
       fallback_task_.reset(pt);
     }
     if ( ! dynamic_cast<PostureTask*>(fallback_task_.get())) {

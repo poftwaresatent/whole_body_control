@@ -271,7 +271,7 @@ namespace opspace {
     /**
        \todo Maybe move this (or something similar) to the superclass?
     */
-    void quickSetup(double kp, double kd, double maxvel, double maxacc);
+    void quickSetup(double dt_seconds, double kp, double kd, double maxvel, double maxacc);
   };
 
 

@@ -497,8 +497,9 @@ namespace opspace {
   
   
   void PostureTask::
-  quickSetup(double kp, double kd, double maxvel, double maxacc)
+  quickSetup(double dt_seconds, double kp, double kd, double maxvel, double maxacc)
   {
+    dt_seconds_ = dt_seconds;
     kp_ = kp * Vector::Ones(1);
     kd_ = kd * Vector::Ones(1);
     maxvel_ = maxvel * Vector::Ones(1);
