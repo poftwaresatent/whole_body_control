@@ -1,0 +1,11 @@
+*~
+build
+bin
+lib
+java
+lisp
+oct
+msg_gen
+srv_gen
+wbc_msgs/src/
+wbc_pr2_ctrl/src/wbc_pr2_ctrl/
