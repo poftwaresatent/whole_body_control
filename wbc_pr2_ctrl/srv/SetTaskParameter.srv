@@ -1,0 +1,5 @@
+string task_name
+OpspaceParameter param
+---
+bool ok
+string errstr
