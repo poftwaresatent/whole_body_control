@@ -42,6 +42,7 @@ static char const * opspace_fallback_str =
   "- tasks:\n"
   "  - type: opspace::PositionTask\n"
   "    name: eepos_instance\n"
+  "    end_effector_id: 6\n"
   "    dt_seconds: 0.002\n"
   "    kp: [ 100.0 ]\n"
   "    kd: [  20.0 ]\n"
@@ -63,6 +64,7 @@ static char const * opspace_fallback_str =
 
 
 static jspace::State jspace_state;
+static scoped_ptr<jspace::ros::Model> jspace_ros_model;
 static scoped_ptr<jspace::Model> jspace_model;
 static size_t ndof;
 
@@ -78,20 +80,20 @@ int main(int argc, char*argv[])
   ROS_INFO ("creating model via URDF conversion from ROS parameter server");
   try {
     
-    jspace::ros::Model jspace_ros_model("/wbc_pr2_ctrl/");
+    jspace_ros_model.reset(new jspace::ros::Model("/wbc_pr2_ctrl/"));
     static const size_t n_tao_trees(2);
-    jspace_ros_model.initFromParam(nn, "/robot_description", n_tao_trees);
+    jspace_ros_model->initFromParam(nn, "/robot_description", n_tao_trees);
     jspace_model.reset(new jspace::Model());
-    if (0 != jspace_model->init(jspace_ros_model.tao_trees_[0],
-				jspace_ros_model.tao_trees_[1],
+    if (0 != jspace_model->init(jspace_ros_model->tao_trees_[0],
+				jspace_ros_model->tao_trees_[1],
 				&cerr)) {
       throw std::runtime_error("jspace_model->init() failed");
     }
     
     ROS_INFO ("gravity compensation hack...");
     std::vector<std::string>::const_iterator
-      gclink(jspace_ros_model.gravity_compensated_links_.begin());
-    for (/**/; gclink != jspace_ros_model.gravity_compensated_links_.end(); ++gclink) {
+      gclink(jspace_ros_model->gravity_compensated_links_.begin());
+    for (/**/; gclink != jspace_ros_model->gravity_compensated_links_.end(); ++gclink) {
       taoDNode const * node(jspace_model->getNodeByName(*gclink));
       if ( ! node) {
 	throw std::runtime_error("gravity-compensated link " + *gclink
