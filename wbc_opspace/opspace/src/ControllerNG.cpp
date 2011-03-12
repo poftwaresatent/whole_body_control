@@ -50,8 +50,29 @@ namespace opspace {
   ControllerNG::
   ControllerNG(std::string const & name)
     : name_(name),
-      fallback_(false)
+      fallback_(false),
+      loglen_(-1),
+      logprefix_(""),
+      logcount_(-1)
   {
+    declareParameter("loglen", &loglen_);
+    declareParameter("logprefix", &logprefix_);
+    declareParameter("jpos", &jpos_);
+    declareParameter("jvel", &jvel_);
+    declareParameter("gamma", &gamma_);
+  }
+  
+  
+  Status ControllerNG::
+  check(std::string const * param, std::string const & value) const
+  {
+    if ((param == &logprefix_) && (loglen_ > 0)) {
+      // could be smart and check if another log is ongoing, but let's
+      // just abort that
+      logcount_ = 0;
+    }
+    Status ok;
+    return ok;
   }
   
   
@@ -105,7 +126,12 @@ namespace opspace {
       return Status(false, "failed to retrieve gravity torques");
     }
     gamma = aa * fallback_task_->getCommand() + grav;
-
+    
+    // logging and debug
+    jpos_ = model.getState().position_;
+    jvel_ = model.getState().velocity_;
+    gamma_ = gamma;
+    
     return st;
   }
   
@@ -141,6 +167,31 @@ namespace opspace {
       fallback_ = true;
       fallback_reason_ = "empty task table";
       return computeFallback(model, true, gamma);
+    }
+    
+    if (0 == logcount_) {
+      // initialize logging
+      log_.clear();
+      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("ctrl_" + name_,
+							       getParameterTable())));
+      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("skill_" + behavior.getName(),
+							       behavior.getParameterTable())));
+      for (size_t ii(0); ii < tasks->size(); ++ii) {
+	std::ostringstream nm;
+	nm << "task_" << ii << "_" << (*tasks)[ii]->getName();
+	log_.push_back(shared_ptr<ParameterLog>(new ParameterLog(nm.str(),
+								 (*tasks)[ii]->getParameterTable())));
+      }
+    }
+    else if ((0 < loglen_) && (loglen_ == logcount_)) {
+      for (size_t ii(0); ii < log_.size(); ++ii) {
+	log_[ii]->writeFiles(logprefix_, &std::cerr);
+      }
+      logcount_ = -1;
+    }
+    
+    if (0 <= logcount_) {
+      ++logcount_;
     }
     
     //////////////////////////////////////////////////
@@ -225,6 +276,16 @@ namespace opspace {
       fallback_ = true;
       fallback_reason_ = "no active tasks";
       return computeFallback(model, true, gamma);
+    }
+    
+    // logging and debug
+    jpos_ = model.getState().position_;
+    jvel_ = model.getState().velocity_;
+    gamma_ = gamma;
+    if (0 < logcount_) {
+      for (size_t ii(0); ii < log_.size(); ++ii) {
+	log_[ii]->update();
+      }
     }
     
     return st;

@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/Task.hpp>
+#include <opspace/Task.hpp><
 
 using namespace jspace;
 
@@ -46,6 +46,11 @@ namespace opspace {
       sigma_threshold_(1.0e-2)
   {
     declareParameter("sigma_threshold", &sigma_threshold_);
+    // these will become read-only, as soon as that is supported in
+    // the Parameter interface...
+    declareParameter("actual", &actual_);
+    declareParameter("command", &command_);
+    // overkill? declareParameter("jacobian", &jacobian_);
   }
   
   

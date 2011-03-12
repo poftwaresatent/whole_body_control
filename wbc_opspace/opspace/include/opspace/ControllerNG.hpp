@@ -43,6 +43,7 @@ namespace opspace {
   
   
   class ControllerNG
+    : public ParameterReflection
   {
   public:
     explicit ControllerNG(std::string const & name);
@@ -57,7 +58,9 @@ namespace opspace {
     virtual Status computeCommand(Model const & model,
 				  Behavior & behavior,
 				  Vector & gamma);
-
+    
+    virtual Status check(std::string const * param, std::string const & value) const;
+    
     virtual void dbg(std::ostream & os,
 		     std::string const & title,
 		     std::string const & prefix) const;
@@ -73,6 +76,20 @@ namespace opspace {
     std::vector<Vector> sv_jstar_; // stored only for dbg()
     bool fallback_;
     std::string fallback_reason_;
+    
+    std::vector<boost::shared_ptr<ParameterLog> > log_;
+    int loglen_;		// <= 0 means disabled
+    std::string logprefix_;
+    mutable int logcount_; // -1 means off, 0 means init, dumps when ==loglen_ then goes to -1
+    
+    // for logging and debugging via Parameter tools, don't bother to
+    // implement check() methods because one day real soon now we'll
+    // be able to flag parameters as read-only and then the superclass
+    // can take care of signaling errors when someone writes to
+    // them...
+    Vector jpos_;
+    Vector jvel_;
+    Vector gamma_;
   };
 
 }
