@@ -29,8 +29,8 @@
 #include <opspace/Behavior.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/ControllerNG.hpp>
-#include <wbc_pr2_ctrl/SetTaskParameter.h>
-#include <wbc_pr2_ctrl/GetTaskParameter.h>
+#include <wbc_pr2_ctrl/SetParameter.h>
+#include <wbc_pr2_ctrl/GetParameter.h>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <map>
@@ -72,13 +72,14 @@ static scoped_ptr<jspace::ros::Model> jspace_ros_model;
 static scoped_ptr<jspace::Model> jspace_model;
 static size_t ndof;
 static opspace::Factory factory;
+static shared_ptr<ControllerNG> controller;
 
 
-static bool set_task_parameter_callback(SetTaskParameter::Request & request,
-					SetTaskParameter::Response & response);
+static bool set_parameter_callback(SetParameter::Request & request,
+				   SetParameter::Response & response);
 
-static bool get_task_parameter_callback(GetTaskParameter::Request & request,
-					GetTaskParameter::Response & response);
+static bool get_parameter_callback(GetParameter::Request & request,
+				   GetParameter::Response & response);
 
 
 int main(int argc, char*argv[])
@@ -93,6 +94,7 @@ int main(int argc, char*argv[])
   // parse options
   
   std::string opspace_filename("");
+  bool verbose(false);
   
   for (int ii(1); ii < argc; ++ii) {
     if ((strlen(argv[ii]) < 2) || ('-' != argv[ii][0])) {
@@ -107,6 +109,10 @@ int main(int argc, char*argv[])
 	  errx(EXIT_FAILURE, "-b requires parameter");
  	}
 	opspace_filename = argv[ii];
+ 	break;
+	
+      case 'v':
+	verbose = true;
  	break;
 	
       default:
@@ -192,7 +198,7 @@ int main(int argc, char*argv[])
     exit(EXIT_FAILURE);
   }
   jspace_model->update(jspace_state);
-  shared_ptr<ControllerNG> controller(new ControllerNG("opspace_servo"));
+  controller.reset(new ControllerNG("opspace_servo"));
   jspace::Status status;
   status = controller->init(*jspace_model);
   if ( ! status) {
@@ -206,8 +212,8 @@ int main(int argc, char*argv[])
   }
   
   ROS_INFO ("starting services");
-  ros::ServiceServer set_task_parameter_server(nn.advertiseService("set_task_parameter", set_task_parameter_callback));
-  ros::ServiceServer get_task_parameter_server(nn.advertiseService("get_task_parameter", get_task_parameter_callback));
+  ros::ServiceServer set_parameter_server(nn.advertiseService("set_parameter", set_parameter_callback));
+  ros::ServiceServer get_parameter_server(nn.advertiseService("get_parameter", get_parameter_callback));
   
   ROS_INFO ("entering control loop");
   jspace::Vector tau(ndof);
@@ -229,8 +235,10 @@ int main(int argc, char*argv[])
       break;
     }
     
-    behavior->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
-    controller->dbg(cout, "--------------------------------------------------", "");
+    if (verbose) {
+      behavior->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
+      controller->dbg(cout, "--------------------------------------------------", "");
+    }
     
     // Wait for "tick" (haha, this is not RT anyway...)
     ros::spinOnce();
@@ -261,23 +269,50 @@ int main(int argc, char*argv[])
 }
 
 
-bool set_task_parameter_callback(SetTaskParameter::Request & request,
-				 SetTaskParameter::Response & response)
+static Parameter * find_param(std::string const & com_type,
+			      std::string const & com_name,
+			      std::string const & param_name,
+			      std::string & errstr)
 {
-  shared_ptr<Task> task(factory.findTask(request.task_name));
-  if ( ! task) {
-    response.ok = false;
-    response.errstr = "no such task";
-    return true;
+  if ("task" == com_type) {
+    shared_ptr<Task> task(factory.findTask(com_name));
+    if ( ! task) {
+      errstr = "no such task";
+      return 0;
+    }
+    errstr = "trying task parameters...";
+    return task->lookupParameter(param_name);
   }
-  Parameter * param(task->lookupParameter(request.param.name));
-  if ( ! task) {
-    response.ok = false;
-    response.errstr = "no such parameter";
+  else if ("skill" == com_type) {
+    shared_ptr<Behavior> skill(factory.findBehavior(com_name));
+    if ( ! skill) {
+      errstr = "no such skill";
+      return 0;
+    }
+    errstr = "trying skill parameters...";
+    return skill->lookupParameter(param_name);
+  }
+  else if ("servo" == com_type) {
+    // ignore com_name for now...
+    errstr = "trying servo parameters...";
+    return controller->lookupParameter(param_name);
+  }
+  errstr = "invalid com_type (use task, skill, or servo)";
+  return 0;
+}
+
+
+bool set_parameter_callback(SetParameter::Request & request,
+			    SetParameter::Response & response)
+{
+  Status status;
+  Parameter * param(find_param(request.com_type, request.com_name, request.param.name, status.errstr));
+  if ( ! param) {
+    status.ok = false;
+    // status.errstr set by find_param...
     return true;
   }
   
-  Status status;
   switch (request.param.type) {
     
   case OpspaceParameter::PARAMETER_TYPE_STRING:
@@ -342,23 +377,18 @@ bool set_task_parameter_callback(SetTaskParameter::Request & request,
 }
 
 
-bool get_task_parameter_callback(GetTaskParameter::Request & request,
-				 GetTaskParameter::Response & response)
+bool get_parameter_callback(GetParameter::Request & request,
+			    GetParameter::Response & response)
 {
-  shared_ptr<Task const> task(factory.findTask(request.task_name));
-  if ( ! task) {
-    response.ok = false;
-    response.errstr = "no such task";
-    return true;
-  }
-  Parameter const * param(task->lookupParameter(request.param_name));
-  if ( ! task) {
-    response.ok = false;
-    response.errstr = "no such parameter";
+  Status status;
+  Parameter const * param(find_param(request.com_type, request.com_name, request.param_name, status.errstr));
+  if ( ! param) {
+    status.ok = false;
+    // status.errstr set by find_param...
     return true;
   }
   
-  response.param.name = request.task_name;
+  response.param.name = request.param_name;
   response.param.type = OpspaceParameter::PARAMETER_TYPE_VOID;
   
   switch (param->type_) {

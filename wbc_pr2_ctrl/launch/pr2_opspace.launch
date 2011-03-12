@@ -4,7 +4,7 @@
       pkg="wbc_pr2_ctrl"
       type="opspace_servo"
       name="opspace_servo"
-      args="-b $(find wbc_pr2_ctrl)/config/opspace_posture.yaml"
+      args="-v -b $(find wbc_pr2_ctrl)/config/opspace_posture.yaml"
       output="screen">
   </node>
 </launch>

@@ -1,4 +1,5 @@
-string task_name
+string com_type
+string com_name
 OpspaceParameter param
 ---
 bool ok
