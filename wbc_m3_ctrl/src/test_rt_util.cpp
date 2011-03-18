@@ -47,15 +47,11 @@ namespace {
     
     virtual int init(M3Sds * sys) {
       if (initialized) {
-	fprintf(stderr, "ERROR in init(): already initialized");
+	fprintf(stderr, "ERROR in init(): already initialized\n");
 	return 42;
       }
       initialized = true;
-      fprintf(stderr, "hello from init()");
-      if (slowmedown) {
-	usleep(100000);
-	slowmedown = false;
-      }
+      fprintf(stderr, "hello from init()\n");
       return 0;
     }
     
@@ -63,21 +59,26 @@ namespace {
 		       jspace::Vector & command)
     {
       if ( ! initialized) {
-	fprintf(stderr, "ERROR in update(): not initialized");
+	fprintf(stderr, "ERROR in update(): not initialized\n");
 	return 17;
       }
       command = -10.0 * state.velocity_;
-      fprintf(stderr, "hello from update()");
+      fprintf(stderr, "+");
+      if (slowmedown) {
+	fprintf(stderr, "update(): slow down requested...\n");
+	usleep(5000);
+	slowmedown = false;
+      }
       return 0;
     }
     
     virtual int cleanup(void)
     {
       if ( ! initialized) {
-	fprintf(stderr, "ERROR in cleanup(): not initialized");
+	fprintf(stderr, "ERROR in cleanup(): not initialized\n");
 	return 8876;
       }
-      fprintf(stderr, "hello from cleanup()");
+      fprintf(stderr, "hello from cleanup()\n");
       initialized = false;
       return 0;
     }
@@ -87,10 +88,10 @@ namespace {
 			 long long actual_ns)
     {
       if ( ! initialized) {
-	fprintf(stderr, "ERROR in slowdown(): not initialized");
+	fprintf(stderr, "ERROR in slowdown(): not initialized\n");
 	return 3232;
       }
-      fprintf(stderr, "hello from slowdown()");
+      fprintf(stderr, "hello from slowdown()\n");
       return 0;
     }
     

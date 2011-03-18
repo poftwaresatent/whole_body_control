@@ -184,12 +184,12 @@ namespace wbc_m3_ctrl {
 	  continue;
 	}
 	fprintf(stderr, "slowing RT task down to %lld ns (instead of %lld ns)\n",
-		count2nano(tick_period), count2nano(dt));
+		count2nano(dt), count2nano(tick_period));
 	tick_period = dt;
-	rt_task_make_periodic(task, end_time + tick_period, tick_period);			
+	rt_task_make_periodic(task, rt_get_time() + tick_period, tick_period); 
       }
       
-    } // end "the big while loop"
+    } // end "the big for loop"
     
     //////////////////////////////////////////////////
     // Clean up after ourselves
@@ -250,7 +250,7 @@ namespace wbc_m3_ctrl {
 	  || (RT_THREAD_ERROR == rt_thread_state)) {
 	break;
       }
-      usleep(100000);
+      usleep(200000);
     }
     
     if (RT_THREAD_RUNNING != rt_thread_state) {
@@ -298,11 +298,11 @@ namespace wbc_m3_ctrl {
       if (RT_THREAD_RUNNING != rt_thread_state) {
 	break;
       }
-      usleep(100000);
+      usleep(200000);
     }
     
     if (RT_THREAD_RUNNING == rt_thread_state) {
-      fprintf(stderr, "failed to shut down\n");
+      fprintf(stderr, "shut down timed out\n");
       rt_thread_state = RT_THREAD_ERROR;
     }
     else {
