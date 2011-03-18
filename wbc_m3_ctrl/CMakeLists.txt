@@ -15,6 +15,8 @@ set (LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 include (CheckIncludeFileCXX)
 
+include_directories (/usr/realtime/include)
+
 if (M3_DIR)
   list (APPEND CMAKE_REQUIRED_INCLUDES ${M3_DIR}/src ${M3_DIR})
   include_directories (${M3_DIR}/src ${M3_DIR})
