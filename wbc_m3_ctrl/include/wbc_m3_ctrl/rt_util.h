@@ -70,7 +70,7 @@ namespace wbc_m3_ctrl {
 			 long long desired_ns,
 			 long long actual_ns) = 0;
     
-    void start() throw(std::runtime_error);
+    void start(long long tick_frequency_hz) throw(std::runtime_error);
     
     static rt_thread_state_t getState();
     static rt_thread_state_t shutdown();

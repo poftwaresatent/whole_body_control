@@ -47,9 +47,6 @@
 #include <m3rt/base/m3rt_def.h>
 
 
-#define RT_TASK_FREQUENCY_TORQUE_SHM 400
-#define RT_TIMER_TICKS_NS_TORQUE_SHM (1000000000 / RT_TASK_FREQUENCY_TORQUE_SHM)
-
 #define TORQUE_SHM "TSHMM"
 #define TORQUE_CMD_SEM "TSHMC"
 #define TORQUE_STATUS_SEM "TSHMS"
@@ -61,7 +58,7 @@ namespace wbc_m3_ctrl {
   static int shutdown_request(0);
   static RT_TASK * nonrt_task(0);
   static int rt_thread_id(0);
-  
+  static long long rt_period_ns(-1); 
   
   static void * rt_thread(void * arg)
   {
@@ -126,11 +123,17 @@ namespace wbc_m3_ctrl {
       goto cleanup_init_callback;
     }
     
+    if (0 >= rt_period_ns) {
+      fprintf(stderr, "invalid rt_period_ns %lld\n", rt_period_ns);
+      rt_thread_state = RT_THREAD_ERROR;
+      goto cleanup_period_check;
+    }
+    
     //////////////////////////////////////////////////
     // Start the real time engine...
     
     rt_thread_state = RT_THREAD_RUNNING;
-    tick_period = nano2count(RT_TIMER_TICKS_NS_TORQUE_SHM);
+    tick_period = nano2count(rt_period_ns);
     rt_task_make_periodic(task, rt_get_time() + tick_period, tick_period); 
     mlockall(MCL_CURRENT | MCL_FUTURE);
     rt_make_hard_real_time();
@@ -186,6 +189,7 @@ namespace wbc_m3_ctrl {
 	fprintf(stderr, "slowing RT task down to %lld ns (instead of %lld ns)\n",
 		count2nano(dt), count2nano(tick_period));
 	tick_period = dt;
+	rt_period_ns = count2nano(dt);
 	rt_task_make_periodic(task, rt_get_time() + tick_period, tick_period); 
       }
       
@@ -208,6 +212,7 @@ namespace wbc_m3_ctrl {
       rt_thread_state = RT_THREAD_DONE;
     }
     
+  cleanup_period_check:
   cleanup_init_callback:
   cleanup_command_sem:
   cleanup_status_sem:
@@ -227,11 +232,14 @@ namespace wbc_m3_ctrl {
   
   
   void RTUtil::
-  start() throw(std::runtime_error)
+  start(long long frequency_hz) throw(std::runtime_error)
   {
     if (nonrt_task) {
       throw std::runtime_error("already running");
     }
+    
+    rt_period_ns = 1000000000L / frequency_hz;
+    long long const rt_period_us(rt_period_ns / 1000);
     
     rt_allow_nonroot_hrt();
     nonrt_task = rt_task_init_schmod(nam2num("TSHM"), RT_TASK_PRIORITY, 0, 0, SCHED_FIFO, 0xF);
@@ -250,7 +258,7 @@ namespace wbc_m3_ctrl {
 	  || (RT_THREAD_ERROR == rt_thread_state)) {
 	break;
       }
-      usleep(200000);
+      usleep(rt_period_us);
     }
     
     if (RT_THREAD_RUNNING != rt_thread_state) {
@@ -264,7 +272,7 @@ namespace wbc_m3_ctrl {
       default: fprintf(stderr, "invalid state %d\n", rt_thread_state);
       }
       shutdown_request = 1;
-      usleep(500000);
+      usleep(15 * rt_period_us);
       rt_task_delete(nonrt_task);
       rt_thread_join(rt_thread_id);
       nonrt_task = 0;
@@ -293,12 +301,13 @@ namespace wbc_m3_ctrl {
     
     fprintf(stderr, "shutting down RT thread");
     shutdown_request = 1;
+    long long const rt_period_us(rt_period_ns / 1000);
     for (size_t ii(0); ii < 30; ++ii) {
       fprintf(stderr, ".");
       if (RT_THREAD_RUNNING != rt_thread_state) {
 	break;
       }
-      usleep(200000);
+      usleep(rt_period_us);
     }
     
     if (RT_THREAD_RUNNING == rt_thread_state) {

@@ -104,7 +104,7 @@ int main(int argc, char ** argv)
 {
   Test test;
   try {
-    test.start();
+    test.start(500);
     for (size_t ii(0); ii < 10; ++ii) {
       fprintf(stderr, "\n*%zu*\n", ii);
       usleep(100000);
