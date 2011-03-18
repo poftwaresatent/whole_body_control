@@ -102,14 +102,14 @@ namespace wbc_m3_ctrl {
     }
     
     status_sem = (SEM*) rt_get_adr(nam2num(TORQUE_STATUS_SEM));
-    if (status_sem) {
+    if ( ! status_sem) {
       fprintf(stderr, "semaphore %s not found\n", TORQUE_STATUS_SEM);
       rt_thread_state = RT_THREAD_ERROR;
       goto cleanup_status_sem;
     }
     
     command_sem = (SEM*) rt_get_adr(nam2num(TORQUE_CMD_SEM));
-    if (!command_sem) {
+    if ( ! command_sem) {
       fprintf(stderr, "semaphore %s not found\n", TORQUE_CMD_SEM);
       rt_thread_state = RT_THREAD_ERROR;
       goto cleanup_command_sem;
@@ -246,7 +246,8 @@ namespace wbc_m3_ctrl {
 				    10000); // XXXX 10000 is stack size I think
     for (size_t ii(0); ii < 30; ++ii) {
       fprintf(stderr, ".");
-      if (RT_THREAD_RUNNING == rt_thread_state) {
+      if ((RT_THREAD_RUNNING == rt_thread_state)
+	  || (RT_THREAD_ERROR == rt_thread_state)) {
 	break;
       }
       usleep(100000);
