@@ -10,10 +10,36 @@ set (LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 #rosbuild_genmsg()
 #rosbuild_gensrv()
 
+##################################################
+# detection of Meka / RTAI code
+
+include (CheckIncludeFileCXX)
+
+if (M3_DIR)
+  list (APPEND CMAKE_REQUIRED_INCLUDES ${M3_DIR}/src ${M3_DIR})
+  include_directories (${M3_DIR}/src ${M3_DIR})
+  ###  link_directories (${M3_DIR}/lib ${M3_DIR})
+endif (M3_DIR)
+check_include_file_cxx (m3/shared_mem/torque_shm_sds.h HAVE_M3_SHM_HEADER)
+if (${HAVE_M3_SHM_HEADER})
+  message ("---- good: found Meka / RTAI")
+  set (HAVE_M3 TRUE)
+  add_definitions (-DHAVE_M3)
+else (${HAVE_M3_SHM_HEADER})
+  message ("**** bad: Meka / RTAI not found, cannot build M3 controller")
+endif (${HAVE_M3_SHM_HEADER})
+
+
 rosbuild_add_library (wbc_m3_ctrl
   src/foo.cpp
+  src/rt_util.cpp
   )
 target_link_libraries (wbc_m3_ctrl wbc_opspace)
 
 rosbuild_add_executable (bar src/bar.cpp)
 target_link_libraries (bar wbc_m3_ctrl)
+
+if (HAVE_M3)
+  rosbuild_add_executable (bar src/bar.cpp)
+  target_link_libraries (bar wbc_m3_ctrl)
+endif (HAVE_M3)
