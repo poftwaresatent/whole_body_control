@@ -28,3 +28,9 @@ rosbuild_add_library (wbc_opspace
   opspace/src/parse_yaml.cpp
   opspace/src/Behavior.cpp
   )
+
+rosbuild_add_executable (testTask opspace/src/testTask.cpp)
+target_link_libraries (testTask wbc_opspace gtest)
+
+rosbuild_add_executable (testFactory opspace/src/testFactory.cpp)
+target_link_libraries (testFactory wbc_opspace gtest)
