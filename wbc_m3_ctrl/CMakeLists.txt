@@ -40,4 +40,7 @@ target_link_libraries (wbc_m3_ctrl wbc_opspace)
 if (HAVE_M3)
   rosbuild_add_executable (test_rt_util src/test_rt_util.cpp)
   target_link_libraries (test_rt_util wbc_m3_ctrl)
+
+  rosbuild_add_executable (servo src/servo.cpp)
+  target_link_libraries (servo wbc_m3_ctrl)
 endif (HAVE_M3)

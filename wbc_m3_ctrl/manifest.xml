@@ -8,6 +8,7 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>https://github.com/poftwaresatent/utaustin-wbc</url>
+  <depend package="roscpp"/>
   <depend package="wbc_opspace"/>
   <!-- <export> -->
   <!--   <cpp cflags="-I${prefix}/include" -->
