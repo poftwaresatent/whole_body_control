@@ -1,0 +1,55 @@
+- tasks:
+  - type: opspace::OrientationTask
+    name: eeori_shake
+    end_effector_id: 6
+    sigma_threshold: 0.01
+    kp: 800.0
+    kd: 20.0
+    maxvel: 12.0
+  - type: opspace::PositionTask
+    name: eepos_shake
+    end_effector_id: 6
+    sigma_threshold: 0.005
+    control_point: [ 0.0, 0.0, 0.0 ]
+    dt_seconds: 0.0025
+    kp: [ 60.0 ]
+    kd: [ 12.0 ]
+    maxvel: [ 0.8 ]
+    maxacc: [ 2.4 ]
+  - type: opspace::PostureTask
+    name: posture_shake
+    sigma_threshold: 0.0001
+    dt_seconds: 0.0025
+    kp: [ 150.0 ]
+    kd: [  10.0 ]
+    maxvel: [ 1.0 ]
+    maxacc: [ 6.0 ]
+  - type: opspace::PositionTask
+    name: eepos_wave
+    end_effector_id: 6
+    sigma_threshold: 0.005
+    control_point: [ 0.0, 0.0, 0.0 ]
+    dt_seconds: 0.0025
+    kp: [ 25.0 ]
+    kd: [  5.0 ]
+    maxvel: [ 0.8 ]
+    maxacc: [ 2.4 ]
+  - type: opspace::PostureTask
+    name: posture_wave
+    sigma_threshold: 0.0001
+    dt_seconds: 0.0025
+    kp: [ 150.0 ]
+    kd: [  10.0 ]
+    maxvel: [ 1.0 ]
+    maxacc: [ 6.0 ]
+
+- behaviors:
+  - type: opspace::HelloGoodbyeBehavior
+    name: hello_goodbye
+    shake:
+      #    orientation: eeori_shake
+      position: eepos_shake
+      posture: posture_shake
+    wave:
+      position: eepos_wave
+      posture: posture_wave
