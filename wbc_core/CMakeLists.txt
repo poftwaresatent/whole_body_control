@@ -63,10 +63,11 @@ rosbuild_add_library (wbc_core
   src/jspace/jspace/vector_util.cpp
   src/jspace/jspace/wrap_eigen.cpp
   src/jspace/jspace/inertia_util.cpp
-  src/jspace/jspace/test/sai_brep.cpp
-  src/jspace/jspace/test/sai_brep_parser.cpp
-  src/jspace/jspace/test/util.cpp
   src/jspace/jspace/test/model_library.cpp
+  src/jspace/jspace/test/sai_brep.cpp
+  src/jspace/jspace/test/util.cpp
+  src/jspace/jspace/test/sai_brep_parser.cpp
+  src/jspace/jspace/test/sai_util.cpp
   )
 
 #target_link_libraries (wbc_core
