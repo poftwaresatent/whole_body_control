@@ -8,4 +8,4 @@ include ($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
 
 rosbuild_init ()
 rosbuild_genmsg ()
-#rosbuild_gensrv ()
+rosbuild_gensrv ()

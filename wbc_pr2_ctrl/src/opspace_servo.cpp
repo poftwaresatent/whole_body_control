@@ -29,14 +29,15 @@
 #include <opspace/Behavior.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/ControllerNG.hpp>
-#include <wbc_pr2_ctrl/SetParameter.h>
-#include <wbc_pr2_ctrl/GetParameter.h>
+#include <wbc_msgs/SetParameter.h>
+#include <wbc_msgs/GetParameter.h>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <map>
 #include <err.h>
 
 using namespace wbc_pr2_ctrl;
+using namespace wbc_msgs;
 using namespace opspace;
 using namespace boost;
 using namespace std;
