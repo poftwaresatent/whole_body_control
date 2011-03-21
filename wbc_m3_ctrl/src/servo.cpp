@@ -330,6 +330,10 @@ int main(int argc, char ** argv)
     // servo has successfully spawned RT thread, just do some
     // debugging etc here
     if (verbose) {
+      cout << "**************************************************\n";
+      jspace::pretty_print(model->getState().position_, cout, "jpos", "  ");
+      jspace::pretty_print(model->getState().velocity_, cout, "jvel", "  ");
+      jspace::pretty_print(model->getState().force_, cout, "jforce", "  ");
       servo.skill->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
       servo.controller->dbg(cout, "--------------------------------------------------", "");
     }
