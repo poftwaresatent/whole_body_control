@@ -45,7 +45,7 @@ namespace {
     
     Test(): initialized(false), slowmedown(false) {}
     
-    virtual int init(M3Sds * sys) {
+    virtual int init(jspace::State const & state) {
       if (initialized) {
 	fprintf(stderr, "ERROR in init(): already initialized\n");
 	return 42;

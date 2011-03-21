@@ -42,6 +42,7 @@
 #include <rtai_nam2num.h>
 #include <rtai_registry.h>
 
+#include "m3/shared_mem/torque_shm_sds.h"
 #include "m3/robots/chain_name.h"
 #include <m3rt/base/m3ec_def.h>
 #include <m3rt/base/m3rt_def.h>
@@ -116,7 +117,14 @@ namespace wbc_m3_ctrl {
     // Give the user a chance to do stuff before we enter periodic
     // hard real time.
     
-    cb_status = rtutil->init(sys);
+    rt_sem_wait(status_sem);
+    memcpy(&shm_status, sys->status, sizeof(shm_status));
+    rt_sem_signal(status_sem);
+    for (size_t ii(0); ii < 7; ++ii) { // XXXX to do: hardcoded NDOF
+      state.position_[ii] = M_PI * shm_status.right_arm.theta[ii] / 180.0;
+      state.velocity_[ii] = M_PI * shm_status.right_arm.thetadot[ii] / 180.0;
+    }
+    cb_status = rtutil->init(state);
     if (0 != cb_status) {
       fprintf(stderr, "init callback returned %d\n", cb_status);
       rt_thread_state = RT_THREAD_ERROR;

@@ -37,7 +37,6 @@
 #define WBC_M3_CTRL_RT_UTIL_H
 
 #include <jspace/State.hpp>
-#include "m3/shared_mem/torque_shm_sds.h"
 #include <stdexcept>
 
 
@@ -59,7 +58,7 @@ namespace wbc_m3_ctrl {
   public:
     virtual ~RTUtil();
     
-    virtual int init(M3Sds * sys) = 0;
+    virtual int init(jspace::State const & state) = 0;
     
     virtual int update(jspace::State const & state,
 		       jspace::Vector & command) = 0;
