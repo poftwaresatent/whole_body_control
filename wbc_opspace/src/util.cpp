@@ -54,6 +54,12 @@ namespace wbc_opspace {
     if (factory_) {
       throw runtime_error("already initialized");
     }
+    if ( ! factory) {
+      throw runtime_error("null factory");
+    }
+    if ( ! controller) {
+      throw runtime_error("null controller");
+    }
     factory_ = factory;
     controller_ = controller;
     set_param_ = node.advertiseService(set_param_service_name,
