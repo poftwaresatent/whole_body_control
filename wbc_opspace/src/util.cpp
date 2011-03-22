@@ -34,6 +34,7 @@
  */
 
 #include <wbc_opspace/util.h>
+#include <wbc_msgs/ChannelFeedback.h>
 
 using namespace opspace;
 using namespace wbc_msgs;
@@ -44,10 +45,20 @@ using namespace std;
 namespace wbc_opspace {
   
   
+  ParamCallbacks::
+  ParamCallbacks()
+    : next_channel_id_(0)
+  {
+  }
+  
+  
   void ParamCallbacks::
   init(ros::NodeHandle node,
        boost::shared_ptr<opspace::Factory> factory,
-       boost::shared_ptr<opspace::ControllerNG> controller) throw(std::runtime_error)
+       boost::shared_ptr<opspace::ControllerNG> controller,
+       size_t input_queue_size,
+       size_t output_queue_size)
+    throw(std::runtime_error)
   {
     if (factory_) {
       throw runtime_error("already initialized");
@@ -69,6 +80,31 @@ namespace wbc_opspace {
     list_params_ = node.advertiseService("list_params",
 					 &::wbc_opspace::ParamCallbacks::listParams,
 					 this);
+    open_channel_ = node.advertiseService("open_channel",
+					  &::wbc_opspace::ParamCallbacks::openChannel,
+					  this);
+    string_sub_ = node.subscribe("string_channel",
+				 input_queue_size,
+				 &::wbc_opspace::ParamCallbacks::stringChannel,
+				 this);
+    integer_sub_ = node.subscribe("integer_channel",
+				  input_queue_size,
+				  &::wbc_opspace::ParamCallbacks::integerChannel,
+				  this);
+    real_sub_ = node.subscribe("real_channel",
+			       input_queue_size,
+			       &::wbc_opspace::ParamCallbacks::realChannel,
+			       this);
+    vector_sub_ = node.subscribe("vector_channel",
+				 input_queue_size,
+				 &::wbc_opspace::ParamCallbacks::vectorChannel,
+				 this);
+    matrix_sub_ = node.subscribe("matrix_channel",
+				 input_queue_size,
+				 &::wbc_opspace::ParamCallbacks::matrixChannel,
+				 this);
+    channel_feedback_ = node.advertise<wbc_msgs::ChannelFeedback>("channel_feedback",
+								  output_queue_size);
   }
   
   
@@ -125,7 +161,7 @@ namespace wbc_opspace {
 				status.errstr));
     if ( ! param) {
       status.ok = false;
-      // status.errstr set by find_param...
+      // status.errstr set by findParam...
       return true;
     }
     
@@ -272,7 +308,7 @@ namespace wbc_opspace {
 				      status.errstr));
     if ( ! param) {
       status.ok = false;
-      // status.errstr set by find_param...
+      // status.errstr set by findParam...
       return true;
     }
     
@@ -337,6 +373,260 @@ namespace wbc_opspace {
     
     response.ok = true;
     return true;
+  }
+  
+  
+  bool ParamCallbacks::
+  openChannel(wbc_msgs::OpenChannel::Request & request,
+	      wbc_msgs::OpenChannel::Response & response)
+  {
+    response.param_type = OpspaceParameter::PARAMETER_TYPE_VOID;
+    Parameter * param(findParam(request.com_type,
+				request.com_name,
+				request.param_name,
+				response.errstr));
+    if ( ! param) {
+      response.ok = false;
+      // status.errstr set by findParam...
+      return true;
+    }
+    
+    switch (param->type_) {
+      
+    case PARAMETER_TYPE_STRING:
+      if (( ! param->getString())
+	  || ( ! dynamic_cast<StringParameter*>(param))) {
+	response.ok = false;
+	response.errstr = "buggy string parameter (oops!)";
+	return true;
+      }
+      else {
+	StringChannel msg;
+	msg.channel_id = next_channel_id_++;
+	msg.transaction_id = 0;
+	msg.value = *param->getString();
+	response.ok = true;
+	response.string_channel.push_back(msg);
+	strings_.insert(make_pair(msg.channel_id, dynamic_cast<StringParameter*>(param)));
+	return true;
+      }
+      
+    case PARAMETER_TYPE_INTEGER:
+      if (( ! param->getInteger())
+	  || ( ! dynamic_cast<IntegerParameter*>(param))) {
+	response.ok = false;
+	response.errstr = "buggy integer parameter (oops!)";
+	return true;
+      }
+      else {
+	IntegerChannel msg;
+	msg.channel_id = next_channel_id_++;
+	msg.transaction_id = 0;
+	msg.value = *param->getInteger();
+	response.ok = true;
+	response.integer_channel.push_back(msg);
+	integers_.insert(make_pair(msg.channel_id, dynamic_cast<IntegerParameter*>(param)));
+	return true;
+      }
+      
+    case PARAMETER_TYPE_REAL:
+      if (( ! param->getReal())
+	  || ( ! dynamic_cast<RealParameter*>(param))) {
+	response.ok = false;
+	response.errstr = "buggy real parameter (oops!)";
+	return true;
+      }
+      else {
+	RealChannel msg;
+	msg.channel_id = next_channel_id_++;
+	msg.transaction_id = 0;
+	msg.value = *param->getReal();
+	response.ok = true;
+	response.real_channel.push_back(msg);
+	reals_.insert(make_pair(msg.channel_id, dynamic_cast<RealParameter*>(param)));
+	return true;
+      }
+      
+    case PARAMETER_TYPE_VECTOR:
+      if (( ! param->getVector())
+	  || ( ! dynamic_cast<VectorParameter*>(param))) {
+	response.ok = false;
+	response.errstr = "buggy vector parameter (oops!)";
+	return true;
+      }
+      else {
+	VectorChannel msg;
+	msg.channel_id = next_channel_id_++;
+	msg.transaction_id = 0;
+	Vector const * vv(param->getVector());
+	msg.value.resize(vv->rows());
+	Vector::Map(&msg.value[0], vv->rows()) = *vv;
+	response.ok = true;
+	response.vector_channel.push_back(msg);
+	vectors_.insert(make_pair(msg.channel_id, dynamic_cast<VectorParameter*>(param)));
+	return true;
+      }
+      
+    case PARAMETER_TYPE_MATRIX:
+      if (( ! param->getMatrix())
+	  || ( ! dynamic_cast<MatrixParameter*>(param))) {
+	response.ok = false;
+	response.errstr = "buggy matrix parameter (oops!)";
+	return true;
+      }
+      else {
+	MatrixChannel msg;
+	msg.channel_id = next_channel_id_++;
+	msg.transaction_id = 0;
+	Matrix const * mm(param->getMatrix());
+	msg.value.resize(mm->rows() * mm->cols());
+	msg.nrows = mm->rows();
+	msg.ncols = mm->cols();
+	Matrix::Map(&msg.value[0], mm->rows(), mm->cols()) = *mm;
+	response.ok = true;
+	response.matrix_channel.push_back(msg);
+	matrices_.insert(make_pair(msg.channel_id, dynamic_cast<MatrixParameter*>(param)));
+	return true;
+      }
+      
+      //    default:
+    }
+    
+    response.ok = false;
+    response.errstr = "buggy parameter type handling (oops!)";
+    return true;
+  }
+  
+  
+  void ParamCallbacks::
+  stringChannel(wbc_msgs::StringChannel const & msg)
+  {
+    ChannelFeedback feedback;
+    feedback.ok = true;
+    feedback.channel_id = msg.channel_id;
+    feedback.transaction_id = msg.transaction_id;
+    
+    std::map<int, opspace::StringParameter *>::iterator ip(strings_.find(msg.channel_id));
+    if (strings_.end() == ip) {
+      feedback.ok = false;
+      feedback.errstr = "invalid string channel";
+    }
+    
+    if (feedback.ok) {
+      Status const status(ip->second->set(msg.value));
+      if ( ! status) {
+	feedback.ok = false;
+	feedback.errstr = status.errstr;
+      }
+    }
+    
+    channel_feedback_.publish(feedback);
+  }
+  
+  
+  void ParamCallbacks::
+  integerChannel(wbc_msgs::IntegerChannel const & msg)
+  {
+    ChannelFeedback feedback;
+    feedback.ok = true;
+    feedback.channel_id = msg.channel_id;
+    feedback.transaction_id = msg.transaction_id;
+    
+    std::map<int, opspace::IntegerParameter *>::iterator ip(integers_.find(msg.channel_id));
+    if (integers_.end() == ip) {
+      feedback.ok = false;
+      feedback.errstr = "invalid integer channel";
+    }
+    
+    if (feedback.ok) {
+      Status const status(ip->second->set(msg.value));
+      if ( ! status) {
+	feedback.ok = false;
+	feedback.errstr = status.errstr;
+      }
+    }
+    
+    channel_feedback_.publish(feedback);
+  }
+
+  
+  void ParamCallbacks::
+  realChannel(wbc_msgs::RealChannel const & msg)
+  {
+    ChannelFeedback feedback;
+    feedback.ok = true;
+    feedback.channel_id = msg.channel_id;
+    feedback.transaction_id = msg.transaction_id;
+    
+    std::map<int, opspace::RealParameter *>::iterator ip(reals_.find(msg.channel_id));
+    if (reals_.end() == ip) {
+      feedback.ok = false;
+      feedback.errstr = "invalid real channel";
+    }
+    
+    if (feedback.ok) {
+      Status const status(ip->second->set(msg.value));
+      if ( ! status) {
+	feedback.ok = false;
+	feedback.errstr = status.errstr;
+      }
+    }
+    
+    channel_feedback_.publish(feedback);
+  }
+
+  
+  void ParamCallbacks::
+  vectorChannel(wbc_msgs::VectorChannel const & msg)
+  {
+    ChannelFeedback feedback;
+    feedback.ok = true;
+    feedback.channel_id = msg.channel_id;
+    feedback.transaction_id = msg.transaction_id;
+    
+    std::map<int, opspace::VectorParameter *>::iterator ip(vectors_.find(msg.channel_id));
+    if (vectors_.end() == ip) {
+      feedback.ok = false;
+      feedback.errstr = "invalid vector channel";
+    }
+    
+    if (feedback.ok) {
+      Vector tmp(jspace::Vector::Map(&msg.value[0], msg.value.size()));
+      Status const status(ip->second->set(tmp));
+      if ( ! status) {
+	feedback.ok = false;
+	feedback.errstr = status.errstr;
+      }
+    }
+    
+    channel_feedback_.publish(feedback);
+  }
+  
+  
+  void ParamCallbacks::
+  matrixChannel(wbc_msgs::MatrixChannel const & msg)
+  {
+    ChannelFeedback feedback;
+    feedback.ok = true;
+    feedback.channel_id = msg.channel_id;
+    feedback.transaction_id = msg.transaction_id;
+    
+    std::map<int, opspace::VectorParameter *>::iterator ip(vectors_.find(msg.channel_id));
+    if (vectors_.end() == ip) {
+      feedback.ok = false;
+      feedback.errstr = "invalid vector channel";
+    }
+    
+    if (feedback.ok) {
+      Matrix tmp(jspace::Vector::Map(&msg.value[0], msg.nrows, msg.ncols));
+      Status const status(ip->second->set(tmp));
+      if ( ! status) {
+	feedback.ok = false;
+	feedback.errstr = status.errstr;
+      }
+    }
+    
+    channel_feedback_.publish(feedback);
   }
   
 }
