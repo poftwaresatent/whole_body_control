@@ -27,6 +27,7 @@ rosbuild_add_library (wbc_opspace
   opspace/src/other_controllers.cpp
   opspace/src/parse_yaml.cpp
   opspace/src/Behavior.cpp
+  src/util.cpp
   )
 
 rosbuild_add_executable (testTask opspace/src/testTask.cpp)

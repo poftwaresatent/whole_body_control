@@ -9,11 +9,13 @@
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
   <url>https://github.com/poftwaresatent/utaustin_wbc_opspace</url>
+  <depend package="roscpp"/>
   <depend package="reflexxes_otg"/>
   <depend package="wbc_core"/>
+  <depend package="wbc_msgs"/>
   <depend package="yaml_cpp"/>
   <export>
-    <cpp cflags="-I${prefix}/opspace/include"
+    <cpp cflags="-I${prefix}/opspace/include -I${prefix}/include"
 	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_opspace" />
   </export>
   <platform os="ubuntu" version="9.04"/>
