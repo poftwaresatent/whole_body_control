@@ -1,0 +1,9 @@
+QUICK NOTES ON PARAMETER REFLECTION
+
+rosservice call /wbc_m3_ctrl_servo/get_param  '{com_type: task, com_name: posture_shake, param_name: goal}'
+
+rosservice call /wbc_m3_ctrl_servo/set_param  '{com_type: task, com_name: posture_shake, param: { name: goal, type: 4, realval: [0.5, 0.8, -0.15, 0.7, 2.0, -0.0, -0.2] } }'
+
+rosservice call /wbc_m3_ctrl_servo/get_param  '{com_type: task, com_name: eepos_shake, param_name: goal}'
+
+rosservice call /wbc_m3_ctrl_servo/set_param  '{com_type: task, com_name: eepos_shake, param: { name: goal, type: 4, realval: [0.3, -0.3, -0.3] } }'
