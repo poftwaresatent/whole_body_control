@@ -40,12 +40,14 @@
 #include <opspace/Behavior.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/ControllerNG.hpp>
+#include <wbc_opspace/util.h>
 #include <boost/scoped_ptr.hpp>
 #include <err.h>
 #include <signal.h>
 
 using namespace wbc_m3_ctrl;
 using namespace opspace;
+using namespace wbc_opspace;
 using namespace boost;
 using namespace std;
 
@@ -57,14 +59,14 @@ static char const * opspace_fallback_str =
   "    end_effector_id: 6\n"
   "    dt_seconds: 0.002\n"
   "    kp: [ 100.0 ]\n"
-  "    kd: [  20.0 ]\n"
+  "    kd: [  10.0 ]\n"
   "    maxvel: [ 0.5 ]\n"
   "    maxacc: [ 1.5 ]\n"
   "  - type: opspace::PostureTask\n"
   "    name: posture\n"
   "    dt_seconds: 0.002\n"
   "    kp: [ 100.0 ]\n"
-  "    kd: [  20.0 ]\n"
+  "    kd: [  10.0 ]\n"
   "    maxvel: [ 3.1416 ]\n"
   "    maxacc: [ 6.2832 ]\n"
   "- behaviors:\n"
@@ -77,8 +79,10 @@ static char const * opspace_fallback_str =
 
 static bool verbose(false);
 static scoped_ptr<jspace::Model> model;
-static Factory factory;
+static shared_ptr<Factory> factory;
 static long long servo_rate;
+static shared_ptr<ParamCallbacks> param_cbs;
+static shared_ptr<ControllerNG> controller;
 
 
 static void usage(int ecode, std::string msg)
@@ -171,18 +175,20 @@ static void parse_options(int argc, char ** argv)
 	 robot_spec.c_str(), ee.what());
   }
   
+  factory.reset(new Factory());
+  
   Status st;
   if (skill_spec.empty()) {
     if (verbose) {
       warnx("using fallback task/posture skill");
     }
-    st = factory.parseString(opspace_fallback_str);
+    st = factory->parseString(opspace_fallback_str);
   }
   else {
     if (verbose) {
       warnx("reading skills from %s", skill_spec.c_str());
     }
-    st = factory.parseFile(skill_spec);
+    st = factory->parseFile(skill_spec);
   }
   if ( ! st) {
     errx(EXIT_FAILURE,
@@ -192,7 +198,7 @@ static void parse_options(int argc, char ** argv)
 	 skill_spec.c_str(), st.errstr.c_str());
   }
   if (verbose) {
-    factory.dump(cout, "*** parsed tasks and skills", "* ");
+    factory->dump(cout, "*** parsed tasks and skills", "* ");
   }
 }
 
@@ -216,16 +222,14 @@ namespace {
     : public RTUtil
   {
   public:
-    shared_ptr<ControllerNG> controller;
-    shared_ptr<Behavior> skill;
-    
+    shared_ptr<Behavior> skill;    
     
     virtual int init(jspace::State const & state) {
-      if (controller) {
+      if (skill) {
 	warnx("Servo::init(): already initialized");
 	return -1;
       }
-      if (factory.getBehaviorTable().empty()) {
+      if (factory->getBehaviorTable().empty()) {
 	warnx("Servo::init(): empty skill table");
 	return -2;
       }
@@ -236,20 +240,17 @@ namespace {
       
       model->update(state);
     
-      controller.reset(new ControllerNG("wbc_m3_ctrl::servo"));
       jspace::Status status(controller->init(*model));
       if ( ! status) {
 	warnx("Servo::init(): controller->init() failed: %s", status.errstr.c_str());
-	controller.reset();
 	return -4;
       }
       
-      skill = factory.getBehaviorTable()[0]; // XXXX to do: allow selection at runtime
+      skill = factory->getBehaviorTable()[0]; // XXXX to do: allow selection at runtime
       status = skill->init(*model);
       if ( ! status) {
 	warnx("Servo::init(): skill->init() failed: %s", status.errstr.c_str());
 	skill.reset();
-	controller.reset();
 	return -5;
       }
       
@@ -260,7 +261,7 @@ namespace {
     virtual int update(jspace::State const & state,
 		       jspace::Vector & command)
     {
-      if ( ! controller) {
+      if ( ! skill) {
 	warnx("Servo::update(): not initialized\n");
 	return -1;
       }
@@ -280,7 +281,6 @@ namespace {
     virtual int cleanup(void)
     {
       skill.reset();
-      controller.reset();
       return 0;
     }
     
@@ -312,9 +312,17 @@ int main(int argc, char ** argv)
   
   ros::init(argc, argv, "wbc_m3_ctrl_servo", ros::init_options::NoSigintHandler);
   parse_options(argc, argv);
+  ros::NodeHandle node("~");
   
+  controller.reset(new ControllerNG("wbc_m3_ctrl::servo"));
+  param_cbs.reset(new ParamCallbacks());
   Servo servo;
   try {
+    if (verbose) {
+      warnx("initializing param callbacks");
+    }
+    param_cbs->init(node, "set_param", "get_param", factory, controller);
+    
     if (verbose) {
       warnx("starting servo with %lld Hz", servo_rate);
     }
@@ -335,7 +343,7 @@ int main(int argc, char ** argv)
       jspace::pretty_print(model->getState().velocity_, cout, "jvel", "  ");
       jspace::pretty_print(model->getState().force_, cout, "jforce", "  ");
       servo.skill->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
-      servo.controller->dbg(cout, "--------------------------------------------------", "");
+      controller->dbg(cout, "--------------------------------------------------", "");
     }
     ros::spinOnce();
     usleep(250000);
