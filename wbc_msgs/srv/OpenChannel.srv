@@ -1,0 +1,12 @@
+string com_type
+string com_name
+string param_name
+---
+int64 param_type
+StringChannel[] string_channel
+IntegerChannel[] integer_channel
+RealChannel[] real_channel
+VectorChannel[] vector_channel
+MatrixChannel[] matrix_channel
+bool ok
+string errstr
