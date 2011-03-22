@@ -46,8 +46,6 @@ namespace wbc_opspace {
   
   void ParamCallbacks::
   init(ros::NodeHandle node,
-       std::string const & set_param_service_name,
-       std::string const & get_param_service_name,
        boost::shared_ptr<opspace::Factory> factory,
        boost::shared_ptr<opspace::ControllerNG> controller) throw(std::runtime_error)
   {
@@ -62,12 +60,15 @@ namespace wbc_opspace {
     }
     factory_ = factory;
     controller_ = controller;
-    set_param_ = node.advertiseService(set_param_service_name,
+    set_param_ = node.advertiseService("set_param",
 				       &::wbc_opspace::ParamCallbacks::setParam,
 				       this);
-    get_param_ = node.advertiseService(get_param_service_name,
+    get_param_ = node.advertiseService("get_param",
 				       &::wbc_opspace::ParamCallbacks::getParam,
 				       this);
+    list_params_ = node.advertiseService("list_params",
+					 &::wbc_opspace::ParamCallbacks::listParams,
+					 this);
   }
   
   
@@ -193,6 +194,73 @@ namespace wbc_opspace {
   }
   
   
+  static bool param_to_msg(Parameter const * param,
+			   wbc_msgs::OpspaceParameter & msg)
+  {
+    msg.name = param->name_;
+    msg.type = OpspaceParameter::PARAMETER_TYPE_VOID;
+    
+    switch (param->type_) {
+      
+    case PARAMETER_TYPE_STRING:
+      if ( ! param->getString()) {
+	return false;
+      }
+      msg.type = OpspaceParameter::PARAMETER_TYPE_STRING;
+      msg.strval = *param->getString();
+      break;
+      
+    case PARAMETER_TYPE_INTEGER:
+      if ( ! param->getInteger()) {
+	return false;
+      }
+      msg.type = OpspaceParameter::PARAMETER_TYPE_INTEGER;
+      msg.intval = *param->getInteger();
+      break;
+      
+    case PARAMETER_TYPE_REAL:
+      if ( ! param->getReal()) {
+	return false;
+      }
+      msg.type = OpspaceParameter::PARAMETER_TYPE_REAL;
+      msg.realval.resize(1);
+      msg.realval[0] = *param->getReal();
+      break;
+      
+    case PARAMETER_TYPE_VECTOR:
+      if ( ! param->getVector()) {
+	return false;
+      }
+      msg.type = OpspaceParameter::PARAMETER_TYPE_VECTOR;
+      {
+	Vector const * vv(param->getVector());
+	msg.realval.resize(vv->rows());
+	Vector::Map(&msg.realval[0], vv->rows()) = *vv;
+      }
+      break;
+      
+    case PARAMETER_TYPE_MATRIX:
+      if ( ! param->getMatrix()) {
+	return false;
+      }
+      msg.type = OpspaceParameter::PARAMETER_TYPE_MATRIX;
+      {
+	Matrix const * mm(param->getMatrix());
+	msg.realval.resize(mm->rows() * mm->cols());
+	msg.nrows = mm->rows();
+	msg.ncols = mm->cols();
+	Matrix::Map(&msg.realval[0], mm->rows(), mm->cols()) = *mm;
+      }
+      break;
+      
+    default:
+      return false;
+    }
+    
+    return true;
+  }
+  
+  
   bool ParamCallbacks::
   getParam(wbc_msgs::GetParameter::Request & request,
 	   wbc_msgs::GetParameter::Response & response)
@@ -208,61 +276,63 @@ namespace wbc_opspace {
       return true;
     }
     
-    response.param.name = request.param_name;
-    response.param.type = OpspaceParameter::PARAMETER_TYPE_VOID;
-    
-    switch (param->type_) {
-      
-    case PARAMETER_TYPE_STRING:
-      response.param.type = OpspaceParameter::PARAMETER_TYPE_STRING;
-      response.param.strval = *param->getString();
-      break;
-      
-    case PARAMETER_TYPE_INTEGER:
-      response.param.type = OpspaceParameter::PARAMETER_TYPE_INTEGER;
-      response.param.intval = *param->getInteger();
-      break;
-      
-    case PARAMETER_TYPE_REAL:
-      response.param.type = OpspaceParameter::PARAMETER_TYPE_REAL;
-      response.param.realval.resize(1);
-      response.param.realval[0] = *param->getReal();
-      break;
-      
-    case PARAMETER_TYPE_VECTOR:
-      response.param.type = OpspaceParameter::PARAMETER_TYPE_VECTOR;
-      {
-	Vector const * vv(param->getVector());
-	if ( ! vv) {
-	  response.ok = false;
-	  response.errstr = "oops, looks like a bug: no vector in vector parameter";
-	  return true;
-	}
-	response.param.realval.resize(vv->rows());
-	Vector::Map(&response.param.realval[0], vv->rows()) = *vv;
-      }
-      break;
-      
-    case PARAMETER_TYPE_MATRIX:
-      response.param.type = OpspaceParameter::PARAMETER_TYPE_MATRIX;
-      {
-	Matrix const * mm(param->getMatrix());
-	if ( ! mm) {
-	  response.ok = false;
-	  response.errstr = "oops, looks like a bug: no matrix in matrix parameter";
-	  return true;
-	}
-	response.param.realval.resize(mm->rows() * mm->cols());
-	response.param.nrows = mm->rows();
-	response.param.ncols = mm->cols();
-	Matrix::Map(&response.param.realval[0], mm->rows(), mm->cols()) = *mm;
-      }
-      break;
-      
-    default:
-      response.ok = false;
-      response.errstr = "unsupported or invalid type";
+    if ( ! param_to_msg(param, response.param)) {
+      status.ok = false;
+      status.errstr = "parameter conversion error (probably a bug!)";
       return true;
+    }
+    
+    response.ok = true;
+    return true;
+  }
+  
+  
+  bool ParamCallbacks::
+  listParams(wbc_msgs::ListParameters::Request & request,
+	     wbc_msgs::ListParameters::Response & response)
+  {
+    if ( ! factory_) {
+      response.ok = false;
+      response.errstr = "not initialized";
+      return true;
+    }
+    
+    {
+      parameter_lookup_t const & params(controller_->getParameterTable());
+      for (parameter_lookup_t::const_iterator ip(params.begin()); ip != params.end(); ++ip) {
+	OpspaceParameter msg;
+	if (param_to_msg(ip->second, msg)) { // should "never" fail though...
+	  response.com_type.push_back("servo");
+	  response.com_name.push_back("");
+	  response.param.push_back(msg);
+	}
+      }
+    }
+    
+    Factory::behavior_table_t const & behaviors(factory_->getBehaviorTable());
+    for (size_t ii(0); ii < behaviors.size(); ++ii) {
+      parameter_lookup_t const & params(behaviors[ii]->getParameterTable());
+      for (parameter_lookup_t::const_iterator ip(params.begin()); ip != params.end(); ++ip) {
+	OpspaceParameter msg;
+	if (param_to_msg(ip->second, msg)) { // should "never" fail though...
+	  response.com_type.push_back("skill");
+	  response.com_name.push_back(behaviors[ii]->getName());
+	  response.param.push_back(msg);
+	}
+      }
+    }
+    
+    Factory::task_table_t const & tasks(factory_->getTaskTable());
+    for (size_t ii(0); ii < tasks.size(); ++ii) {
+      parameter_lookup_t const & params(tasks[ii]->getParameterTable());
+      for (parameter_lookup_t::const_iterator ip(params.begin()); ip != params.end(); ++ip) {
+	OpspaceParameter msg;
+	if (param_to_msg(ip->second, msg)) { // should "never" fail though...
+	  response.com_type.push_back("task");
+	  response.com_name.push_back(tasks[ii]->getName());
+	  response.param.push_back(msg);
+	}
+      }
     }
     
     response.ok = true;

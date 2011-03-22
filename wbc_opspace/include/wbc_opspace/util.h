@@ -40,6 +40,7 @@
 #include <opspace/ControllerNG.hpp>
 #include <wbc_msgs/SetParameter.h>
 #include <wbc_msgs/GetParameter.h>
+#include <wbc_msgs/ListParameters.h>
 #include <boost/shared_ptr.hpp>
 #include <ros/ros.h>
 
@@ -49,10 +50,9 @@ namespace wbc_opspace {
   {
   public:
     void init(ros::NodeHandle node,
-	      std::string const & set_param_service_name,
-	      std::string const & get_param_service_name,
 	      boost::shared_ptr<opspace::Factory> factory,
-	      boost::shared_ptr<opspace::ControllerNG> controller) throw(std::runtime_error);
+	      boost::shared_ptr<opspace::ControllerNG> controller)
+      throw(std::runtime_error);
     
     opspace::Parameter * findParam(std::string const & com_type,
 				   std::string const & com_name,
@@ -65,9 +65,14 @@ namespace wbc_opspace {
     bool getParam(wbc_msgs::GetParameter::Request & request,
 		  wbc_msgs::GetParameter::Response & response);
     
+    bool listParams(wbc_msgs::ListParameters::Request & request,
+		    wbc_msgs::ListParameters::Response & response);
+    
   protected:
     ros::ServiceServer set_param_;
     ros::ServiceServer get_param_;
+    ros::ServiceServer list_params_;
+    
     boost::shared_ptr<opspace::Factory> factory_;
     boost::shared_ptr<opspace::ControllerNG> controller_;
   };
