@@ -321,7 +321,7 @@ int main(int argc, char ** argv)
     if (verbose) {
       warnx("initializing param callbacks");
     }
-    param_cbs->init(node, "set_param", "get_param", factory, controller);
+    param_cbs->init(node, factory, controller, 1, 100);
     
     if (verbose) {
       warnx("starting servo with %lld Hz", servo_rate);
