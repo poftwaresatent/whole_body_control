@@ -335,18 +335,24 @@ int main(int argc, char ** argv)
   warnx("started servo RT thread");
   
   while (ros::ok()) {
-    // servo has successfully spawned RT thread, just do some
-    // debugging etc here
-    if (verbose) {
-      cout << "**************************************************\n";
-      jspace::pretty_print(model->getState().position_, cout, "jpos", "  ");
-      jspace::pretty_print(model->getState().velocity_, cout, "jvel", "  ");
-      jspace::pretty_print(model->getState().force_, cout, "jforce", "  ");
-      servo.skill->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
-      controller->dbg(cout, "--------------------------------------------------", "");
+    try {
+      // servo has successfully spawned RT thread, just do some
+      // debugging etc here
+      if (verbose) {
+	cout << "**************************************************\n";
+	jspace::pretty_print(model->getState().position_, cout, "jpos", "  ");
+	jspace::pretty_print(model->getState().velocity_, cout, "jvel", "  ");
+	jspace::pretty_print(model->getState().force_, cout, "jforce", "  ");
+	servo.skill->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
+	controller->dbg(cout, "--------------------------------------------------", "");
+      }
+      ros::spinOnce();
+      usleep(250000);
     }
-    ros::spinOnce();
-    usleep(250000);
+    catch (std::exception const & ee) {
+      warnx("EXCEPTION: %s", ee.what());
+      ros::shutdown();
+    }
   }
   
   warnx("shutting down");

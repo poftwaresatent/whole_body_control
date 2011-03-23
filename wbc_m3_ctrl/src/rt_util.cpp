@@ -75,6 +75,8 @@ namespace wbc_m3_ctrl {
     RTIME tick_period;
     int cb_status;
     
+/* grr... */ try {
+
     //////////////////////////////////////////////////
     // Initialize shared memory, RT task, and semaphores.
     
@@ -202,13 +204,23 @@ namespace wbc_m3_ctrl {
       }
       
     } // end "the big for loop"
+
+
+/* grr... */ }
+    catch (std::exception const & ee) {
+      fprintf(stderr, "EXCEPTION in RT thread: %s", ee.what());
+      rt_thread_state = RT_THREAD_ERROR;
+    }
     
     //////////////////////////////////////////////////
     // Clean up after ourselves
     
     fprintf(stderr, "exiting RT thread\n");
     
-    rt_thread_state = RT_THREAD_CLEANUP;
+    if (RT_THREAD_ERROR != rt_thread_state) {
+      rt_thread_state = RT_THREAD_CLEANUP;
+    }
+    
     rt_make_soft_real_time();
     
     cb_status = rtutil->cleanup();
@@ -216,7 +228,8 @@ namespace wbc_m3_ctrl {
       fprintf(stderr, "cleanup callback returned %d\n", cb_status);
       rt_thread_state = RT_THREAD_ERROR;
     }
-    else {
+    
+    if (RT_THREAD_ERROR != rt_thread_state) {
       rt_thread_state = RT_THREAD_DONE;
     }
     
