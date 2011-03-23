@@ -35,8 +35,8 @@
 
 #include <gtest/gtest.h>
 #include <opspace/task_library.hpp>
-#include <opspace/Controller.hpp>
-#include <opspace/other_controllers.hpp>
+#include <opspace/behavior_library.hpp>
+#include <opspace/ControllerNG.hpp>
 #include <jspace/test/model_library.hpp>
 #include <err.h>
 
@@ -113,8 +113,7 @@ static shared_ptr<Task> create_sel_jp_task(string const & name, Vector const & s
 }
 
 
-static void append_odd_even_tasks(Controller & ctrl, size_t ndof)
-  throw(runtime_error)
+static void append_odd_even_tasks(GenericBehavior gb, size_t ndof)
 {
   vector<shared_ptr<Task> > task;
   Vector sel_odd(Vector::Zero(ndof));
@@ -130,15 +129,12 @@ static void append_odd_even_tasks(Controller & ctrl, size_t ndof)
   task.push_back(create_sel_jp_task("odd", sel_odd));
   task.push_back(create_sel_jp_task("even", sel_even));
   for (size_t ii(0); ii < task.size(); ++ii) {
-    if ( ! ctrl.appendTask(task[ii])) {
-      throw runtime_error("failed to add task `" + task[ii]->getName() + "'");
-    }
+    gb.appendTask(task[ii]);
   }
 }
 
 
-static void append_odd_full_tasks(Controller & ctrl, size_t ndof)
-  throw(runtime_error)
+static void append_odd_full_tasks(GenericBehavior gb, size_t ndof)
 {
   vector<shared_ptr<Task> > task;
   Vector sel_odd(Vector::Zero(ndof));
@@ -149,9 +145,7 @@ static void append_odd_full_tasks(Controller & ctrl, size_t ndof)
   task.push_back(create_sel_jp_task("odd", sel_odd));
   task.push_back(create_sel_jp_task("full", sel_full));
   for (size_t ii(0); ii < task.size(); ++ii) {
-    if ( ! ctrl.appendTask(task[ii])) {
-      throw runtime_error("failed to add task `" + task[ii]->getName() + "'");
-    }
+    gb.appendTask(task[ii]);
   }
 }
 
@@ -161,8 +155,8 @@ TEST (controller, odd_even)
   shared_ptr<Task> jpos;
   Vector gamma_jpos;
   
-  vector<Controller*> ctrl;
-  vector<ostringstream*> msg;
+  vector<shared_ptr<ControllerNG> > ctrl;
+  vector<shared_ptr<GenericBehavior> > gb;
   vector<Vector> gamma;
 
   try {
@@ -180,28 +174,22 @@ TEST (controller, odd_even)
     EXPECT_TRUE (st.ok) << "failed to update jpos task: " << st.errstr;
     gamma_jpos = aa * jpos->getCommand() + gg;
     
-    msg.push_back(new ostringstream());
-    ctrl.push_back(new SController("Samir", msg.back()));
-    gamma.push_back(Vector::Zero(puma->getNDOF()));
-    
-    msg.push_back(new ostringstream());
-    ctrl.push_back(new LController("Luis", msg.back()));
+    ctrl.push_back(shared_ptr<ControllerNG>(new ControllerNG("blah")));
+    gb.push_back(shared_ptr<GenericBehavior>(new GenericBehavior("blah")));
     gamma.push_back(Vector::Zero(puma->getNDOF()));
     
     for (size_t ii(0); ii < ctrl.size(); ++ii) {
       
-      append_odd_even_tasks(*ctrl[ii], puma->getNDOF());
+      append_odd_even_tasks(*gb[ii], puma->getNDOF());
+      st = gb[ii]->init(*puma);
+      EXPECT_TRUE (st.ok) << "failed to init generic behavior #"
+			  << ii << ": " << st.errstr;
       st = ctrl[ii]->init(*puma);
       EXPECT_TRUE (st.ok) << "failed to init controller #"
 			  << ii << " `" << ctrl[ii]->getName() << "': " << st.errstr;
-      st = ctrl[ii]->computeCommand(*puma, gamma[ii]);
+      st = ctrl[ii]->computeCommand(*puma, *gb[ii], gamma[ii]);
       EXPECT_TRUE (st.ok) << "failed to compute torques #"
 			  << ii << " `" << ctrl[ii]->getName() << "': " << st.errstr;
-      
-      cout << "==================================================\n"
-	   << "messages from controller #" << ii << " `" << ctrl[ii]->getName() << "'\n"
-	   << "--------------------------------------------------\n"
-	   << msg[ii]->str();
     }
     
     cout << "==================================================\n"
@@ -216,12 +204,6 @@ TEST (controller, odd_even)
   }
   catch (exception const & ee) {
     ADD_FAILURE () << "exception " << ee.what();
-    for (size_t ii(0); ii < ctrl.size(); ++ii) {
-      delete ctrl[ii];
-    }
-    for (size_t ii(0); ii < msg.size(); ++ii) {
-      delete msg[ii];
-    }
   }
 }
 
@@ -231,8 +213,8 @@ TEST (controller, odd_full)
   shared_ptr<Task> jpos;
   Vector gamma_jpos;
   
-  vector<Controller*> ctrl;
-  vector<ostringstream*> msg;
+  vector<shared_ptr<ControllerNG> > ctrl;
+  vector<shared_ptr<GenericBehavior> > gb;
   vector<Vector> gamma;
 
   try {
@@ -250,28 +232,22 @@ TEST (controller, odd_full)
     EXPECT_TRUE (st.ok) << "failed to update jpos task: " << st.errstr;
     gamma_jpos = aa * jpos->getCommand() + gg;
     
-    msg.push_back(new ostringstream());
-    ctrl.push_back(new SController("Samir", msg.back()));
-    gamma.push_back(Vector::Zero(puma->getNDOF()));
-    
-    msg.push_back(new ostringstream());
-    ctrl.push_back(new LController("Luis", msg.back()));
+    ctrl.push_back(shared_ptr<ControllerNG>(new ControllerNG("blah")));
+    gb.push_back(shared_ptr<GenericBehavior>(new GenericBehavior("blah")));
     gamma.push_back(Vector::Zero(puma->getNDOF()));
     
     for (size_t ii(0); ii < ctrl.size(); ++ii) {
       
-      append_odd_full_tasks(*ctrl[ii], puma->getNDOF());
+      append_odd_full_tasks(*gb[ii], puma->getNDOF());
+      st = gb[ii]->init(*puma);
+      EXPECT_TRUE (st.ok) << "failed to init generic behavior #"
+			  << ii << ": " << st.errstr;
       st = ctrl[ii]->init(*puma);
       EXPECT_TRUE (st.ok) << "failed to init controller #"
 			  << ii << " `" << ctrl[ii]->getName() << "': " << st.errstr;
-      st = ctrl[ii]->computeCommand(*puma, gamma[ii]);
+      st = ctrl[ii]->computeCommand(*puma, *gb[ii], gamma[ii]);
       EXPECT_TRUE (st.ok) << "failed to compute torques #"
 			  << ii << " `" << ctrl[ii]->getName() << "': " << st.errstr;
-      
-      cout << "==================================================\n"
-	   << "messages from controller #" << ii << " `" << ctrl[ii]->getName() << "'\n"
-	   << "--------------------------------------------------\n"
-	   << msg[ii]->str();
     }
     
     cout << "==================================================\n"
@@ -286,12 +262,6 @@ TEST (controller, odd_full)
   }
   catch (exception const & ee) {
     ADD_FAILURE () << "exception " << ee.what();
-    for (size_t ii(0); ii < ctrl.size(); ++ii) {
-      delete ctrl[ii];
-    }
-    for (size_t ii(0); ii < msg.size(); ++ii) {
-      delete msg[ii];
-    }
   }
 }
 
@@ -359,17 +329,20 @@ TEST (task, jlimit)
     st = param->set(foo);
     ASSERT_TRUE (st.ok) << "failed to set maxacc: " << st.errstr;
     
-    LController ctrl("ctrl", &cerr);
-    ctrl.appendTask(jlimit);
+    ControllerNG ctrl("ctrl");
+    GenericBehavior gb("gb");
+    gb.appendTask(jlimit);
     
     State state(ndof, ndof, 0);
     state.position_ = Vector::Zero(ndof);
     state.velocity_ = Vector::Zero(ndof);
     puma->update(state);
+    st = gb.init(*puma);
+    EXPECT_TRUE (st.ok) << "failed to init generic behavior: " << st.errstr;
     st = ctrl.init(*puma);
-    EXPECT_TRUE (st.ok) << "failed to init: " << st.errstr;
+    EXPECT_TRUE (st.ok) << "failed to init controller: " << st.errstr;
     Vector gamma;
-    st = ctrl.computeCommand(*puma, gamma);
+    st = ctrl.computeCommand(*puma, gb, gamma);
     EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
     
     for (size_t ii(0); ii < ndof; ++ii) {
@@ -380,7 +353,9 @@ TEST (task, jlimit)
 	state.position_[ii] = -4.0 * M_PI;
       }
       puma->update(state);
-      st = ctrl.computeCommand(*puma, gamma);
+      st = gb.update(*puma);
+      EXPECT_TRUE (st.ok) << "failed to update generic behavior: " << st.errstr;
+      st = ctrl.computeCommand(*puma, gb, gamma);
       EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
     }
     

@@ -56,11 +56,11 @@ namespace opspace {
     if ("opspace::SelectedJointPostureTask" == type) {
       return new opspace::SelectedJointPostureTask(name);
     }
-    if ("opspace::PositionTask" == type) {
-      return new opspace::PositionTask(name);
+    if ("opspace::CartPosTrjTask" == type) {
+      return new opspace::CartPosTrjTask(name);
     }
-    if ("opspace::PostureTask" == type) {
-      return new opspace::PostureTask(name);
+    if ("opspace::JPosTrjTask" == type) {
+      return new opspace::JPosTrjTask(name);
     }
     if ("opspace::JointLimitTask" == type) {
       return new opspace::JointLimitTask(name);

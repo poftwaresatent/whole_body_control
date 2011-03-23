@@ -42,6 +42,43 @@ using boost::shared_ptr;
 namespace opspace {
   
   
+  GenericBehavior::
+  GenericBehavior(std::string const & name)
+    : Behavior(name)
+  {
+    // hmm... how to declare generic slots?
+  }
+  
+  
+  Status GenericBehavior::
+  update(Model const & model)
+  {
+    Status st;
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      st = task_table_[ii]->update(model);
+      if ( ! st) {
+	return st;
+      }
+    }
+    return st;
+  }
+  
+  
+  Behavior::task_table_t const * GenericBehavior::
+  getTaskTable()
+  {
+    return &task_table_;
+  }
+  
+  
+  void GenericBehavior::
+  appendTask(boost::shared_ptr<Task> task)
+  {
+    storage_.push_back(task);
+    task_table_.push_back(task.get());
+  }
+  
+  
   TPBehavior::
   TPBehavior(std::string const & name)
     : Behavior(name)

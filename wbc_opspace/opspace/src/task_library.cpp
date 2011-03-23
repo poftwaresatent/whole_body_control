@@ -42,8 +42,10 @@ namespace opspace {
 
 
   PDTask::
-  PDTask(std::string const & name)
+  PDTask(std::string const & name,
+	 saturation_policy_t saturation_policy)
     : Task(name),
+      saturation_policy_(saturation_policy),
       initialized_(false)
   {
     declareParameter("goalpos", &goalpos_);
@@ -58,6 +60,11 @@ namespace opspace {
   check(Vector const * param, Vector const & value) const
   {
     if ((param == &kp_) || (param == &kd_) || (param == &maxvel_)) {
+      if (SATURATION_NORM == saturation_policy_) {
+	if (1 != value.rows()) {
+	  return Status(false, "SATURATION_NORM requires one-dimensional gains and limits");
+	}
+      }
       for (size_t ii(0); ii < value.rows(); ++ii) {
 	if (0 > value[ii]) {
 	  return Status(false, "gains and limits must be >= 0");
@@ -65,8 +72,14 @@ namespace opspace {
       }
     }
     if (initialized_) {
-      if ((param == &kp_) || (param == &kd_) || (param == &maxvel_)
-	  || (param == &goalpos_) || (param == &goalvel_)) {
+      if (SATURATION_NORM != saturation_policy_) {
+	if ((param == &kp_) || (param == &kd_) || (param == &maxvel_)) {
+	  if (goalpos_.rows() != value.rows()) {
+	    return Status(false, "invalid dimension");
+	  }
+	}
+      }
+      if ((param == &goalpos_) || (param == &goalvel_)) {
 	if (goalpos_.rows() != value.rows()) {
 	  return Status(false, "invalid dimension");
 	}
@@ -77,32 +90,45 @@ namespace opspace {
   
   
   Status PDTask::
-  initPDTask(Vector const & initpos,
-	     bool allow_scalar_to_vector)
+  initPDTask(Vector const & initpos)
   {
     int const ndim(initpos.rows());
-    if (ndim != kp_.rows()) {
-      if ((ndim != 1) && (1 == kp_.rows()) && allow_scalar_to_vector) {
-	kp_ = kp_[0] * Vector::Ones(ndim);
+    
+    if (SATURATION_NORM == saturation_policy_) {
+      if (1 != kp_.rows()) {
+	return Status(false, "kp must be one-dimensional for SATURATION_NORM policy");
       }
-      else {
-	return Status(false, "you did not (correctly) set kp");
+      if (1 != kd_.rows()) {
+	return Status(false, "kd must be one-dimensional for SATURATION_NORM policy");
       }
-    }
-    if (ndim != kd_.rows()) {
-      if ((ndim != 1) && (1 == kd_.rows()) && allow_scalar_to_vector) {
-	kd_ = kd_[0] * Vector::Ones(ndim);
-      }
-      else {
-	return Status(false, "you did not (correctly) set kd");
+      if (1 != maxvel_.rows()) {
+	return Status(false, "maxvel must be one-dimensional for SATURATION_NORM policy");
       }
     }
-    if (ndim != maxvel_.rows()) {
-      if ((ndim != 1) && (1 == maxvel_.rows()) && allow_scalar_to_vector) {
-	maxvel_ = maxvel_[0] * Vector::Ones(ndim);
+    else {
+      if (ndim != kp_.rows()) {
+	if ((ndim != 1) && (1 == kp_.rows())) {
+	  kp_ = kp_[0] * Vector::Ones(ndim);
+	}
+	else {
+	  return Status(false, "invalid kp dimension");
+	}
       }
-      else {
-	return Status(false, "you did not (correctly) set maxvel");
+      if (ndim != kd_.rows()) {
+	if ((ndim != 1) && (1 == kd_.rows())) {
+	  kd_ = kd_[0] * Vector::Ones(ndim);
+	}
+	else {
+	  return Status(false, "invalid kd dimension");
+	}
+      }
+      if (ndim != maxvel_.rows()) {
+	if ((ndim != 1) && (1 == maxvel_.rows())) {
+	  maxvel_ = maxvel_[0] * Vector::Ones(ndim);
+	}
+	else {
+	  return Status(false, "invalid maxvel dimension");
+	}
       }
     }
     
@@ -118,44 +144,61 @@ namespace opspace {
   Status PDTask::
   computePDCommand(Vector const & curpos,
 		   Vector const & curvel,
-		   bool component_wise_saturation,
 		   Vector & command)
   {
     Status st;
     if ( ! initialized_) {
       st.ok = false;
       st.errstr = "not initialized";
+      return st;
     }
-    else {
-      command = kp_.cwise() * (goalpos_ - curpos);
-      if (component_wise_saturation) {
-	for (int ii(0); ii < command.rows(); ++ii) {
-	  // beware of div by zero
-	  if ((maxvel_[ii] > 1e-4) && (kd_[ii] > 1e-4)) {
-	    double const sat(fabs((command[ii] / maxvel_[ii]) / kd_[ii]));
-	    if (sat > 1.0) {
-	      command[ii] /= sat;
-	    }
+
+    if (SATURATION_NORM == saturation_policy_) {
+      command = kp_[0] * (goalpos_ - curpos);
+      if ((maxvel_[0] > 1e-4) && (kd_[0] > 1e-4)) { // beware of div by zero
+	double const sat(command.norm() / maxvel_[0] / kd_[0]);
+	if (sat > 1.0) {
+	  command /= sat;
+	}
+      }
+      command += kd_[0] * (goalvel_ - curvel);
+      return st;
+    }    
+    
+    command = kp_.cwise() * (goalpos_ - curpos);
+    
+    if (SATURATION_COMPONENT_WISE == saturation_policy_) {
+      for (int ii(0); ii < command.rows(); ++ii) {
+	if ((maxvel_[ii] > 1e-4) && (kd_[ii] > 1e-4)) { // beware of div by zero
+	  double const sat(fabs((command[ii] / maxvel_[ii]) / kd_[ii]));
+	  if (sat > 1.0) {
+	    command[ii] /= sat;
 	  }
 	}
       }
-      else {
-	double saturation(0.0);
-	for (int ii(0); ii < command.rows(); ++ii) {
-	  // beware of div by zero
-	  if ((maxvel_[ii] > 1e-4) && (kd_[ii] > 1e-4)) {
-	    double const sat(fabs((command[ii] / maxvel_[ii]) / kd_[ii]));
-	    if (sat > saturation) {
-	      saturation = sat;
-	    }
+    }
+    
+    else if (SATURATION_MAX_COMPONENT == saturation_policy_) {
+      double saturation(0.0);
+      for (int ii(0); ii < command.rows(); ++ii) {
+	if ((maxvel_[ii] > 1e-4) && (kd_[ii] > 1e-4)) { // beware of div by zero
+	  double const sat(fabs((command[ii] / maxvel_[ii]) / kd_[ii]));
+	  if (sat > saturation) {
+	    saturation = sat;
 	  }
 	}
-	if (saturation > 1.0) {
-	  command /= saturation;
-	}
       }
-      command += kd_.cwise() * (goalvel_ - curvel);
+      if (saturation > 1.0) {
+	command /= saturation;
+      }
     }
+    
+    // else (...) : other saturation policies would go here. For now
+    // we silently assume that any other value of saturation_policy
+    // means SATURATION_OFF.
+    
+    command += kd_.cwise() * (goalvel_ - curvel);
+    
     return st;
   }
   
@@ -408,8 +451,8 @@ namespace opspace {
   }
   
   
-  PositionTask::
-  PositionTask(std::string const & name)
+  CartPosTrjTask::
+  CartPosTrjTask(std::string const & name)
     : TrajectoryTask(name),
       end_effector_id_(-1),
       control_point_(Vector::Zero(3))
@@ -419,7 +462,7 @@ namespace opspace {
   }
   
   
-  Status PositionTask::
+  Status CartPosTrjTask::
   init(Model const & model)
   {
     if (0 > end_effector_id_) {
@@ -435,7 +478,7 @@ namespace opspace {
   }
   
   
-  Status PositionTask::
+  Status CartPosTrjTask::
   update(Model const & model)
   {
     taoDNode const * ee_node(updateActual(model));
@@ -455,7 +498,7 @@ namespace opspace {
   }
   
   
-  taoDNode const * PositionTask::
+  taoDNode const * CartPosTrjTask::
   updateActual(Model const & model)
   {
     taoDNode * ee_node(model.getNode(end_effector_id_));
@@ -472,14 +515,14 @@ namespace opspace {
   }
   
   
-  PostureTask::
-  PostureTask(std::string const & name)
+  JPosTrjTask::
+  JPosTrjTask(std::string const & name)
     : TrajectoryTask(name)
   {
   }
   
   
-  Status PostureTask::
+  Status JPosTrjTask::
   init(Model const & model)
   {
     jacobian_ = Matrix::Identity(model.getNDOF(), model.getNDOF());
@@ -488,7 +531,7 @@ namespace opspace {
   }
   
   
-  Status PostureTask::
+  Status JPosTrjTask::
   update(Model const & model)
   {
     actual_ = model.getState().position_;
@@ -496,7 +539,7 @@ namespace opspace {
   }
   
   
-  void PostureTask::
+  void JPosTrjTask::
   quickSetup(double dt_seconds, double kp, double kd, double maxvel, double maxacc)
   {
     dt_seconds_ = dt_seconds;

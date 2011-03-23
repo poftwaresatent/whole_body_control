@@ -87,11 +87,11 @@ namespace opspace {
   init(Model const & model)
   {
     if ( ! fallback_task_) {
-      PostureTask * pt(new PostureTask("ControllerNG_fallback_posture"));
+      JPosTrjTask * pt(new JPosTrjTask("ControllerNG_fallback_posture"));
       pt->quickSetup(0.01, 50, 5, 1, 2);
       fallback_task_.reset(pt);
     }
-    if ( ! dynamic_cast<PostureTask*>(fallback_task_.get())) {
+    if ( ! dynamic_cast<JPosTrjTask*>(fallback_task_.get())) {
       return Status(false, "fallback task has to be a posture (for now)");
     }
     return Status();

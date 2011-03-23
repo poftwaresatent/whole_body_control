@@ -41,7 +41,24 @@
 
 namespace opspace {
   
-
+  
+  class GenericBehavior
+    : public Behavior
+  {
+  public:
+    GenericBehavior(std::string const & name);
+    
+    virtual Status update(Model const & model);
+    virtual task_table_t const * getTaskTable();
+    
+    void appendTask(boost::shared_ptr<Task> task);
+    
+  protected:
+    task_table_t task_table_;
+    std::vector<boost::shared_ptr<Task> > storage_;
+  };
+  
+  
   class TPBehavior
     : public Behavior
   {
@@ -54,8 +71,8 @@ namespace opspace {
     virtual Status checkJStarSV(Task const * task, Vector const & sv);
     
   protected:
-    PositionTask * eepos_;
-    PostureTask * posture_;
+    CartPosTrjTask * eepos_;
+    JPosTrjTask * posture_;
     task_table_t task_table_;
   };
 
@@ -85,12 +102,12 @@ namespace opspace {
     } state_;
     
     //    OrientationTask * shake_eeori_;
-    PositionTask * shake_eepos_task_;
-    PostureTask * shake_posture_task_;
+    CartPosTrjTask * shake_eepos_task_;
+    JPosTrjTask * shake_posture_task_;
     task_table_t shake_task_table_;
     
-    PositionTask * wave_eepos_task_;
-    PostureTask * wave_posture_task_;
+    CartPosTrjTask * wave_eepos_task_;
+    JPosTrjTask * wave_posture_task_;
     task_table_t wave_task_table_;
     
     Parameter * shake_eepos_goal_;

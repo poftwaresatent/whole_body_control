@@ -73,37 +73,56 @@ namespace opspace {
     virtual Status check(Vector const * param, Vector const & value) const;
     
   protected:
-    explicit PDTask(std::string const & name);
+    /**
+       Velocity saturation policy.
+       - SATURATION_OFF: do not saturate commands (use with caution)
+       - SATURATION_COMPONENT_WISE: each component of the
+         position-error is scaled according to an individual
+         saturation term
+       - SATURATION_MAX_COMPONENT: similar to
+         SATURATION_COMPONENT_WISE, but the most saturated component
+         determines the overall scaling.
+       - SATURATION_NORM: the vector norm of the position error is
+         used to determine the saturation factor (this only makes
+         sense if kp, kd, and maxvel are one-dimensional values, so
+         this constraint is enforced in other parts of the PDTask
+         implementation as well)
+    */
+    typedef enum {
+      SATURATION_OFF,
+      SATURATION_COMPONENT_WISE,
+      SATURATION_MAX_COMPONENT,
+      SATURATION_NORM
+    } saturation_policy_t;
+    
+    PDTask(std::string const & name, saturation_policy_t saturation_policy);
     
     /**
        Initialize the goalpos to initpos and the goalvel to zero. Also
-       performs sanity checks on kp, kd, and maxvel. If you pass
-       allow_scalar_to_vector=true, then any one-dimensional parameter
-       values get converted to N-dimensional vectors by filling them
-       with N copies of the value. E.g. if kp=[100.0] and initpos is
-       3-dimensional, kp would end up as [100.0, 100.0, 100.0].
+       performs sanity checks on kp, kd, and maxvel. If saturation
+       policy is opspace::PDTask::SATURATION_NORM, then kp, kd, and
+       maxvel must be single-dimensional. Otherwise, if they are
+       single-dimensional, this method converts them to N-dimensional
+       vectors by filling them with N copies of the value. E.g. if
+       kp=[100.0] and initpos is 3-dimensional, kp would end up as
+       [100.0, 100.0, 100.0].
        
        \return Success if everything went well, failure otherwise.
     */
-    Status initPDTask(Vector const & initpos,
-		      bool allow_scalar_to_vector);
+    Status initPDTask(Vector const & initpos);
     
     /**
-       Compute velocity-saturated PD command. This boils down to
-       driving the task to achieving goalpos with goalvel.
-       
-       Velocity saturation can be component_wise or not. In the former
-       case, each component is scaled according to its saturation
-       term. In the latter case, the most saturated component
-       determines the scaling of the entire vector.
-       
+       Compute PD command, with velocity saturation determined by the
+       saturation_policy specified at construction time. This drives
+       the task to achieving goalpos with goalvel.
+              
        \return Success if everything went well, failure otherwise.
     */
     Status computePDCommand(Vector const & curpos,
 			    Vector const & curvel,
-			    bool component_wise_saturation,
 			    Vector & command);
     
+    saturation_policy_t const saturation_policy_;
     bool initialized_;
     Vector goalpos_;
     Vector goalvel_;
@@ -235,11 +254,11 @@ namespace opspace {
      - end_effector_id (integer): identifier of the end effector link
      - control_point (vector): reference point wrt end effector frame
   */
-  class PositionTask
+  class CartPosTrjTask
     : public TrajectoryTask
   {
   public:
-    explicit PositionTask(std::string const & name);
+    explicit CartPosTrjTask(std::string const & name);
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
@@ -259,11 +278,11 @@ namespace opspace {
      
      Parameters: inherited from TrajectoryTask.
   */
-  class PostureTask
+  class JPosTrjTask
     : public TrajectoryTask
   {
   public:
-    explicit PostureTask(std::string const & name);
+    explicit JPosTrjTask(std::string const & name);
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);

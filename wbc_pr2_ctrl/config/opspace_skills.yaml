@@ -1,5 +1,5 @@
 - tasks:
-  - type: opspace::PositionTask
+  - type: opspace::CartPosTrjTask
     name: eepos
     sigma_threshold: 0.00001
     end_effector_id: 6
@@ -9,7 +9,7 @@
     kd: [  20.0 ]
     maxvel: [ 0.5 ]
     maxacc: [ 1.0 ]
-  - type: opspace::PostureTask
+  - type: opspace::JPosTrjTask
     name: posture
     sigma_threshold: 0.0001
     dt_seconds: 0.0025
