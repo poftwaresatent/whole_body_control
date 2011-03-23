@@ -34,12 +34,19 @@ endif (${HAVE_M3_SHM_HEADER})
 if (HAVE_M3)
   rosbuild_add_library (wbc_m3_ctrl
     src/rt_util.cpp
+    src/udp_util.cpp
     )
   target_link_libraries (wbc_m3_ctrl wbc_opspace)
   
   rosbuild_add_executable (test_rt_util src/test_rt_util.cpp)
   target_link_libraries (test_rt_util wbc_m3_ctrl)
 
+  rosbuild_add_executable (test_udp_util src/test_udp_util.cpp)
+  target_link_libraries (test_udp_util wbc_m3_ctrl)
+
   rosbuild_add_executable (servo src/servo.cpp)
   target_link_libraries (servo wbc_m3_ctrl)
+
+  rosbuild_add_executable (teleop src/teleop.cpp)
+  target_link_libraries (teleop wbc_m3_ctrl)
 endif (HAVE_M3)
