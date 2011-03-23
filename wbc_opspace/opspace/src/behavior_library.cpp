@@ -79,8 +79,8 @@ namespace opspace {
   }
   
   
-  TPBehavior::
-  TPBehavior(std::string const & name)
+  TaskPostureBehavior::
+  TaskPostureBehavior(std::string const & name)
     : Behavior(name)
   {
     declareSlot("default", "eepos", &eepos_);
@@ -88,7 +88,7 @@ namespace opspace {
   }
   
   
-  Status TPBehavior::
+  Status TaskPostureBehavior::
   init(Model const & model)
   {
     Status st(Behavior::init(model));
@@ -101,7 +101,7 @@ namespace opspace {
   }
   
   
-  Status TPBehavior::
+  Status TaskPostureBehavior::
   update(Model const & model)
   {
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
@@ -115,14 +115,73 @@ namespace opspace {
   }
   
   
-  Behavior::task_table_t const * TPBehavior::
+  Behavior::task_table_t const * TaskPostureBehavior::
   getTaskTable()
   {
     return &task_table_;
   }
   
   
-  Status TPBehavior::
+  Status TaskPostureBehavior::
+  checkJStarSV(Task const * task, Vector const & sv)
+  {
+    if (task == eepos_) {
+      if (sv.rows() != 3) {
+	return Status(false, "eepos dimension mismatch");
+      }
+      if (sv[2] < eepos_->getSigmaThreshold()) {
+	return Status(false, "singular eepos");
+      }
+    }
+    Status ok;
+    return ok;
+  }
+
+
+  TaskPostureTrjBehavior::
+  TaskPostureTrjBehavior(std::string const & name)
+    : Behavior(name)
+  {
+    declareSlot("default", "eepos", &eepos_);
+    declareSlot("default", "posture", &posture_);
+  }
+  
+  
+  Status TaskPostureTrjBehavior::
+  init(Model const & model)
+  {
+    Status st(Behavior::init(model));
+    if ( ! st) {
+      return st;
+    }
+    task_table_.push_back(eepos_);
+    task_table_.push_back(posture_);
+    return st;
+  }
+  
+  
+  Status TaskPostureTrjBehavior::
+  update(Model const & model)
+  {
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      Status const st(task_table_[ii]->update(model));
+      if ( ! st) {
+	return st;
+      }
+    }
+    Status ok;
+    return ok;
+  }
+  
+  
+  Behavior::task_table_t const * TaskPostureTrjBehavior::
+  getTaskTable()
+  {
+    return &task_table_;
+  }
+  
+  
+  Status TaskPostureTrjBehavior::
   checkJStarSV(Task const * task, Vector const & sv)
   {
     if (task == eepos_) {

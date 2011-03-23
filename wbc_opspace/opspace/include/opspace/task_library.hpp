@@ -133,6 +133,57 @@ namespace opspace {
   
   
   /**
+     Cartesian position task. Servos a control point, specified with
+     respect to a given end_effector link, to the goal position.
+     
+     \note This task is always three dimensional, and it relies on the
+     PDTask::SATURATION_NORM policy, so the gains and maxvel have to
+     be one-dimensional.
+     
+     Parameters (see also PDTask for inherited parameters):
+     - end_effector (string): name of the end effector link
+     - control_point (vector): reference point wrt end effector frame
+  */
+  class CartPosTask
+    : public PDTask
+  {
+  public:
+    explicit CartPosTask(std::string const & name);
+    
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+    virtual Status check(std::string const * param, std::string const & value) const;
+    
+  protected:
+    std::string end_effector_name_;
+    Vector control_point_;
+    
+    mutable taoDNode const * end_effector_node_;
+    
+    taoDNode const * updateActual(Model const & model);
+  };
+  
+  
+  /**
+     Joint-space posture task. Servos the joint position towards a
+     desired posture using acceleration-bounded trajectories.
+     
+     \note Uses component-wise velocity saturation.
+
+     Parameters: inherited from PDTask.
+  */
+  class JPosTask
+    : public PDTask
+  {
+  public:
+    explicit JPosTask(std::string const & name);
+    
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+  };
+  
+  
+  /**
      A test task which drives a subset of DOF to zero using
      non-saturated PD control.
      

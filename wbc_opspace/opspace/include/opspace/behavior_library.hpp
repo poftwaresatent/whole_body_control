@@ -59,11 +59,29 @@ namespace opspace {
   };
   
   
-  class TPBehavior
+  class TaskPostureBehavior
     : public Behavior
   {
   public:
-    TPBehavior(std::string const & name);
+    TaskPostureBehavior(std::string const & name);
+    
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+    virtual task_table_t const * getTaskTable();
+    virtual Status checkJStarSV(Task const * task, Vector const & sv);
+    
+  protected:
+    CartPosTask * eepos_;
+    JPosTask * posture_;
+    task_table_t task_table_;
+  };
+  
+  
+  class TaskPostureTrjBehavior
+    : public Behavior
+  {
+  public:
+    TaskPostureTrjBehavior(std::string const & name);
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);

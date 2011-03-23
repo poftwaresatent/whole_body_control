@@ -163,14 +163,14 @@ namespace opspace {
       
       Parameter * param(parser.task->lookupParameter(key));
       if ( ! param) {
-	throw std::runtime_error("no parameter called `" + key + "' in task '" + parser.name + "`");
+	throw std::runtime_error("no parameter called `" + key + "' in task `" + parser.name + "'");
       }
       else {
 	
 	if (PARAMETER_TYPE_INTEGER == param->type_) {
 	  if (YAML::CT_SCALAR != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task '" + parser.name
-				     + "` should be scalar (integer)");
+	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
+				     + "' should be scalar (integer)");
 	  }
 	  int integer;
 	  value >> integer;
@@ -179,15 +179,32 @@ namespace opspace {
 	  }
 	  Status const st(param->set(integer));
 	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
-				     + "` failed: " + st.errstr);
+	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
+				     + "' failed: " + st.errstr);
+	  }
+	}
+	
+	else if (PARAMETER_TYPE_STRING == param->type_) {
+	  if (YAML::CT_SCALAR != value.GetType()) {
+	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
+				     + "' should be scalar (string)");
+	  }
+	  std::string foo;
+	  value >> foo;
+	  if (parser.dbg) {
+	    *parser.dbg << "    setting value `" << foo << "'\n";
+	  }
+	  Status const st(param->set(foo));
+	  if ( ! st) {
+	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
+				     + "' failed: " + st.errstr);
 	  }
 	}
 	
 	else if (PARAMETER_TYPE_REAL == param->type_) {
 	  if (YAML::CT_SCALAR != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task '" + parser.name
-				     + "` should be scalar (real)");
+	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
+				     + "' should be scalar (real)");
 	  }
 	  double real;
 	  value >> real;
@@ -196,15 +213,15 @@ namespace opspace {
 	  }
 	  Status const st(param->set(real));
 	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
-				     + "` failed: " + st.errstr);
+	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
+				     + "' failed: " + st.errstr);
 	  }
 	}
 	
 	else if (PARAMETER_TYPE_VECTOR == param->type_) {
 	  if (YAML::CT_SEQUENCE != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task '" + parser.name
-				     + "` should be sequence (vector)");
+	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
+				     + "' should be sequence (vector)");
 	  }
 	  Vector vector;
 	  value >> vector;
@@ -213,19 +230,19 @@ namespace opspace {
 	  }
 	  Status const st(param->set(vector));
 	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
-				     + "` failed: " + st.errstr);
+	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
+				     + "' failed: " + st.errstr);
 	  }
 	}
 	
 	else if (PARAMETER_TYPE_MATRIX == param->type_) {
-	  throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
-				   + "` requires MATRIX type which is not (yet) supported");
+	  throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
+				   + "' requires MATRIX type which is not (yet) supported");
 	}
 	
 	else {
-	  throw std::runtime_error("setting parameter `" + key + "' of task '" + parser.name
-				   + "` invalid or VOID type cannot be set");
+	  throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
+				   + "' invalid or VOID type cannot be set (maybe add new type to parse_yaml.cpp?)");
 	}
 	
 	if (parser.dbg) {

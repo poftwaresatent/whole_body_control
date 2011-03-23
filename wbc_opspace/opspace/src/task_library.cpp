@@ -203,6 +203,110 @@ namespace opspace {
   }
   
   
+  CartPosTask::
+  CartPosTask(std::string const & name)
+    : PDTask(name, PDTask::SATURATION_NORM),
+      end_effector_name_(""),
+      control_point_(Vector::Zero(3))
+  {
+    declareParameter("end_effector", &end_effector_name_);
+    declareParameter("control_point", &control_point_);
+  }
+  
+  
+  Status CartPosTask::
+  init(Model const & model)
+  {
+    if (end_effector_name_.empty()) {
+      return Status(false, "no end_effector");
+    }
+    if (3 != control_point_.rows()) {
+      return Status(false, "control_point must have 3 dimensions");
+    }
+    end_effector_node_ = updateActual(model);
+    if ( ! end_effector_node_) {
+      return Status(false, "invalid end_effector");
+    }
+    return initPDTask(actual_);
+  }
+  
+  
+  Status CartPosTask::
+  update(Model const & model)
+  {
+    end_effector_node_ = updateActual(model);
+    if ( ! end_effector_node_) {
+      return Status(false, "invalid end_effector");
+    }
+    
+    Matrix Jfull;
+    if ( ! model.computeJacobian(end_effector_node_, actual_[0], actual_[1], actual_[2], Jfull)) {
+      return Status(false, "failed to compute Jacobian (unsupported joint type?)");
+    }
+    jacobian_ = Jfull.block(0, 0, 3, Jfull.cols());
+    
+    return computePDCommand(actual_,
+			    jacobian_ * model.getState().velocity_,
+			    command_);
+  }
+  
+  
+  Status CartPosTask::
+  check(std::string const * param, std::string const & value) const
+  {
+    if (param == &end_effector_name_) {
+      end_effector_node_ = 0; // lazy re-init... would be nice to detect errors here though, but need model
+    }
+    Status ok;
+    return ok;
+  }
+  
+  
+  taoDNode const * CartPosTask::
+  updateActual(Model const & model)
+  {
+    if ( ! end_effector_node_) {
+      end_effector_node_ = model.getNodeByName(end_effector_name_);
+    }
+    if (end_effector_node_) {
+      jspace::Transform ee_transform;
+      model.computeGlobalFrame(end_effector_node_,
+			       control_point_[0],
+			       control_point_[1],
+			       control_point_[2],
+			       ee_transform);
+      actual_ = ee_transform.translation();
+    }
+    return end_effector_node_;
+  }
+  
+  
+  JPosTask::
+  JPosTask(std::string const & name)
+    : PDTask(name, PDTask::SATURATION_COMPONENT_WISE)
+  {
+  }
+  
+  
+  Status JPosTask::
+  init(Model const & model)
+  {
+    jacobian_ = Matrix::Identity(model.getNDOF(), model.getNDOF());
+    actual_ = model.getState().position_;
+    return initPDTask(model.getState().position_);
+  }
+  
+  
+  Status JPosTask::
+  update(Model const & model)
+  {
+    actual_ = model.getState().position_;
+    return computePDCommand(actual_,
+			    model.getState().velocity_,
+			    command_);
+  }
+  
+  
   SelectedJointPostureTask::
   SelectedJointPostureTask(std::string const & name)
     : Task(name),

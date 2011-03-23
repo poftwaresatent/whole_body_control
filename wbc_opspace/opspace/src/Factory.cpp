@@ -62,6 +62,12 @@ namespace opspace {
     if ("opspace::JPosTrjTask" == type) {
       return new opspace::JPosTrjTask(name);
     }
+    if ("opspace::CartPosTask" == type) {
+      return new opspace::CartPosTask(name);
+    }
+    if ("opspace::JPosTask" == type) {
+      return new opspace::JPosTask(name);
+    }
     if ("opspace::JointLimitTask" == type) {
       return new opspace::JointLimitTask(name);
     }
@@ -205,8 +211,11 @@ namespace opspace {
   
   Behavior * createBehavior(std::string const & type, std::string const & name)
   {
-    if ("opspace::TPBehavior" == type) {
-      return new opspace::TPBehavior(name);
+    if ("opspace::TaskPostureBehavior" == type) {
+      return new opspace::TaskPostureBehavior(name);
+    }
+    if ("opspace::TaskPostureTrjBehavior" == type) {
+      return new opspace::TaskPostureTrjBehavior(name);
     }
     if ("opspace::HelloGoodbyeBehavior" == type) {
       return new opspace::HelloGoodbyeBehavior(name);
