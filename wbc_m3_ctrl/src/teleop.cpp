@@ -351,7 +351,7 @@ int main(int argc, char ** argv)
   warnx("started servo RT thread");
   
   ros::Time t0(ros::Time::now());
-  ros::Duration dbg_dt(0.3);
+  ros::Duration dbg_dt(0.1);
 
   m2s_data m2s;
   s2m_data s2m;
@@ -362,6 +362,9 @@ int main(int argc, char ** argv)
     warnx("bug: no vector in eepos_actual");
     ros::shutdown();
   }
+  
+  Vector master_offset;
+  Vector slave_offset(*eepos);
   
   while (ros::ok()) {
     if (verbose) {
@@ -374,6 +377,11 @@ int main(int argc, char ** argv)
 	jspace::pretty_print(model->getState().force_, cerr, "jforce", "  ");
 	servo.skill->dbg(cerr, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
 	controller->dbg(cerr, "--------------------------------------------------", "");
+	cerr << "--------------------------------------------------\n"
+	     << "actual eepos\n";
+	eepos_actual->dump(cerr, "  ");
+	cerr << "eepos goal\n";
+	eepos_goal->dump(cerr, "  ");
       }
     }
     
@@ -381,6 +389,8 @@ int main(int argc, char ** argv)
     s2m.eepos_y = eepos->y();
     s2m.eepos_z = eepos->z();
     int const nwritten(udp_client_write(s2m_fd, &s2m, sizeof(s2m)));
+    usleep(1000000 / 500);
+    
     //too noisy...
     // if (0 > nwritten) {
     //   warn("udp_client_write");
@@ -399,7 +409,12 @@ int main(int argc, char ** argv)
     else if (sizeof(m2s) == nread) {
       Vector goal(3);
       goal << m2s.eepos_x, m2s.eepos_y, m2s.eepos_z;
-      jspace::pretty_print(goal, cerr, "received goal via UDP", "  ");
+      if (0 == master_offset.rows()) {
+	master_offset = goal;
+      }
+      goal -= master_offset;
+      goal += slave_offset;
+      ////      jspace::pretty_print(goal, cerr, "received goal via UDP", "  ");
       Status const st(eepos_goal->set(goal));
       if ( ! st) {
 	warnx("eepos_goal->set() failed: %s", st.errstr.c_str());

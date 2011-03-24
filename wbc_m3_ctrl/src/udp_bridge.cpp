@@ -58,9 +58,9 @@ static void cb(std_msgs::Float64MultiArray const & msg_in)
     return;
   }
   cerr << "I";
-  m2s.eepos_x = msg_in.data[0];
-  m2s.eepos_y = msg_in.data[1];
-  m2s.eepos_z = msg_in.data[2];
+  m2s.eepos_x = 1e-3 * msg_in.data[0];
+  m2s.eepos_y = 1e-3 * msg_in.data[1];
+  m2s.eepos_z = 1e-3 * msg_in.data[2];
   if (0 > udp_client_write(m2s_fd, &m2s, sizeof(m2s))) {
     warn("\nudp_client_write");
   }
@@ -82,13 +82,13 @@ int main(int argc, char ** argv)
     errx(EXIT_FAILURE, "failed to start servo: %s", ee.what());
   }
   
-  sub = node.subscribe("/cart_pos_pr2", 1, cb);
-  pub = node.advertise<std_msgs::Float64MultiArray>("/cart_pos_blacky", 1);
+  sub = node.subscribe("/cart_pos_blacky", 1, cb);
+  pub = node.advertise<std_msgs::Float64MultiArray>("/cart_pos_dreamer", 1);
   
   ros::Time t0(ros::Time::now());
   ros::Duration pub_dt(1e-3);
   std_msgs::Float64MultiArray msg_out;
-  msg_out.data.assign(12, 0.0);
+  msg_out.data.assign(15, 0.0);
   struct sockaddr_storage peer_addr;
   socklen_t peer_addr_len;
   bool got_data(false);
@@ -112,9 +112,9 @@ int main(int argc, char ** argv)
       ros::Time t1(ros::Time::now());
       if (t1 - t0 > pub_dt) {
 	t0 = t1;
-	msg_out.data[0] = s2m.eepos_x;
-	msg_out.data[1] = s2m.eepos_y;
-	msg_out.data[2] = s2m.eepos_z;
+	msg_out.data[0] = 1e3 * s2m.eepos_x;
+	msg_out.data[1] = 1e3 * s2m.eepos_y;
+	msg_out.data[2] = 1e3 * s2m.eepos_z;
 	pub.publish(msg_out);
 	cerr << "O";
       }
