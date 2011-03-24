@@ -50,6 +50,9 @@ if (HAVE_M3)
   rosbuild_add_executable (servo src/servo.cpp)
   target_link_libraries (servo wbc_m3_ctrl)
 
+  rosbuild_add_executable (udp_bridge src/udp_bridge.cpp)
+  target_link_libraries (udp_bridge wbc_m3_ctrl)
+
   rosbuild_add_executable (teleop src/teleop.cpp)
   target_link_libraries (teleop wbc_m3_ctrl)
 endif (HAVE_M3)

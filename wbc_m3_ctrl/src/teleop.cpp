@@ -317,29 +317,26 @@ int main(int argc, char ** argv)
   parse_options(argc, argv);
   ros::NodeHandle node("~");
   
-  int udp_rcv;
+  int m2s_fd;
+  int s2m_fd;
   Parameter * eepos_goal;
+  Parameter * eepos_actual;
   controller.reset(new ControllerNG("wbc_m3_ctrl::servo"));
   param_cbs.reset(new ParamCallbacks());
   Servo servo;
   try {
-    if (verbose) {
-      warnx("creating UDP server");
-    }
-    udp_rcv = wbcnet::create_udp_server(WBC_M3_CTRL_M2S_PORT, AF_UNSPEC);
+    m2s_fd = wbcnet::create_udp_server(WBC_M3_CTRL_M2S_PORT, AF_UNSPEC);
+    s2m_fd = wbcnet::create_udp_client("127.0.0.1", WBC_M3_CTRL_S2M_PORT, AF_UNSPEC);
     
-    if (verbose) {
-      warnx("initializing param callbacks");
-    }
     param_cbs->init(node, factory, controller, 1, 100);
-    
-    if (verbose) {
-      warnx("retrieving end-effector goal parameter");
-    }
     string errstr;
     eepos_goal = param_cbs->findParam("task", "eepos", "goalpos", errstr);
     if ( ! eepos_goal) {
       throw runtime_error("failed to find eepos goal parameter: " + errstr);
+    }
+    eepos_actual = param_cbs->findParam("task", "eepos", "actual", errstr);
+    if ( ! eepos_actual) {
+      throw runtime_error("failed to find eepos actual parameter: " + errstr);
     }
     
     if (verbose) {
@@ -348,7 +345,7 @@ int main(int argc, char ** argv)
     servo.start(servo_rate);
   }
   catch (std::runtime_error const & ee) {
-    errx(EXIT_FAILURE, "failed to start servo: %s", ee.what());
+    errx(EXIT_FAILURE, "EXCEPTION: %s", ee.what());
   }
   
   warnx("started servo RT thread");
@@ -356,9 +353,15 @@ int main(int argc, char ** argv)
   ros::Time t0(ros::Time::now());
   ros::Duration dbg_dt(0.3);
 
-  master_to_slave s2m;
+  m2s_data m2s;
+  s2m_data s2m;
   struct sockaddr_storage peer_addr;
   socklen_t peer_addr_len;
+  Vector const * eepos(eepos_actual->getVector());
+  if ( ! eepos) {
+    warnx("bug: no vector in eepos_actual");
+    ros::shutdown();
+  }
   
   while (ros::ok()) {
     if (verbose) {
@@ -374,18 +377,28 @@ int main(int argc, char ** argv)
       }
     }
     
+    s2m.eepos_x = eepos->x();
+    s2m.eepos_y = eepos->y();
+    s2m.eepos_z = eepos->z();
+    int const nwritten(udp_client_write(s2m_fd, &s2m, sizeof(s2m)));
+    //too noisy...
+    // if (0 > nwritten) {
+    //   warn("udp_client_write");
+    //   ////      ros::shutdown();
+    // }
+    
     peer_addr_len = sizeof(struct sockaddr_storage);
-    int const nread(udp_server_recvfrom(udp_rcv, &s2m, sizeof(s2m), MSG_DONTWAIT,
+    int const nread(udp_server_recvfrom(m2s_fd, &m2s, sizeof(m2s), MSG_DONTWAIT,
 					(struct sockaddr *) &peer_addr, &peer_addr_len));
     if (0 > nread) {
       if ((EAGAIN != errno) && (EWOULDBLOCK != errno)) {
-	warn("recvfrom");
+	warn("udp_server_recvfrom");
 	ros::shutdown();
       }
     }
-    else if (sizeof(s2m) == nread) {
+    else if (sizeof(m2s) == nread) {
       Vector goal(3);
-      goal << s2m.eepos_x, s2m.eepos_y, s2m.eepos_z;
+      goal << m2s.eepos_x, m2s.eepos_y, m2s.eepos_z;
       jspace::pretty_print(goal, cerr, "received goal via UDP", "  ");
       Status const st(eepos_goal->set(goal));
       if ( ! st) {
@@ -398,6 +411,6 @@ int main(int argc, char ** argv)
   }
   
   warnx("shutting down");
-  close(udp_rcv);
+  close(m2s_fd);
   servo.shutdown();
 }

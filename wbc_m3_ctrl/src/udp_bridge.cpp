@@ -35,10 +35,8 @@
 
 #include <wbc_m3_ctrl/udp_util.h>
 #include <wbc_m3_ctrl/qh.h>
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
+#include <ros/ros.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <err.h>
 #include <errno.h>
 
@@ -46,37 +44,84 @@ using namespace wbc_m3_ctrl;
 using namespace wbcnet;
 using namespace std;
 
+static ros::Subscriber sub;
+static ros::Publisher pub;
+static m2s_data m2s;
+static s2m_data s2m;
+static int m2s_fd;
+static int s2m_fd;
+
+static void cb(std_msgs::Float64MultiArray const & msg_in)
+{
+  if (msg_in.data.size() < 3) {
+    cerr << "\nE";
+    return;
+  }
+  cerr << "I";
+  m2s.eepos_x = msg_in.data[0];
+  m2s.eepos_y = msg_in.data[1];
+  m2s.eepos_z = msg_in.data[2];
+  if (0 > udp_client_write(m2s_fd, &m2s, sizeof(m2s))) {
+    warn("\nudp_client_write");
+  }
+  else {
+    cerr << "o";
+  }
+}
+
 int main(int argc, char ** argv)
 {
+  ros::init(argc, argv, "wbc_m3_ctrl_udp_bridge");
+  ros::NodeHandle node("~");
+  
   try {
-    
-    if (argc != 4) {
-      errx(EXIT_FAILURE, "usage: sendgoal x y z");
-    }
-    
-    m2s_data data;
-    if (1 != sscanf(argv[1], "%lf", &(data.eepos_x))) {
-      errx(EXIT_FAILURE, "failed to parse x");
-    }
-    if (1 != sscanf(argv[2], "%lf", &(data.eepos_y))) {
-      errx(EXIT_FAILURE, "failed to parse y");
-    }
-    if (1 != sscanf(argv[3], "%lf", &(data.eepos_z))) {
-      errx(EXIT_FAILURE, "failed to parse z");
-    }
-    
-    int sockfd(create_udp_client("127.0.0.1", WBC_M3_CTRL_M2S_PORT, AF_UNSPEC));
-    cout << "sending " << data.eepos_x << "  " << data.eepos_y << "  " << data.eepos_z << "\n";
-    
-    int const nwritten(udp_client_write(sockfd, &data, sizeof(data)));
-    if (0 > nwritten) {
-      err(EXIT_FAILURE, "write");
-    }
-    
+    m2s_fd = create_udp_client("127.0.0.1", WBC_M3_CTRL_M2S_PORT, AF_UNSPEC);
+    s2m_fd = create_udp_server(WBC_M3_CTRL_S2M_PORT, AF_UNSPEC);
+  }
+  catch (std::runtime_error const & ee) {
+    errx(EXIT_FAILURE, "failed to start servo: %s", ee.what());
   }
   
-  catch (std::exception const & ee) {
-    errx(EXIT_FAILURE, "EXCEPTION: %s", ee.what());
+  sub = node.subscribe("/cart_pos_pr2", 1, cb);
+  pub = node.advertise<std_msgs::Float64MultiArray>("/cart_pos_blacky", 1);
+  
+  ros::Time t0(ros::Time::now());
+  ros::Duration pub_dt(1e-3);
+  std_msgs::Float64MultiArray msg_out;
+  msg_out.data.assign(12, 0.0);
+  struct sockaddr_storage peer_addr;
+  socklen_t peer_addr_len;
+  bool got_data(false);
+  
+  while (ros::ok()) {
+    peer_addr_len = sizeof(struct sockaddr_storage);
+    int const nread(udp_server_recvfrom(s2m_fd, &s2m, sizeof(s2m), MSG_DONTWAIT,
+					(struct sockaddr *) &peer_addr, &peer_addr_len));
+    if (0 > nread) {
+      if ((EAGAIN != errno) && (EWOULDBLOCK != errno)) {
+	warn("udp_server_recvfrom");
+	ros::shutdown();
+      }
+    }
+    else if (sizeof(s2m) == nread) {
+      got_data = true;
+      cerr << "i";
+    }
+    
+    if (got_data) {
+      ros::Time t1(ros::Time::now());
+      if (t1 - t0 > pub_dt) {
+	t0 = t1;
+	msg_out.data[0] = s2m.eepos_x;
+	msg_out.data[1] = s2m.eepos_y;
+	msg_out.data[2] = s2m.eepos_z;
+	pub.publish(msg_out);
+	cerr << "O";
+      }
+    }
+    
+    ros::spinOnce();
   }
   
+  cerr << "\nbyebye\n";
 }
