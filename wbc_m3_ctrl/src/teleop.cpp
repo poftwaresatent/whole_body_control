@@ -201,7 +201,7 @@ static void parse_options(int argc, char ** argv)
 	 skill_spec.c_str(), st.errstr.c_str());
   }
   if (verbose) {
-    factory->dump(cout, "*** parsed tasks and skills", "* ");
+    factory->dump(cerr, "*** parsed tasks and skills", "* ");
   }
 }
 
@@ -354,7 +354,7 @@ int main(int argc, char ** argv)
   warnx("started servo RT thread");
   
   ros::Time t0(ros::Time::now());
-  ros::Duration dbg_dt(0.1);
+  ros::Duration dbg_dt(0.3);
 
   master_to_slave s2m;
   struct sockaddr_storage peer_addr;
@@ -365,12 +365,12 @@ int main(int argc, char ** argv)
       ros::Time t1(ros::Time::now());
       if (t1 - t0 > dbg_dt) {
 	t0 = t1;
-	cout << "**************************************************\n";
-	jspace::pretty_print(model->getState().position_, cout, "jpos", "  ");
-	jspace::pretty_print(model->getState().velocity_, cout, "jvel", "  ");
-	jspace::pretty_print(model->getState().force_, cout, "jforce", "  ");
-	servo.skill->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
-	controller->dbg(cout, "--------------------------------------------------", "");
+	cerr << "**************************************************\n";
+	jspace::pretty_print(model->getState().position_, cerr, "jpos", "  ");
+	jspace::pretty_print(model->getState().velocity_, cerr, "jvel", "  ");
+	jspace::pretty_print(model->getState().force_, cerr, "jforce", "  ");
+	servo.skill->dbg(cerr, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
+	controller->dbg(cerr, "--------------------------------------------------", "");
       }
     }
     
@@ -386,7 +386,7 @@ int main(int argc, char ** argv)
     else if (sizeof(s2m) == nread) {
       Vector goal(3);
       goal << s2m.eepos_x, s2m.eepos_y, s2m.eepos_z;
-      jspace::pretty_print(goal, cout, "received goal via UDP", "  ");
+      jspace::pretty_print(goal, cerr, "received goal via UDP", "  ");
       Status const st(eepos_goal->set(goal));
       if ( ! st) {
 	warnx("eepos_goal->set() failed: %s", st.errstr.c_str());
