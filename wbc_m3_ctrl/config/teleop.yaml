@@ -1,0 +1,22 @@
+- tasks:
+  - type: opspace::CartPosTask
+    name: eepos
+    end_effector: right-hand
+    sigma_threshold: 0.005
+    control_point: [ 0.0, 0.0, 0.0 ]
+    kp: [ 60.0 ]
+    kd: [  0.0 ]
+    maxvel: [ 0.8 ]
+  - type: opspace::JPosTask
+    name: posture
+    sigma_threshold: 0.0001
+    kp: [ 0.0 ]
+    kd: [ 0.0 ]
+    maxvel: [ 1.0 ]
+
+- behaviors:
+  - type: opspace::TaskPostureBehavior
+    name: task_posture
+    default:
+      eepos: eepos
+      posture: posture

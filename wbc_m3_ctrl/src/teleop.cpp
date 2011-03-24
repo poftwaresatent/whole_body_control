@@ -326,7 +326,7 @@ int main(int argc, char ** argv)
     if (verbose) {
       warnx("creating UDP server");
     }
-    udp_rcv = wbcnet::create_udp_server("9876", AF_UNSPEC);
+    udp_rcv = wbcnet::create_udp_server(WBC_M3_CTRL_M2S_PORT, AF_UNSPEC);
     
     if (verbose) {
       warnx("initializing param callbacks");

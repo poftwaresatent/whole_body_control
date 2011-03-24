@@ -1,5 +1,7 @@
-#ifndef QH_H
-#define QH_H
+#ifndef WBC_M3_CTRL_QH_H
+#define WBC_M3_CTRL_QH_H
+
+#define WBC_M3_CTRL_M2S_PORT "9876"
 
 namespace wbc_m3_ctrl {
   
@@ -9,4 +11,4 @@ namespace wbc_m3_ctrl {
   
 }
 
-#endif // QH_H
+#endif // WBC_M3_CTRL_QH_H

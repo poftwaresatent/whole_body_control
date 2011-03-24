@@ -44,6 +44,9 @@ if (HAVE_M3)
   rosbuild_add_executable (test_udp_util src/test_udp_util.cpp)
   target_link_libraries (test_udp_util wbc_m3_ctrl)
 
+  rosbuild_add_executable (sendgoal src/sendgoal.cpp)
+  target_link_libraries (sendgoal wbc_m3_ctrl)
+
   rosbuild_add_executable (servo src/servo.cpp)
   target_link_libraries (servo wbc_m3_ctrl)
 
