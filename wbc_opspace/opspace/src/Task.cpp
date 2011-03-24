@@ -71,6 +71,8 @@ namespace opspace {
   void Task::
   dbg(std::ostream & os, std::string const & title, std::string const & prefix) const
   {
+    os << prefix << "task " << name_ << "\n";
+    ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
   }
   
 }
