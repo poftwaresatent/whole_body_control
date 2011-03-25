@@ -62,13 +62,12 @@ namespace opspace {
 
     {
       std::ostringstream msg;
-      msg << "missing task instances:\n";
-      for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-	for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	  if ( ! it->second->getInstance()) {
-	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << it->first << "'\n";
-	  }
+      msg << "missing non-optional task instances:\n";
+      for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
+	if ((0 == is->second->getNInstances())
+	    && ( ! is->second->isOptional())) {
+	  ok = false;
+	  msg << "  slot `" << is->first << "' task `" << is->first << "'\n";
 	}
       }
       if ( ! ok) {
@@ -79,12 +78,13 @@ namespace opspace {
     {
       std::ostringstream msg;
       msg << "failed task initializations:\n";
-      for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-	for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	  Status const st(it->second->getInstance()->init(model));
+      for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
+	for (size_t it(0); it < is->second->getNInstances(); ++it) {
+	  shared_ptr<Task> task(is->second->getInstance(it));
+	  Status const st(task->init(model));
 	  if ( ! st) {
 	    ok = false;
-	    msg << "  state `" << is->first << "' task `" << it->first
+	    msg << "  slot `" << is->first << "' task[" << it << "] `" << task->getName()
 		<< "': " << st.errstr << "\n";
 	  }
 	}
@@ -99,16 +99,12 @@ namespace opspace {
   
   
   boost::shared_ptr<TaskSlotAPI> Behavior::
-  lookupSlot(std::string const & state_name, std::string const & task_name)
+  lookupSlot(std::string const & name)
   {
     shared_ptr<TaskSlotAPI> slot;
-    state_map_t::iterator ism(state_map_.find(state_name));
-    if (ism == state_map_.end()) {
-      return slot;
-    }
-    task_slot_map_t::iterator isd(ism->second.find(task_name));
-    if (isd != ism->second.end()) {
-      slot = isd->second;
+    slot_map_t::iterator ism(slot_map_.find(name));
+    if (ism != slot_map_.end()) {
+      slot = ism->second;
     }
     return slot;
   }
@@ -124,16 +120,20 @@ namespace opspace {
     }
     os << prefix << "behavior " << name_ << "\n";
     ParameterReflection::dump(os, prefix + "  parameters:", prefix + "    ");
-    os << prefix << "  task slots:\n";
-    for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-      os << prefix << "    " << is->first << ":\n";
-      for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	Task const * task(it->second->getInstance().get());
-	if (task) {
-	  os << prefix << "      " << it->first << ": " << task->getName() << "\n";
-	}
-	else {
-	  os << prefix << "      " << it->first << " (empty slot)\n";
+    os << prefix << "  slots:\n";
+    for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
+      os << prefix << "    " << is->first;
+      if (0 == is->second->getNInstances()) {
+	os << " (EMPTY)\n";
+      }
+      else if (1 == is->second->getNInstances()) {
+	os << ": " << is->second->getInstance(0)->getName() << "\n";
+      }
+      else {
+	os << ":\n";
+	for (size_t it(0); it < is->second->getNInstances(); ++it) {
+	  os << prefix << "      [" << it << "]: "
+	     << is->second->getInstance(it)->getName() << "\n";
 	}
       }
     }
@@ -150,15 +150,10 @@ namespace opspace {
     }
     os << prefix << "behavior " << name_ << "\n";
     ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
-    for (state_map_t::const_iterator is(state_map_.begin()); is != state_map_.end(); ++is) {
-      for (task_slot_map_t::const_iterator it(is->second.begin()); it != is->second.end(); ++it) {
-	Task const * task(it->second->getInstance().get());
-	if (task) {
-	  task->dbg(os, "  " + is->first + "/" + it->first, prefix + "    ");
-	}
-	else {
-	  os << prefix << "  " << is->first << "/" << it->first << " is NULL\n";
-	}
+    for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
+      for (size_t it(0); it < is->second->getNInstances(); ++it) {
+	Task const * task(is->second->getInstance(it).get());
+	task->dbg(os, "  " + is->first + "/" + task->getName(), prefix + "    ");
       }
     }
   }

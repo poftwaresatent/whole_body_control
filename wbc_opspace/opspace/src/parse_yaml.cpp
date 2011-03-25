@@ -41,6 +41,7 @@
 
 using jspace::pretty_print;
 using boost::shared_ptr;
+using std::string;
 
 
 namespace opspace {
@@ -127,6 +128,103 @@ namespace opspace {
   }
   
   
+  static Parameter * parse_parameter(std::string const & com_type,
+				     std::string const & com_name,
+				     ParameterReflection & pr,
+				     std::string const & key,
+				     YAML::Node const & value)
+    throw(std::runtime_error)
+  {
+    Parameter * param(pr.lookupParameter(key));
+    if ( ! param) {
+      throw std::runtime_error("no parameter called `" + key + "' in " + com_type
+			       + " `" + com_name + "'");
+    }
+    
+    if (PARAMETER_TYPE_INTEGER == param->type_) {
+      if (YAML::CT_SCALAR != value.GetType()) {
+	throw std::runtime_error("parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' should be scalar (integer) but is "
+				 + string(yaml_type_name(value)));
+      }
+      int integer;
+      value >> integer;
+      Status const st(param->set(integer));
+      if ( ! st) {
+	throw std::runtime_error("setting integer parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' failed: " + st.errstr);
+      }
+    }
+    
+    else if (PARAMETER_TYPE_STRING == param->type_) {
+      if (YAML::CT_SCALAR != value.GetType()) {
+	throw std::runtime_error("parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' should be scalar (string) but is "
+				 + string(yaml_type_name(value)));
+      }
+      std::string foo;
+      value >> foo;
+      Status const st(param->set(foo));
+      if ( ! st) {
+	throw std::runtime_error("setting string parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' failed: " + st.errstr);
+      }
+    }
+    
+    else if (PARAMETER_TYPE_REAL == param->type_) {
+      if (YAML::CT_SCALAR != value.GetType()) {
+	throw std::runtime_error("parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' should be scalar (real) but is "
+				 + string(yaml_type_name(value)));
+      }
+      double real;
+      value >> real;
+      Status const st(param->set(real));
+      if ( ! st) {
+	throw std::runtime_error("setting real parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' failed: " + st.errstr);
+      }
+    }
+    
+    else if (PARAMETER_TYPE_VECTOR == param->type_) {
+      if (YAML::CT_SEQUENCE != value.GetType()) {
+	throw std::runtime_error("parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' should be sequence (vector) but is "
+				 + string(yaml_type_name(value)));
+      }
+      Vector vector;
+      value >> vector;
+      Status const st(param->set(vector));
+      if ( ! st) {
+	throw std::runtime_error("setting vector parameter `" + key
+				 + "' of " + com_type + " `" + com_name
+				 + "' failed: " + st.errstr);
+      }
+    }
+    
+    else if (PARAMETER_TYPE_MATRIX == param->type_) {
+      throw std::runtime_error("setting parameter `" + key
+			       + "' of " + com_type + " `" + com_name
+			       + "' requires MATRIX type which is not (yet) supported");
+    }
+    
+    else {
+      throw std::runtime_error("setting parameter `" + key
+			       + "' of " + com_type + " `" + com_name
+			       + "' invalid or VOID type (need to update parse_yaml.cpp maybe?)");
+    }
+    
+    return param;
+  }
+  
+  
   void operator >> (YAML::Node const & node, TaskParser & parser)
   {
     parser.task = 0;		// in case type or name is undefined
@@ -161,95 +259,10 @@ namespace opspace {
 	*parser.dbg << "    trying `" << key << "' (YAML type " << yaml_type_name(value) << ")\n";
       }
       
-      Parameter * param(parser.task->lookupParameter(key));
-      if ( ! param) {
-	throw std::runtime_error("no parameter called `" + key + "' in task `" + parser.name + "'");
+      Parameter const * param(parse_parameter("task", parser.name, *parser.task, key, value));
+      if (parser.dbg) {
+	param->dump(*parser.dbg, "    ");
       }
-      else {
-	
-	if (PARAMETER_TYPE_INTEGER == param->type_) {
-	  if (YAML::CT_SCALAR != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
-				     + "' should be scalar (integer)");
-	  }
-	  int integer;
-	  value >> integer;
-	  if (parser.dbg) {
-	    *parser.dbg << "    setting value " << integer << "\n";
-	  }
-	  Status const st(param->set(integer));
-	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
-				     + "' failed: " + st.errstr);
-	  }
-	}
-	
-	else if (PARAMETER_TYPE_STRING == param->type_) {
-	  if (YAML::CT_SCALAR != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
-				     + "' should be scalar (string)");
-	  }
-	  std::string foo;
-	  value >> foo;
-	  if (parser.dbg) {
-	    *parser.dbg << "    setting value `" << foo << "'\n";
-	  }
-	  Status const st(param->set(foo));
-	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
-				     + "' failed: " + st.errstr);
-	  }
-	}
-	
-	else if (PARAMETER_TYPE_REAL == param->type_) {
-	  if (YAML::CT_SCALAR != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
-				     + "' should be scalar (real)");
-	  }
-	  double real;
-	  value >> real;
-	  if (parser.dbg) {
-	    *parser.dbg << "    setting value " << real << "\n";
-	  }
-	  Status const st(param->set(real));
-	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
-				     + "' failed: " + st.errstr);
-	  }
-	}
-	
-	else if (PARAMETER_TYPE_VECTOR == param->type_) {
-	  if (YAML::CT_SEQUENCE != value.GetType()) {
-	    throw std::runtime_error("parameter `" + key + "' of task `" + parser.name
-				     + "' should be sequence (vector)");
-	  }
-	  Vector vector;
-	  value >> vector;
-	  if (parser.dbg) {
-	    pretty_print(vector, *parser.dbg, "    setting vector", "      ");
-	  }
-	  Status const st(param->set(vector));
-	  if ( ! st) {
-	    throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
-				     + "' failed: " + st.errstr);
-	  }
-	}
-	
-	else if (PARAMETER_TYPE_MATRIX == param->type_) {
-	  throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
-				   + "' requires MATRIX type which is not (yet) supported");
-	}
-	
-	else {
-	  throw std::runtime_error("setting parameter `" + key + "' of task `" + parser.name
-				   + "' invalid or VOID type cannot be set (maybe add new type to parse_yaml.cpp?)");
-	}
-	
-	if (parser.dbg) {
-	  param->dump(*parser.dbg, "    ");
-	}
-	
-      }	// end "if (param)"
       
     } // end for (YAML::Iterator ... )
   }
@@ -274,8 +287,9 @@ namespace opspace {
     }
     
     if (parser.dbg) {
-      *parser.dbg << "  created behavior `" << parser.name << "' of type " << parser.type << "\n"
-		  << "    parsing parameters and tasks:\n";
+      *parser.dbg << "  created skill `" << parser.name
+		  << "' of type " << parser.type << "\n"
+		  << "    parsing slots and parameters:\n";
     }
     for (YAML::Iterator it(node.begin()); it != node.end(); ++it) {
       std::string key;
@@ -284,45 +298,56 @@ namespace opspace {
 	continue;
       }
       
-      YAML::Node const & slots(it.second());
-      if (parser.dbg) {
-	*parser.dbg << "    trying `" << key << "' (YAML type " << yaml_type_name(slots) << ")\n";
-      }
+      if ("slots" == key) {
+	YAML::Node const & slotlist(it.second());
+	if (YAML::CT_MAP != slotlist.GetType()) {
+	  throw std::runtime_error("entry for `" + key + "' is a "
+				   + string(yaml_type_name(slotlist))
+				   + " but should be a map");
+	}
+	for (YAML::Iterator slot_it(slotlist.begin()); slot_it != slotlist.end(); ++slot_it) {
+	  std::string slot_name;
+	  slot_it.first() >> slot_name;
+	  std::string task_name;
+	  slot_it.second() >> task_name;
+	  
+	  shared_ptr<TaskSlotAPI> slot(parser.behavior->lookupSlot(slot_name));
+	  if ( ! slot) {
+	    throw std::runtime_error("behavior `" + parser.name + "' has no slot `"
+				     + slot_name + "'");
+	  }
+	  
+	  shared_ptr<Task> task(parser.factory.findTask(task_name));
+	  if ( ! task) {
+	    throw std::runtime_error("no task instance `" + task_name + "' for behavior `"
+				     + parser.name + "' slot `" + slot_name + "'");
+	  }
+	  
+	  Status const st(slot->assign(task));
+	  if ( ! st) {
+	    throw std::runtime_error("oops assigning task instance `" + task_name
+				     + "' to behavior `" + parser.name
+				     + "' slot `" + slot_name + "': " + st.errstr);
+	  }
+	  
+	  if (parser.dbg) {
+	    *parser.dbg << "  assigned task instance `" << task_name
+			<< "' to slot `" << slot_name << "' in behavior `"
+			<< parser.name << "'\n";
+	  }
+	}
+      } // end if ("slots" ...)
       
-      if (YAML::CT_MAP != slots.GetType()) {
-	throw std::runtime_error("entry for `" + key + "' is not a map");
-      }
-      
-      for (YAML::Iterator slot_it(slots.begin()); slot_it != slots.end(); ++slot_it) {
-	std::string slot_name;
-	slot_it.first() >> slot_name;
-	std::string task_name;
-	slot_it.second() >> task_name;
-	
-	shared_ptr<TaskSlotAPI> slot(parser.behavior->lookupSlot(key, slot_name));
-	if ( ! slot) {
-	  throw std::runtime_error("behavior `" + parser.name + "' has no slot `" + key + "' / `"
-				   + slot_name + "'");
-	}
-	
-	shared_ptr<Task> task(parser.factory.findTask(task_name));
-	if ( ! task) {
-	  throw std::runtime_error("no task instance `" + task_name + "' for behavior `" + parser.name
-				   + "' slot `" + key + "' / `" + slot_name + "'");
-	}
-	
-	Status const st(slot->assign(task));
-	if ( ! st) {
-	  throw std::runtime_error("oops assigning task instance `" + task_name + "' to behavior `" + parser.name
-				   + "' slot `" + key + "' / `" + slot_name + "': " + st.errstr);
-	}
-	
+      else {
+	// assume it's a parameter
+	Parameter const * param(parse_parameter("skill", parser.name,
+						*parser.behavior, key, it.second()));
 	if (parser.dbg) {
-	  *parser.dbg << "  assigned task instance `" << task_name << "' to slot `" << slot_name
-		      << "' of state `" << key << "' in behavior `" << parser.name << "'\n";
+	  param->dump(*parser.dbg, "    ");
 	}
       }
-    }
+      
+    } // end for (YAML::Iterator ...)
   }
   
   

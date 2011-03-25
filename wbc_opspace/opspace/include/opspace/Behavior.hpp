@@ -44,22 +44,30 @@
 namespace opspace {
   
   
+  typedef enum {
+    TASK_SLOT_DEFAULT = 0,
+    TASK_SLOT_OPTIONAL = 1
+  } task_slot_flags_t;
+  
+  
   class TaskSlotAPI
   {
   public:
-    std::string const state_name_;
-    std::string const slot_name_;
+    std::string const name_;
+    task_slot_flags_t const flags_;
     
-    TaskSlotAPI(std::string const & state_name,
-		std::string const & slot_name)
-      : state_name_(state_name), slot_name_(slot_name) {}
+    TaskSlotAPI(std::string const & name, task_slot_flags_t flags)
+      : name_(name), flags_(flags) {}
     
     virtual ~TaskSlotAPI() {}
     
     virtual Status assign(boost::shared_ptr<Task> instance)
     { return Status(false, "type mismatch"); }
     
-    virtual boost::shared_ptr<Task> getInstance() = 0;
+    virtual size_t getNInstances() const = 0;
+    virtual boost::shared_ptr<Task> getInstance(size_t index) = 0;
+    
+    inline bool isOptional() const { return flags_ & TASK_SLOT_OPTIONAL; }
   };
   
   
@@ -68,10 +76,10 @@ namespace opspace {
     : public TaskSlotAPI
   {
   public:
-    TaskSlot(std::string const & state_name,
-	     std::string const & task_name,
-	     task_subtype ** slot)
-      : TaskSlotAPI(state_name, task_name), slot_(slot) {}
+    TaskSlot(std::string const & name,
+	     task_subtype ** slot,
+	     task_slot_flags_t flags)
+      : TaskSlotAPI(name, flags), slot_(slot) {}
     
     virtual Status assign(boost::shared_ptr<Task> instance) {
       Task * base(instance.get());
@@ -82,16 +90,19 @@ namespace opspace {
       if ( ! raw) {
 	return Status(false, "type mismatch");
       }
-      *slot_ = raw;
-      instance_ = instance;
+      if (slot_) {
+	*slot_ = raw;
+      }
+      instances_.push_back(instance);
       return Status();
     }
 
-    virtual boost::shared_ptr<Task> getInstance() { return instance_; }
+    virtual size_t getNInstances() const { return instances_.size(); }
+    virtual boost::shared_ptr<Task> getInstance(size_t index) { return instances_[index]; }
     
   protected:
     task_subtype ** slot_;
-    boost::shared_ptr<Task> instance_;
+    std::vector<boost::shared_ptr<Task> > instances_;
   };
   
   
@@ -111,8 +122,7 @@ namespace opspace {
     
     inline std::string const & getName() const { return name_; }
     
-    boost::shared_ptr<TaskSlotAPI> lookupSlot(std::string const & state_name,
-					      std::string const & task_name);
+    boost::shared_ptr<TaskSlotAPI> lookupSlot(std::string const & name);
     
     virtual void dump(std::ostream & os,
 		      std::string const & title,
@@ -126,21 +136,20 @@ namespace opspace {
     Behavior(std::string const & name);
     
     template<typename task_subtype>
-    void declareSlot(std::string const & state_name,
-		     std::string const & slot_name,
-		     task_subtype ** slot)
+    void declareSlot(std::string const & name,
+		     task_subtype ** slot = 0,
+		     task_slot_flags_t flags = TASK_SLOT_DEFAULT)
     {
       boost::shared_ptr<TaskSlotAPI>
-	slot_api(new TaskSlot<task_subtype>(state_name, slot_name, slot));
-      state_map_[state_name][slot_name] = slot_api;
+	slot_api(new TaskSlot<task_subtype>(name, slot, flags));
+      slot_map_[name] = slot_api;
     }
     
     std::string const name_;
     
   private:
-    typedef std::map<std::string, boost::shared_ptr<TaskSlotAPI> > task_slot_map_t;
-    typedef std::map<std::string, task_slot_map_t> state_map_t;
-    state_map_t state_map_;
+    typedef std::map<std::string, boost::shared_ptr<TaskSlotAPI> > slot_map_t;
+    slot_map_t slot_map_;
   };
   
 }

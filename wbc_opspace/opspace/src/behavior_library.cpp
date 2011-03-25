@@ -83,8 +83,8 @@ namespace opspace {
   TaskPostureBehavior(std::string const & name)
     : Behavior(name)
   {
-    declareSlot("default", "eepos", &eepos_);
-    declareSlot("default", "posture", &posture_);
+    declareSlot("eepos", &eepos_);
+    declareSlot("posture", &posture_);
   }
   
   
@@ -142,8 +142,8 @@ namespace opspace {
   TaskPostureTrjBehavior(std::string const & name)
     : Behavior(name)
   {
-    declareSlot("default", "eepos", &eepos_);
-    declareSlot("default", "posture", &posture_);
+    declareSlot("eepos", &eepos_);
+    declareSlot("posture", &posture_);
   }
   
   
@@ -225,10 +225,10 @@ namespace opspace {
       wave_count_threshold_(6)
   {
     //    declareSlot("shake", "orientation", &shake_eeori_);
-    declareSlot("shake", "position", &shake_eepos_task_);
-    declareSlot("shake", "posture", &shake_posture_task_);
-    declareSlot("wave", "position", &wave_eepos_task_);
-    declareSlot("wave", "posture", &wave_posture_task_);
+    declareSlot("shake_position", &shake_eepos_task_);
+    declareSlot("shake_posture", &shake_posture_task_);
+    declareSlot("wave_position", &wave_eepos_task_);
+    declareSlot("wave_posture", &wave_posture_task_);
   }
   
   
