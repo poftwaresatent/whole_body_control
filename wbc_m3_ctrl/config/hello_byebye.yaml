@@ -46,10 +46,10 @@
 - behaviors:
   - type: opspace::HelloGoodbyeBehavior
     name: hello_goodbye
-    shake:
-      #    orientation: eeori_shake
-      position: eepos_shake
-      posture: posture_shake
-    wave:
-      position: eepos_wave
-      posture: posture_wave
+    slots:
+      # shake_orientation: eeori_shake
+      shake_position: eepos_shake
+      shake_posture: posture_shake
+      wave_position: eepos_wave
+      wave_posture: posture_wave
+      
