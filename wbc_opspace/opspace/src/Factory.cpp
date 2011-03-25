@@ -211,6 +211,9 @@ namespace opspace {
   
   Behavior * createBehavior(std::string const & type, std::string const & name)
   {
+    if ("opspace::GenericBehavior" == type) {
+      return new opspace::GenericBehavior(name);
+    }
     if ("opspace::TaskPostureBehavior" == type) {
       return new opspace::TaskPostureBehavior(name);
     }

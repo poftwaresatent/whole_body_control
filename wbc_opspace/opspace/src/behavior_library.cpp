@@ -46,7 +46,21 @@ namespace opspace {
   GenericBehavior(std::string const & name)
     : Behavior(name)
   {
-    // hmm... how to declare generic slots?
+    slot_ = declareSlot<Task>("task");
+  }
+  
+  
+  Status GenericBehavior::
+  init(Model const & model)
+  {
+    Status const st(Behavior::init(model));
+    if ( ! st) {
+      return st;
+    }
+    for (size_t ii(0); ii < slot_->getNInstances(); ++ii) {
+      task_table_.push_back(slot_->getInstance(ii).get());
+    }
+    return st;
   }
   
   
@@ -54,10 +68,16 @@ namespace opspace {
   update(Model const & model)
   {
     Status st;
-    for (size_t ii(0); ii < task_table_.size(); ++ii) {
-      st = task_table_[ii]->update(model);
-      if ( ! st) {
-	return st;
+    if ( task_table_.empty()) {
+      st.ok = false;
+      st.errstr = "empty task table, did you assign any? did you forget to init()?";
+    }
+    else {
+      for (size_t ii(0); ii < task_table_.size(); ++ii) {
+	st = task_table_[ii]->update(model);
+	if ( ! st) {
+	  return st;
+	}
       }
     }
     return st;
@@ -74,8 +94,7 @@ namespace opspace {
   void GenericBehavior::
   appendTask(boost::shared_ptr<Task> task)
   {
-    storage_.push_back(task);
-    task_table_.push_back(task.get());
+    slot_->assign(task);
   }
   
   

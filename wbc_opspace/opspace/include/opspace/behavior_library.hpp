@@ -48,6 +48,7 @@ namespace opspace {
   public:
     GenericBehavior(std::string const & name);
     
+    virtual Status init(Model const & model);
     virtual Status update(Model const & model);
     virtual task_table_t const * getTaskTable();
     
@@ -55,7 +56,7 @@ namespace opspace {
     
   protected:
     task_table_t task_table_;
-    std::vector<boost::shared_ptr<Task> > storage_;
+    boost::shared_ptr<TaskSlotAPI> slot_;
   };
   
   

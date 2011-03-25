@@ -136,13 +136,15 @@ namespace opspace {
     Behavior(std::string const & name);
     
     template<typename task_subtype>
-    void declareSlot(std::string const & name,
-		     task_subtype ** slot = 0,
-		     task_slot_flags_t flags = TASK_SLOT_DEFAULT)
+    boost::shared_ptr<TaskSlotAPI>
+    declareSlot(std::string const & name,
+		task_subtype ** slot = 0,
+		task_slot_flags_t flags = TASK_SLOT_DEFAULT)
     {
       boost::shared_ptr<TaskSlotAPI>
 	slot_api(new TaskSlot<task_subtype>(name, slot, flags));
       slot_map_[name] = slot_api;
+      return slot_api;
     }
     
     std::string const name_;

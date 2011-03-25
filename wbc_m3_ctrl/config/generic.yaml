@@ -1,0 +1,13 @@
+- tasks:
+  - type: opspace::JPosTask
+    name: jpos
+    sigma_threshold: 0.0001
+    kp: [ 50.0 ]
+    kd: [  5.0 ]
+    maxvel: [ 10.0 ]
+
+- behaviors:
+  - type: opspace::GenericBehavior
+    name: generic
+    slots:
+      task: jpos
