@@ -217,6 +217,8 @@ int main(int argc, char*argv[])
   
   ROS_INFO ("entering control loop");
   jspace::Vector tau(ndof);
+  ros::Time t0(ros::Time::now());
+  ros::Duration dbg_dt(0.2);
   while (ros::ok()) {
     
     // Compute torque command.
@@ -236,8 +238,12 @@ int main(int argc, char*argv[])
     }
     
     if (verbose) {
-      behavior->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
-      controller->dbg(cout, "--------------------------------------------------", "");
+      ros::Time t1(ros::Time::now());
+      if (t1 - t0 > dbg_dt) {
+	t0 = t1;
+	behavior->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
+	controller->dbg(cout, "--------------------------------------------------", "");
+      }
     }
     
     // Wait for "tick" (haha, this is not RT anyway...)
