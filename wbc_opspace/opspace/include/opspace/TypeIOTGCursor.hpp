@@ -42,8 +42,10 @@
 namespace opspace {
   
   using jspace::Vector;
-  
 
+  char const * otg_errstr(int otg_error_code);
+  
+  
   /**
      Utility for using reflexxes_otg::TypeIOTG. This class wraps a
      acceleration-bounded trajectory object from the reflexxes_otg

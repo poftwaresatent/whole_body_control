@@ -351,7 +351,8 @@ namespace opspace {
   
   
   Status SelectedJointPostureTask::
-  update(Model const & model) { 
+  update(Model const & model)
+  {
     Status st;
     if ( ! initialized_) {
       st.ok = false;
@@ -393,17 +394,13 @@ namespace opspace {
   
   
   TrajectoryTask::
-  TrajectoryTask(std::string const & name)
-    : Task(name),
+  TrajectoryTask(std::string const & name, saturation_policy_t saturation_policy)
+    : PDTask(name, saturation_policy),
       cursor_(0),
-      dt_seconds_(-1),
-      goal_changed_(false)
+      dt_seconds_(-1)
   {
     declareParameter("dt_seconds", &dt_seconds_);
-    declareParameter("goal", &goal_);
-    declareParameter("kp", &kp_);
-    declareParameter("kd", &kd_);
-    declareParameter("maxvel", &maxvel_);
+    declareParameter("trjgoal", &trjgoal_);
     declareParameter("maxacc", &maxacc_);
   }
   
@@ -416,43 +413,26 @@ namespace opspace {
   
   
   Status TrajectoryTask::
-  initTrajectoryTask(Vector const & initpos, bool allow_scalar_to_vector)
+  initTrajectoryTask(Vector const & initpos)
   {
+    Status st(initPDTask(initpos));
+    if ( ! st) {
+      return st;
+    }
+    
     if (0 > dt_seconds_) {
-      return Status(false, "you did not (correctly) set dt_seconds");
+      st.ok = false;
+      st.errstr = "you did not (correctly) set dt_seconds";
+      return st;
     }
     
     int const ndim(initpos.rows());
-    if (ndim != maxvel_.rows()) {
-      if ((ndim != 1) && (1 == maxvel_.rows()) && allow_scalar_to_vector) {
-	maxvel_ = maxvel_[0] * Vector::Ones(ndim);
-      }
-      else {
-	return Status(false, "you did not (correctly) set maxvel");
-      }
-    }
     if (ndim != maxacc_.rows()) {
-      if ((ndim != 1) && (1 == maxacc_.rows()) && allow_scalar_to_vector) {
+      if ((ndim != 1) && (1 == maxacc_.rows())) {
 	maxacc_ = maxacc_[0] * Vector::Ones(ndim);
       }
       else {
-	return Status(false, "you did not (correctly) set maxacc");
-      }
-    }
-    if (ndim != kp_.rows()) {
-      if ((ndim != 1) && (1 == kp_.rows()) && allow_scalar_to_vector) {
-	kp_ = kp_[0] * Vector::Ones(ndim);
-      }
-      else {
-	return Status(false, "you did not (correctly) set kp");
-      }
-    }
-    if (ndim != kd_.rows()) {
-      if ((ndim != 1) && (1 == kd_.rows()) && allow_scalar_to_vector) {
-	kd_ = kd_[0] * Vector::Ones(ndim);
-      }
-      else {
-	return Status(false, "you did not (correctly) set kd");
+	return Status(false, "invalid maxacc dimension");
       }
     }
     
@@ -466,10 +446,18 @@ namespace opspace {
       cursor_ = new TypeIOTGCursor(ndim, dt_seconds_);
     }
     
-    goal_ = initpos;
-    goal_changed_ = true;
+    trjgoal_ = initpos;
+    cursor_->position() = initpos;
+    cursor_->velocity() = Vector::Zero(ndim);
     
-    return Status();
+    if (SATURATION_NORM == saturation_policy_) {
+      qh_maxvel_ = maxvel_[0] * Vector::Ones(ndim);
+    }
+    else {
+      qh_maxvel_ = maxvel_;
+    }
+    
+    return st;
   }
   
   
@@ -482,22 +470,18 @@ namespace opspace {
       return Status(false, "not initialized");
     }
     
-    if (goal_changed_) {
-      cursor_->position() = curpos;
-      cursor_->velocity() = curvel;
-      goal_changed_ = false;
+    int const trjstatus(cursor_->next(qh_maxvel_, maxacc_, trjgoal_));
+    if (0 > trjstatus) {
+      std::ostringstream msg;
+      msg << "trajectory generation error code "
+	  << trjstatus << ": " << otg_errstr(trjstatus);
+      return Status(false, msg.str());
     }
     
-    if (0 > cursor_->next(maxvel_, maxacc_, goal_)) {
-      return Status(false, "trajectory generation error");
-    }
+    goalpos_ = cursor_->position();
+    goalvel_ = cursor_->velocity();
     
-    command
-      = kp_.cwise() * (cursor_->position() - curpos)
-      + kd_.cwise() * (cursor_->velocity() - curvel);
-    
-    Status ok;
-    return ok;
+    return computePDCommand(curpos, curvel, command);
   }
   
   
@@ -507,33 +491,49 @@ namespace opspace {
     if ((param == &dt_seconds_) && (0 >= value)) {
       return Status(false, "dt_seconds must be > 0");
     }
-    return Status();
+    return Status(); // if we had one in the superclass, we'd call PDTask::check(param, value);
   }
   
   
   Status TrajectoryTask::
   check(Vector const * param, Vector const & value) const
   {
-    if (cursor_) {
-      if (param == &goal_) {
-	if (cursor_->ndof_ != value.rows()) {
-	  return Status(false, "invalid goal dimension");
-	}
-	goal_changed_ = true;
+    Status st(PDTask::check(param, value));
+    if ( ! st) {
+      return st;
+    }
+    
+    if ( ! cursor_) {
+      return st;
+    }
+    
+    if (param == &trjgoal_) {
+      if (cursor_->ndof_ != value.rows()) {
+	return Status(false, "invalid goal dimension");
       }
-      if ((param == &kp_) || (param == &kd_)
-	  || (param == &maxvel_) || (param == &maxacc_)) {
-	if (cursor_->ndof_ != value.rows()) {
-	  return Status(false, "invalid dimension");
-	}
-	for (size_t ii(0); ii < cursor_->ndof_; ++ii) {
-	  if (0 > value[ii]) {
-	    return Status(false, "bounds and gains must be >= 0");
-	  }
+    }
+    
+    if (param == &maxacc_) {
+      if (cursor_->ndof_ != value.rows()) {
+	return Status(false, "invalid maxacc dimension");
+      }
+      for (size_t ii(0); ii < value.rows(); ++ii) {
+	if (0 > value[ii]) {
+	  return Status(false, "maxacc must be >= 0");
 	}
       }
     }
-    return Status();
+    
+    if (param == &maxvel_) {
+      if (SATURATION_NORM == saturation_policy_) {
+	qh_maxvel_ = value[0] * Vector::Ones(cursor_->ndof_);
+      }
+      else {
+	qh_maxvel_ = value;
+      }
+    }
+    
+    return st;
   }
   
   
@@ -549,15 +549,17 @@ namespace opspace {
     if ( ! cursor_) {
       os << prefix << "  NOT INITIALIZED\n";
     }
-    pretty_print(actual_, os, prefix + "  actual", prefix + "    ");
-    pretty_print(cursor_->position(), os, prefix + "  carrot", prefix + "    ");
-    pretty_print(goal_, os, prefix + "  goal", prefix + "    ");
+    else {
+      pretty_print(actual_, os, prefix + "  actual", prefix + "    ");
+      pretty_print(cursor_->position(), os, prefix + "  carrot", prefix + "    ");
+      pretty_print(trjgoal_, os, prefix + "  trjgoal", prefix + "    ");
+    }
   }
   
   
   CartPosTrjTask::
   CartPosTrjTask(std::string const & name)
-    : TrajectoryTask(name),
+    : TrajectoryTask(name, PDTask::SATURATION_NORM),
       end_effector_id_(-1),
       control_point_(Vector::Zero(3))
   {
@@ -578,7 +580,7 @@ namespace opspace {
     if (0 == updateActual(model)) {
       return Status(false, "updateActual() failed, did you specify a valid end_effector_id?");
     }
-    return initTrajectoryTask(actual_, true);
+    return initTrajectoryTask(actual_);
   }
   
   
@@ -621,7 +623,7 @@ namespace opspace {
   
   JPosTrjTask::
   JPosTrjTask(std::string const & name)
-    : TrajectoryTask(name)
+    : TrajectoryTask(name, PDTask::SATURATION_COMPONENT_WISE)
   {
   }
   
@@ -631,7 +633,7 @@ namespace opspace {
   {
     jacobian_ = Matrix::Identity(model.getNDOF(), model.getNDOF());
     actual_ = model.getState().position_;
-    return initTrajectoryTask(model.getState().position_, true);
+    return initTrajectoryTask(model.getState().position_);
   }
   
   

@@ -99,4 +99,22 @@ namespace opspace {
     return result;
   }
   
+  
+  char const * otg_errstr(int otg_error_code)
+  {
+    switch (otg_error_code) {
+    case TypeIOTG::OTG_ERROR:
+      return "OTG_ERROR (general error)";
+    case TypeIOTG::OTG_MAX_VELOCITY_ERROR:
+      return "OTG_MAX_VELOCITY_ERROR (maxvel too small)";
+    case TypeIOTG::OTG_MAX_ACCELERATION_ERROR:
+      return "OTG_MAX_ACCELERATION_ERROR (maxacc too small)";
+    case TypeIOTG::OTG_WORKING:
+      return "OTG_WORKING (everything is fine)";
+    case TypeIOTG::OTG_FINAL_STATE_REACHED:
+      return "OTG_FINAL_STATE_REACHED (all is fine and we're at the goal)";
+    }
+    return "invalid or unrecognized otg_error_code";
+  }
+  
 }
