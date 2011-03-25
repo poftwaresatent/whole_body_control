@@ -240,28 +240,30 @@ namespace opspace {
       return st;
     }
     
-    shake_eepos_goal_ = shake_eepos_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    // XXXX to do: could read the name of the parameter from a
+    // parameter (also for other tasks)
+    shake_eepos_goal_ = shake_eepos_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
     if ( ! shake_eepos_goal_) {
       st.ok = false;
       st.errstr = "no appropriate goal parameter in shake position task";
       return st;
     }
     
-    shake_posture_goal_ = shake_posture_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    shake_posture_goal_ = shake_posture_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
     if ( ! shake_posture_goal_) {
       st.ok = false;
       st.errstr = "no appropriate goal parameter in shake posture task";
       return st;
     }
     
-    wave_eepos_goal_ = wave_eepos_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    wave_eepos_goal_ = wave_eepos_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
     if ( ! wave_eepos_goal_) {
       st.ok = false;
       st.errstr = "no appropriate goal parameter in wave position task";
       return st;
     }
     
-    wave_posture_goal_ = wave_posture_task_->lookupParameter("goal", PARAMETER_TYPE_VECTOR);
+    wave_posture_goal_ = wave_posture_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
     if ( ! wave_posture_goal_) {
       st.ok = false;
       st.errstr = "no appropriate goal parameter in wave position task";
