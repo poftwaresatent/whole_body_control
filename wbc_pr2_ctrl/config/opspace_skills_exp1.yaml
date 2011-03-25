@@ -1,0 +1,25 @@
+- tasks:
+  - type: opspace::CartPosTrjTask
+    name: eepos
+    sigma_threshold: 0.00001
+    end_effector_id: 12
+    control_point: [ 0.0, 0.0, 0.0 ]
+    dt_seconds: 0.0025
+    kp: [ 100.0 ]
+    kd: [   3.0 ]
+    maxvel: [ 10000.0 ]
+    maxacc: [ 10000.0, 10000.0, 10000.0 ]
+  - type: opspace::JPosTrjTask
+    name: posture
+    sigma_threshold: 0.0001
+    dt_seconds: 0.0025
+    kp: [ 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0,    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
+    kd: [ 10.0, 10.0, 3.0, 3.0, 6.0, 4.0, 4.0,                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
+    maxvel: [ 10000.0 ]
+    maxacc: [ 10000.0 ]
+- behaviors:
+  - type: opspace::TaskPostureTrjBehavior
+    name: task_posture
+    default:
+      eepos: eepos
+      posture: posture
