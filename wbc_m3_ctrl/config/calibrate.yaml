@@ -1,0 +1,17 @@
+- tasks:
+  - type: opspace::DraftPIDTask
+    name: pid
+    sigma_threshold: 0.0001
+    dt_seconds: 0.002
+    kp: [ 50.0 ]
+    ki: [  1.0 ]
+    kd: [  5.0 ]
+    maxvel: [ 10.0 ]
+    limitpos: [ 0.17 ]
+    limitvel: [ 0.17 ]
+
+- behaviors:
+  - type: opspace::GenericBehavior
+    name: generic
+    slots:
+      task: pid

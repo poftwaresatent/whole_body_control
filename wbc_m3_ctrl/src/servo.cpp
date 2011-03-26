@@ -333,20 +333,28 @@ int main(int argc, char ** argv)
   }
   
   warnx("started servo RT thread");
+  ros::Time t0(ros::Time::now());
+  ros::Duration dbg_dt(0.1);
   
   while (ros::ok()) {
-    // servo has successfully spawned RT thread, just do some
-    // debugging etc here
     if (verbose) {
-      cout << "**************************************************\n";
-      jspace::pretty_print(model->getState().position_, cout, "jpos", "  ");
-      jspace::pretty_print(model->getState().velocity_, cout, "jvel", "  ");
-      jspace::pretty_print(model->getState().force_, cout, "jforce", "  ");
-      servo.skill->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
-      controller->dbg(cout, "--------------------------------------------------", "");
+      ros::Time t1(ros::Time::now());
+      if (t1 - t0 > dbg_dt) {
+	t0 = t1;
+	servo.skill->dbg(cout, "\n\n**************************************************", "");
+	controller->dbg(cout, "--------------------------------------------------", "");
+	cout << "--------------------------------------------------\n";
+	jspace::pretty_print(model->getState().position_, cout, "jpos", "  ");
+	jspace::pretty_print(model->getState().velocity_, cout, "jvel", "  ");
+	jspace::pretty_print(model->getState().force_, cout, "jforce", "  ");
+	jspace::pretty_print(controller->getCommand(), cout, "gamma", "  ");
+	Vector gravity;
+	model->getGravity(gravity);
+	jspace::pretty_print(gravity, cout, "gravity", "  ");
+      }
     }
     ros::spinOnce();
-    usleep(250000);
+    usleep(10000);		// 100Hz-ish
   }
   
   warnx("shutting down");

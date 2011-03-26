@@ -70,7 +70,7 @@ namespace wbc_m3_ctrl {
     RTUtil * rtutil((RTUtil*) arg);
     M3TorqueShmSdsStatus shm_status;
     M3TorqueShmSdsCommand shm_cmd;
-    jspace::State state(7, 7, 0); // XXXX to do: use all joints, add torques
+    jspace::State state(7, 7, 7);
     jspace::Vector command(7);
     RTIME tick_period;
     int cb_status;
@@ -123,6 +123,7 @@ namespace wbc_m3_ctrl {
     for (size_t ii(0); ii < 7; ++ii) { // XXXX to do: hardcoded NDOF
       state.position_[ii] = M_PI * shm_status.right_arm.theta[ii] / 180.0;
       state.velocity_[ii] = M_PI * shm_status.right_arm.thetadot[ii] / 180.0;
+      state.force_[ii] = 1.0e-3 * shm_status.right_arm.torque[ii];
     }
     cb_status = rtutil->init(state);
     if (0 != cb_status) {
