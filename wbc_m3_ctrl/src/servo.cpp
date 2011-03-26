@@ -35,6 +35,14 @@
 
 #include <wbc_m3_ctrl/rt_util.h>
 
+// one of these just for logging timestamp
+#include <rtai_sched.h>
+#include <rtai_shm.h>
+#include <rtai.h>
+#include <rtai_sem.h>
+#include <rtai_nam2num.h>
+#include <rtai_registry.h>
+
 #include <ros/ros.h>
 #include <jspace/test/sai_util.hpp>
 #include <opspace/Behavior.hpp>
@@ -81,6 +89,7 @@ static bool verbose(false);
 static scoped_ptr<jspace::Model> model;
 static shared_ptr<Factory> factory;
 static long long servo_rate;
+static long long actual_servo_rate;
 static shared_ptr<ParamCallbacks> param_cbs;
 static shared_ptr<ControllerNG> controller;
 
@@ -223,9 +232,6 @@ namespace {
   {
   public:
     shared_ptr<Behavior> skill;    
-    bool shutmedownlaterplease;
-    
-    Servo() : shutmedownlaterplease(false) {}
     
     virtual int init(jspace::State const & state) {
       if (skill) {
@@ -276,10 +282,6 @@ namespace {
 	warnx("Servo::update(): controller->computeCommand() failed: %s", status.errstr.c_str());
 	return -2;
       }
-
-      if (shutmedownlaterplease) {
-	fprintf(stderr, "please shut me down once logs are written etc\n");
-      }
       
       return 0;
     }
@@ -296,9 +298,7 @@ namespace {
 			 long long desired_ns,
 			 long long actual_ns)
     {
-      if (iteration  > 1000) {
-	shutmedownlaterplease = true;
-      }
+      actual_servo_rate = 1000000000 / actual_ns;
       return 0;
     }
   };
@@ -331,6 +331,7 @@ int main(int argc, char ** argv)
     if (verbose) {
       warnx("starting servo with %lld Hz", servo_rate);
     }
+    actual_servo_rate = servo_rate;
     servo.start(servo_rate);
   }
   catch (std::runtime_error const & ee) {
@@ -341,7 +342,7 @@ int main(int argc, char ** argv)
   ros::Time dbg_t0(ros::Time::now());
   ros::Time dump_t0(ros::Time::now());
   ros::Duration dbg_dt(0.1);
-  ros::Duration dump_dt(0.1);
+  ros::Duration dump_dt(0.05);
   
   while (ros::ok()) {
     ros::Time t1(ros::Time::now());
@@ -358,12 +359,12 @@ int main(int argc, char ** argv)
 	Vector gravity;
 	model->getGravity(gravity);
 	jspace::pretty_print(gravity, cout, "gravity", "  ");
+	cout << "servo rate: " << actual_servo_rate << "\n";
       }
     }
     if (t1 - dump_t0 > dump_dt) {
       dump_t0 = t1;
-      cout << "maybeWriteLogFiles()...\n";
-      controller->maybeWriteLogFiles();
+      controller->qhlog(*servo.skill, rt_get_cpu_time_ns() / 1000);
     }
     ros::spinOnce();
     usleep(10000);		// 100Hz-ish
