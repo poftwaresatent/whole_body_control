@@ -300,16 +300,38 @@ namespace opspace {
       
       if ("slots" == key) {
 	YAML::Node const & slotlist(it.second());
-	if (YAML::CT_MAP != slotlist.GetType()) {
-	  throw std::runtime_error("entry for `" + key + "' is a "
-				   + string(yaml_type_name(slotlist))
-				   + " but should be a map");
-	}
 	for (YAML::Iterator slot_it(slotlist.begin()); slot_it != slotlist.end(); ++slot_it) {
 	  std::string slot_name;
-	  slot_it.first() >> slot_name;
 	  std::string task_name;
-	  slot_it.second() >> task_name;
+
+	  if (YAML::CT_MAP == slotlist.GetType()) {
+	    slot_it.first() >> slot_name;
+	    slot_it.second() >> task_name;
+	  }
+	  else if (YAML::CT_SEQUENCE == slotlist.GetType()) {
+	    if (YAML::CT_MAP != slot_it->GetType()) {
+	      throw std::runtime_error("list item for `" + key + "' is a "
+				     + string(yaml_type_name(slotlist))
+				       + " but should be a map with one key/value pair");
+	    }
+	    YAML::Iterator slot_it_it(slot_it->begin());
+	    if (slot_it->end() == slot_it_it) {
+	      throw std::runtime_error("list item for `" + key
+				       + "' is empty but should have one key/value pair");
+	    }
+	    slot_it_it.first() >> slot_name;
+	    slot_it_it.second() >> task_name;
+	    ++slot_it_it;
+	    if (slot_it->end() != slot_it_it) {
+	      throw std::runtime_error("list item for `" + key
+				       + "' has more than one key/value pair");
+	    }
+	  }
+	  else {
+	    throw std::runtime_error("entry for `" + key + "' is a "
+				     + string(yaml_type_name(slotlist))
+				     + " but should be a map or a list");
+	  }
 	  
 	  shared_ptr<TaskSlotAPI> slot(parser.behavior->lookupSlot(slot_name));
 	  if ( ! slot) {
