@@ -126,9 +126,43 @@ namespace opspace {
     bool initialized_;
     Vector goalpos_;
     Vector goalvel_;
+    Vector errpos_;
+    Vector errvel_;
     Vector kp_;
     Vector kd_;
     Vector maxvel_;
+  };
+  
+  
+  class DraftPIDTask
+    : public PDTask
+  {
+  public:
+    explicit DraftPIDTask(std::string const & name);
+    
+    virtual Status check(double const * param, double value) const;
+    virtual Status check(Vector const * param, Vector const & value) const;
+    
+    virtual Status init(Model const & model);
+    virtual Status update(Model const & model);
+    
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
+  protected:
+    Status initDraftPIDTask(Vector const & initpos);
+    
+    Status computeDraftPIDCommand(Vector const & curpos,
+				  Vector const & curvel,
+				  Vector & command);
+    
+    double dt_seconds_;
+    Vector ki_;
+    Vector errsum_;
+    Vector limitpos_;
+    Vector limitvel_;
+    Vector triggerpos_;
   };
   
   

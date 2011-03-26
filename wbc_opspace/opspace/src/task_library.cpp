@@ -50,6 +50,8 @@ namespace opspace {
   {
     declareParameter("goalpos", &goalpos_);
     declareParameter("goalvel", &goalvel_);
+    declareParameter("errpos", &errpos_);
+    declareParameter("errvel", &errvel_);
     declareParameter("kp", &kp_);
     declareParameter("kd", &kd_);
     declareParameter("maxvel", &maxvel_);
@@ -59,6 +61,9 @@ namespace opspace {
   Status PDTask::
   check(Vector const * param, Vector const & value) const
   {
+    if ((param == &errpos_) || (param == &errvel_)) {
+      return Status(false, "error signals are read-only");
+    }
     if ((param == &kp_) || (param == &kd_) || (param == &maxvel_)) {
       if (SATURATION_NORM == saturation_policy_) {
 	if (1 != value.rows()) {
@@ -134,6 +139,8 @@ namespace opspace {
     
     goalpos_ = initpos;
     goalvel_ = Vector::Zero(ndim);
+    errpos_ = Vector::Zero(ndim);
+    errvel_ = Vector::Zero(ndim);
     initialized_ = true;
     
     Status ok;
@@ -152,20 +159,23 @@ namespace opspace {
       st.errstr = "not initialized";
       return st;
     }
-
+    
+    errpos_ = goalpos_ - curpos;
+    errvel_ = goalvel_ - curvel;
+    
     if (SATURATION_NORM == saturation_policy_) {
-      command = kp_[0] * (goalpos_ - curpos);
+      command = kp_[0] * errpos_;
       if ((maxvel_[0] > 1e-4) && (kd_[0] > 1e-4)) { // beware of div by zero
 	double const sat(command.norm() / maxvel_[0] / kd_[0]);
 	if (sat > 1.0) {
 	  command /= sat;
 	}
       }
-      command += kd_[0] * (goalvel_ - curvel);
+      command += kd_[0] * errvel_;
       return st;
     }    
     
-    command = kp_.cwise() * (goalpos_ - curpos);
+    command = kp_.cwise() * errpos_;
     
     if (SATURATION_COMPONENT_WISE == saturation_policy_) {
       for (int ii(0); ii < command.rows(); ++ii) {
@@ -197,10 +207,206 @@ namespace opspace {
     // we silently assume that any other value of saturation_policy
     // means SATURATION_OFF.
     
-    command += kd_.cwise() * (goalvel_ - curvel);
+    command += kd_.cwise() * errvel_;
     
     return st;
   }
+  
+  
+  DraftPIDTask::
+  DraftPIDTask(std::string const & name)
+    : PDTask(name, PDTask::SATURATION_COMPONENT_WISE),
+      dt_seconds_(-1)
+  {
+    declareParameter("dt_seconds", &dt_seconds_);
+    declareParameter("ki", &ki_);
+    declareParameter("errsum", &errsum_);
+    declareParameter("limitpos", &limitpos_);
+    declareParameter("limitvel", &limitvel_);
+    declareParameter("triggerpos", &triggerpos_);
+  }
+  
+  
+  Status DraftPIDTask::
+  check(double const * param, double value) const
+  {
+    if (param == &dt_seconds_) {
+      if (0 >= value) {
+	return Status(false, "dt_seconds must be > 0");
+      }
+    }
+    return Status();
+  }
+  
+  
+  Status DraftPIDTask::
+  check(Vector const * param, Vector const & value) const
+  {
+    if (param == &triggerpos_) {
+      return Status(false, "triggerpos is read-only");
+    }
+    if (param == &errsum_) {
+      return Status(false, "errsum is read-only");
+    }
+    if ((param == &ki_) || (param == &limitpos_) || (param == &limitvel_)) {
+      for (size_t ii(0); ii < value.rows(); ++ii) {
+	if (0 > value[ii]) {
+	  return Status(false, "gains and limits must be >= 0");
+	}
+      }
+      if (initialized_) {
+	if (goalpos_.rows() != value.rows()) {
+	  return Status(false, "invalid dimension");
+	}
+      }
+    }
+    return Status();
+  }
+  
+  
+  Status DraftPIDTask::
+  initDraftPIDTask(Vector const & initpos)
+  {
+    Status st(initPDTask(initpos));
+    if ( ! st) {
+      return st;
+    }
+    
+    if (0 >= dt_seconds_) {
+      return Status(false, "dt_seconds_ must be > 0");
+    }
+    for (size_t ii(0); ii < ki_.rows(); ++ii) {
+      if (0 > ki_[ii]) {
+	return Status(false, "ki must be >= 0");
+      }
+    }
+    for (size_t ii(0); ii < limitpos_.rows(); ++ii) {
+      if (0 > limitpos_[ii]) {
+	return Status(false, "limitpos must be >= 0");
+      }
+    }
+    for (size_t ii(0); ii < limitvel_.rows(); ++ii) {
+      if (0 > limitvel_[ii]) {
+	return Status(false, "limitvel must be >= 0");
+      }
+    }
+    
+    int const ndim(initpos.rows());
+    if (ndim != ki_.rows()) {
+      if ((ndim != 1) && (1 == ki_.rows())) {
+	ki_ = ki_[0] * Vector::Ones(ndim);
+      }
+      else {
+	return Status(false, "invalid ki dimension");
+      }
+    }
+    if (ndim != limitpos_.rows()) {
+      if ((ndim != 1) && (1 == limitpos_.rows())) {
+	limitpos_ = limitpos_[0] * Vector::Ones(ndim);
+      }
+      else {
+	return Status(false, "invalid limitpos dimension");
+      }
+    }
+    if (ndim != limitvel_.rows()) {
+      if ((ndim != 1) && (1 == limitvel_.rows())) {
+	limitvel_ = limitvel_[0] * Vector::Ones(ndim);
+      }
+      else {
+	return Status(false, "invalid limitvel dimension");
+      }
+    }
+    
+    errsum_ = Vector::Zero(ndim);
+    triggerpos_ = - 1.0 * Vector::Ones(ndim);
+    
+    return st;
+  }
+  
+  
+  Status DraftPIDTask::
+  computeDraftPIDCommand(Vector const & curpos,
+			 Vector const & curvel,
+			 Vector & command)
+  {
+    Status st(computePDCommand(curpos, curvel, command));
+    if ( ! st) {
+      return st;
+    }
+    
+    // update "state" for each DOF: if triggerpos_[ii] is positive
+    // after this loop, it means we should enable the integral term
+    // for it further down.
+    for (int ii(0); ii < triggerpos_.rows(); ++ii) {
+      if (triggerpos_[ii] > 0) {
+	// integral term currently ON
+	if (fabs(errpos_[ii]) > triggerpos_[ii]) {
+	  // overshoot: switch off integration
+	  triggerpos_[ii] = -1;
+	}
+	else if (fabs(errvel_[ii]) > 2.0 * limitvel_[ii]) {
+	  // too fast: switch off integration
+	  triggerpos_[ii] = -1;
+	}
+	// else it remains on
+      }
+      else {
+	// integral term currently OFF
+	if ((fabs(errpos_[ii]) < limitpos_[ii])
+	    && (fabs(errvel_[ii]) < limitvel_[ii])) {
+	  // close to the goal: switch on integration
+	  triggerpos_[ii] = 2.0 * fabs(errpos_[ii]);
+	  errsum_[ii] = 0;
+	}
+      }
+    }
+    
+    // for each DOF with integral term enabled, add it to the command
+    for (int ii(0); ii < triggerpos_.rows(); ++ii) {
+      if (triggerpos_[ii] > 0) {
+	errsum_[ii] += errpos_[ii] * dt_seconds_;
+	command[ii] += ki_[ii] * errsum_[ii];
+      }
+    }
+    
+    return st;
+  }
+  
+  
+  Status DraftPIDTask::
+  init(Model const & model)
+  {
+    jacobian_ = Matrix::Identity(model.getNDOF(), model.getNDOF());
+    actual_ = model.getState().position_;
+    return initDraftPIDTask(model.getState().position_);
+  }
+  
+  
+  Status DraftPIDTask::
+  update(Model const & model)
+  {
+    actual_ = model.getState().position_;
+    return computeDraftPIDCommand(actual_,
+				  model.getState().velocity_,
+				  command_);
+  }
+  
+  
+  void DraftPIDTask::
+  dbg(std::ostream & os,
+      std::string const & title,
+      std::string const & prefix) const
+  {
+    if ( ! title.empty()) {
+      os << title << "\n";
+    }
+    os << prefix << "draft PID task: `" << name_ << "'\n";
+    pretty_print(errpos_, os, prefix + "  errpos", prefix + "    ");
+    pretty_print(triggerpos_, os, prefix + "  triggerpos", prefix + "    ");
+    pretty_print(ki_, os, prefix + "  ki", prefix + "    ");
+    pretty_print(errsum_, os, prefix + "  errsum", prefix + "    ");
+  }
+
   
   
   CartPosTask::

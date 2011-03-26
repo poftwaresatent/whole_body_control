@@ -69,6 +69,8 @@ namespace opspace {
 			   bool init_required,
 			   Vector & gamma);
     
+    inline Vector const & getCommand() const { return gamma_; }
+    
   protected:
     std::string const name_;
     boost::shared_ptr<Task> fallback_task_;

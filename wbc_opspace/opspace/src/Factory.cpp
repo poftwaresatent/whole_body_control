@@ -74,6 +74,9 @@ namespace opspace {
     if ("opspace::OrientationTask" == type) {
       return new opspace::OrientationTask(name);
     }
+    if ("opspace::DraftPIDTask" == type) {
+      return new opspace::DraftPIDTask(name);
+    }
     return 0;
   }
   
