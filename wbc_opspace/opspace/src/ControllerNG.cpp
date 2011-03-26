@@ -184,10 +184,7 @@ namespace opspace {
       }
     }
     else if ((0 < loglen_) && (loglen_ == logcount_)) {
-      for (size_t ii(0); ii < log_.size(); ++ii) {
-	log_[ii]->writeFiles(logprefix_, &std::cerr);
-      }
-      logcount_ = -1;
+      logcount_ = -2;
     }
     
     if (0 <= logcount_) {
@@ -310,6 +307,18 @@ namespace opspace {
     if (fallback_) {
       os << prefix << "# FALLBACK MODE ENABLED ##########################\n"
 	 << prefix << "# reason: " << fallback_reason_ << "\n";
+    }
+  }
+  
+  
+  void ControllerNG::
+  maybeWriteLogFiles()
+  {
+    if (-2 == logcount_) {
+      for (size_t ii(0); ii < log_.size(); ++ii) {
+	log_[ii]->writeFiles(logprefix_, &std::cerr);
+      }
+      logcount_ = -1;
     }
   }
   

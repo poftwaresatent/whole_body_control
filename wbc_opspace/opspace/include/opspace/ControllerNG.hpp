@@ -71,6 +71,9 @@ namespace opspace {
     
     inline Vector const & getCommand() const { return gamma_; }
     
+    void maybeWriteLogFiles();
+    
+    
   protected:
     std::string const name_;
     boost::shared_ptr<Task> fallback_task_;
@@ -82,7 +85,10 @@ namespace opspace {
     std::vector<boost::shared_ptr<ParameterLog> > log_;
     int loglen_;		// <= 0 means disabled
     std::string logprefix_;
-    mutable int logcount_; // -1 means off, 0 means init, dumps when ==loglen_ then goes to -1
+    
+    // -1 means off, 0 means init, -2 means maybeWriteLogFiles() will
+    // actually write them (this gets set when ==loglen_)
+    mutable int logcount_;
     
     // for logging and debugging via Parameter tools, don't bother to
     // implement check() methods because one day real soon now we'll
