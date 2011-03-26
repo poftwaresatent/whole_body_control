@@ -52,11 +52,13 @@ namespace opspace {
     : name_(name),
       fallback_(false),
       loglen_(-1),
+      logsubsample_(10),
       logprefix_(""),
       logcount_(-1)
   {
-    declareParameter("loglen", &loglen_);
-    declareParameter("logprefix", &logprefix_);
+    declareParameter("loglen", &loglen_, PARAMETER_FLAG_NOLOG);
+    declareParameter("logsubsample", &logsubsample_, PARAMETER_FLAG_NOLOG);
+    declareParameter("logprefix", &logprefix_, PARAMETER_FLAG_NOLOG);
     declareParameter("jpos", &jpos_);
     declareParameter("jvel", &jvel_);
     declareParameter("gamma", &gamma_);
@@ -280,8 +282,11 @@ namespace opspace {
     jvel_ = model.getState().velocity_;
     gamma_ = gamma;
     if (0 < logcount_) {
-      for (size_t ii(0); ii < log_.size(); ++ii) {
-	log_[ii]->update();
+      if ((logsubsample_ <= 0)
+	  || (0 == (logcount_ % logsubsample_))) {
+	for (size_t ii(0); ii < log_.size(); ++ii) {
+	  log_[ii]->update();
+	}
       }
     }
     

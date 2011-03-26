@@ -52,9 +52,9 @@ namespace opspace {
     declareParameter("goalvel", &goalvel_);
     declareParameter("errpos", &errpos_);
     declareParameter("errvel", &errvel_);
-    declareParameter("kp", &kp_);
-    declareParameter("kd", &kd_);
-    declareParameter("maxvel", &maxvel_);
+    declareParameter("kp", &kp_, PARAMETER_FLAG_NOLOG);
+    declareParameter("kd", &kd_, PARAMETER_FLAG_NOLOG);
+    declareParameter("maxvel", &maxvel_, PARAMETER_FLAG_NOLOG);
   }
   
   
@@ -218,11 +218,11 @@ namespace opspace {
     : PDTask(name, PDTask::SATURATION_COMPONENT_WISE),
       dt_seconds_(-1)
   {
-    declareParameter("dt_seconds", &dt_seconds_);
-    declareParameter("ki", &ki_);
+    declareParameter("dt_seconds", &dt_seconds_, PARAMETER_FLAG_NOLOG);
+    declareParameter("ki", &ki_, PARAMETER_FLAG_NOLOG);
     declareParameter("errsum", &errsum_);
-    declareParameter("limitpos", &limitpos_);
-    declareParameter("limitvel", &limitvel_);
+    declareParameter("limitpos", &limitpos_, PARAMETER_FLAG_NOLOG);
+    declareParameter("limitvel", &limitvel_, PARAMETER_FLAG_NOLOG);
     declareParameter("triggerpos", &triggerpos_);
   }
   
@@ -415,8 +415,8 @@ namespace opspace {
       end_effector_name_(""),
       control_point_(Vector::Zero(3))
   {
-    declareParameter("end_effector", &end_effector_name_);
-    declareParameter("control_point", &control_point_);
+    declareParameter("end_effector", &end_effector_name_, PARAMETER_FLAG_NOLOG);
+    declareParameter("control_point", &control_point_, PARAMETER_FLAG_NOLOG);
   }
   
   
@@ -520,9 +520,9 @@ namespace opspace {
       kd_(20.0),
       initialized_(false)
   {
-    declareParameter("selection", &selection_);
-    declareParameter("kp", &kp_);
-    declareParameter("kd", &kd_);
+    declareParameter("selection", &selection_, PARAMETER_FLAG_NOLOG);
+    declareParameter("kp", &kp_, PARAMETER_FLAG_NOLOG);
+    declareParameter("kd", &kd_, PARAMETER_FLAG_NOLOG);
   }
   
   
@@ -605,9 +605,9 @@ namespace opspace {
       cursor_(0),
       dt_seconds_(-1)
   {
-    declareParameter("dt_seconds", &dt_seconds_);
+    declareParameter("dt_seconds", &dt_seconds_, PARAMETER_FLAG_NOLOG);
     declareParameter("trjgoal", &trjgoal_);
-    declareParameter("maxacc", &maxacc_);
+    declareParameter("maxacc", &maxacc_, PARAMETER_FLAG_NOLOG);
   }
   
   
@@ -769,8 +769,8 @@ namespace opspace {
       end_effector_id_(-1),
       control_point_(Vector::Zero(3))
   {
-    declareParameter("end_effector_id", &end_effector_id_);
-    declareParameter("control_point", &control_point_);
+    declareParameter("end_effector_id", &end_effector_id_, PARAMETER_FLAG_NOLOG);
+    declareParameter("control_point", &control_point_, PARAMETER_FLAG_NOLOG);
   }
   
   
@@ -867,15 +867,15 @@ namespace opspace {
     : Task(name),
       dt_seconds_(-1)
   {
-    declareParameter("dt_seconds", &dt_seconds_);
-    declareParameter("upper_stop_deg", &upper_stop_deg_);
-    declareParameter("upper_trigger_deg", &upper_trigger_deg_);
-    declareParameter("lower_stop_deg", &lower_stop_deg_);
-    declareParameter("lower_trigger_deg", &lower_trigger_deg_);
-    declareParameter("kp", &kp_);
-    declareParameter("kd", &kd_);
-    declareParameter("maxvel", &maxvel_);
-    declareParameter("maxacc", &maxacc_);
+    declareParameter("dt_seconds", &dt_seconds_, PARAMETER_FLAG_NOLOG);
+    declareParameter("upper_stop_deg", &upper_stop_deg_, PARAMETER_FLAG_NOLOG);
+    declareParameter("upper_trigger_deg", &upper_trigger_deg_, PARAMETER_FLAG_NOLOG);
+    declareParameter("lower_stop_deg", &lower_stop_deg_, PARAMETER_FLAG_NOLOG);
+    declareParameter("lower_trigger_deg", &lower_trigger_deg_, PARAMETER_FLAG_NOLOG);
+    declareParameter("kp", &kp_, PARAMETER_FLAG_NOLOG);
+    declareParameter("kd", &kd_, PARAMETER_FLAG_NOLOG);
+    declareParameter("maxvel", &maxvel_, PARAMETER_FLAG_NOLOG);
+    declareParameter("maxacc", &maxacc_, PARAMETER_FLAG_NOLOG);
   }
   
   
@@ -1083,10 +1083,10 @@ namespace opspace {
       kd_(5),
       maxvel_(0.5)
   {
-    declareParameter("end_effector_id", &end_effector_id_);
-    declareParameter("kp", &kp_);
-    declareParameter("kd", &kd_);
-    declareParameter("maxvel", &maxvel_);
+    declareParameter("end_effector_id", &end_effector_id_, PARAMETER_FLAG_NOLOG);
+    declareParameter("kp", &kp_, PARAMETER_FLAG_NOLOG);
+    declareParameter("kd", &kd_, PARAMETER_FLAG_NOLOG);
+    declareParameter("maxvel", &maxvel_, PARAMETER_FLAG_NOLOG);
   }
   
   

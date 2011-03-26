@@ -44,9 +44,11 @@ namespace opspace {
   Parameter::
   Parameter(std::string const & name,
 	    parameter_type_t type,
+	    parameter_flags_t flags,
 	    ParameterReflection const * checker)
     : name_(name),
       type_(type),
+      flags_(flags),
       checker_(checker)
   {
     switch (type) {
@@ -152,8 +154,11 @@ namespace opspace {
   
   
   IntegerParameter::
-  IntegerParameter(std::string const & name, ParameterReflection const * checker, int * integer)
-    : Parameter(name, PARAMETER_TYPE_INTEGER, checker),
+  IntegerParameter(std::string const & name,
+		   parameter_flags_t flags,
+		   ParameterReflection const * checker,
+		   int * integer)
+    : Parameter(name, PARAMETER_TYPE_INTEGER, flags, checker),
       integer_(integer)
   {
   }
@@ -183,9 +188,10 @@ namespace opspace {
   
   StringParameter::
   StringParameter(std::string const & name,
+		  parameter_flags_t flags,
 		  ParameterReflection const * checker,
 		  std::string * instance)
-    : Parameter(name, PARAMETER_TYPE_STRING, checker),
+    : Parameter(name, PARAMETER_TYPE_STRING, flags, checker),
       string_(instance)
   {
   }
@@ -214,8 +220,11 @@ namespace opspace {
 
 
   RealParameter::
-  RealParameter(std::string const & name, ParameterReflection const * checker, double * real)
-    : Parameter(name, PARAMETER_TYPE_REAL, checker),
+  RealParameter(std::string const & name,
+		parameter_flags_t flags,
+		ParameterReflection const * checker,
+		double * real)
+    : Parameter(name, PARAMETER_TYPE_REAL, flags, checker),
       real_(real)
   {
   }
@@ -244,8 +253,11 @@ namespace opspace {
 
 
   VectorParameter::
-  VectorParameter(std::string const & name, ParameterReflection const * checker, Vector * vector)
-    : Parameter(name, PARAMETER_TYPE_VECTOR, checker),
+  VectorParameter(std::string const & name,
+		  parameter_flags_t flags,
+		  ParameterReflection const * checker,
+		  Vector * vector)
+    : Parameter(name, PARAMETER_TYPE_VECTOR, flags, checker),
       vector_(vector)
   {
   }
@@ -275,8 +287,11 @@ namespace opspace {
 
 
   MatrixParameter::
-  MatrixParameter(std::string const & name, ParameterReflection const * checker, Matrix * matrix)
-    : Parameter(name, PARAMETER_TYPE_MATRIX, checker),
+  MatrixParameter(std::string const & name,
+		  parameter_flags_t flags,
+		  ParameterReflection const * checker,
+		  Matrix * matrix)
+    : Parameter(name, PARAMETER_TYPE_MATRIX, flags, checker),
       matrix_(matrix)
   {
   }
@@ -418,45 +433,45 @@ namespace opspace {
   
   
   IntegerParameter * ParameterReflection::
-  declareParameter(std::string const & name, int * integer)
+  declareParameter(std::string const & name, int * integer, parameter_flags_t flags)
   {
-    IntegerParameter * entry(new IntegerParameter(name, this, integer));
+    IntegerParameter * entry(new IntegerParameter(name, flags, this, integer));
     parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
   }
     
   
   StringParameter * ParameterReflection::
-  declareParameter(std::string const & name, std::string * instance)
+  declareParameter(std::string const & name, std::string * instance, parameter_flags_t flags)
   {
-    StringParameter * entry(new StringParameter(name, this, instance));
+    StringParameter * entry(new StringParameter(name, flags, this, instance));
     parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
   }
   
   
   RealParameter * ParameterReflection::
-  declareParameter(std::string const & name, double * real)
+  declareParameter(std::string const & name, double * real, parameter_flags_t flags)
   {
-    RealParameter * entry(new RealParameter(name, this, real));
+    RealParameter * entry(new RealParameter(name, flags, this, real));
     parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
   }
   
   
   VectorParameter * ParameterReflection::
-  declareParameter(std::string const & name, Vector * vector)
+  declareParameter(std::string const & name, Vector * vector, parameter_flags_t flags)
   {
-    VectorParameter * entry(new VectorParameter(name, this, vector));
+    VectorParameter * entry(new VectorParameter(name, flags, this, vector));
     parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
   }
   
   
   MatrixParameter * ParameterReflection::
-  declareParameter(std::string const & name, Matrix * matrix)
+  declareParameter(std::string const & name, Matrix * matrix, parameter_flags_t flags)
   {
-    MatrixParameter * entry(new MatrixParameter(name, this, matrix));
+    MatrixParameter * entry(new MatrixParameter(name, flags, this, matrix));
     parameter_lookup_.insert(std::make_pair(name, entry));
     return entry;
   }
@@ -468,6 +483,9 @@ namespace opspace {
   {
     parameter_t const * pp(dynamic_cast<parameter_t const *>(parameter));
     if (pp) {
+      if (pp->flags_ & PARAMETER_FLAG_NOLOG) {
+	return true;
+      }
       collection.push_back(ParameterLog::log_s<parameter_t, storage_t>(pp));
       return true;
     }

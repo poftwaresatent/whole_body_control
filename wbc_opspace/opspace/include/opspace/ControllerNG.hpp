@@ -84,6 +84,7 @@ namespace opspace {
     
     std::vector<boost::shared_ptr<ParameterLog> > log_;
     int loglen_;		// <= 0 means disabled
+    int logsubsample_;
     std::string logprefix_;
     
     // -1 means off, 0 means init, -2 means maybeWriteLogFiles() will

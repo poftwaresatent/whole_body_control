@@ -60,6 +60,12 @@ namespace opspace {
     PARAMETER_TYPE_VECTOR,	//!< mapped to jspace::Vector
     PARAMETER_TYPE_MATRIX	//!< mapped to jspace::Matrix
   } parameter_type_t;
+
+
+  typedef enum {
+    PARAMETER_FLAG_DEFAULT = 0,
+    PARAMETER_FLAG_NOLOG = 1
+  } parameter_flags_t;
   
   
   class ParameterReflection;
@@ -81,10 +87,12 @@ namespace opspace {
   public:
     std::string const name_;
     parameter_type_t const type_;
+    parameter_flags_t const flags_;
     ParameterReflection const * checker_;
     
     Parameter(std::string const & name,
 	      parameter_type_t type,
+	      parameter_flags_t flags,
 	      ParameterReflection const * checker);
     
     virtual ~Parameter();
@@ -109,6 +117,7 @@ namespace opspace {
   class IntegerParameter : public Parameter {
   public:
     IntegerParameter(std::string const & name,
+		     parameter_flags_t flags,
 		     ParameterReflection const * checker,
 		     int * instance);
     virtual int const * getInteger() const { return integer_; }
@@ -123,6 +132,7 @@ namespace opspace {
   class StringParameter : public Parameter {
   public:
     StringParameter(std::string const & name,
+		    parameter_flags_t flags,
 		    ParameterReflection const * checker,
 		    std::string * instance);
     virtual std::string const * getString() const { return string_; }
@@ -137,6 +147,7 @@ namespace opspace {
   class RealParameter : public Parameter {
   public:
     RealParameter(std::string const & name,
+		  parameter_flags_t flags,
 		  ParameterReflection const * checker,
 		  double * real);
     virtual double const * getReal() const { return real_; }
@@ -150,7 +161,10 @@ namespace opspace {
   /** Implementation for vector parameters: a vector of double values. */
   class VectorParameter : public Parameter {
   public:
-    VectorParameter(std::string const & name, ParameterReflection const * checker, Vector * vector);
+    VectorParameter(std::string const & name,
+		    parameter_flags_t flags,
+		    ParameterReflection const * checker,
+		    Vector * vector);
     virtual Vector const * getVector() const { return vector_; }
     virtual Status set(Vector const & vector);
     virtual void dump(std::ostream & os, std::string const & prefix) const;
@@ -162,7 +176,10 @@ namespace opspace {
   /** Implementation for matrix parameters: a matrix of double values. */
   class MatrixParameter : public Parameter {
   public:
-    MatrixParameter(std::string const & name, ParameterReflection const * checker, Matrix * matrix);
+    MatrixParameter(std::string const & name,
+		    parameter_flags_t flags,
+		    ParameterReflection const * checker,
+		    Matrix * matrix);
     virtual Matrix const * getMatrix() const { return matrix_; }
     virtual Status set(Matrix const & matrix);
     virtual void dump(std::ostream & os, std::string const & prefix) const;
@@ -249,19 +266,29 @@ namespace opspace {
        method will call Task::check() before actually writing a new
        value into the pointer provided here at declaration time.
     */
-    IntegerParameter * declareParameter(std::string const & name, int * integer);
+    IntegerParameter * declareParameter(std::string const & name,
+					int * integer,
+					parameter_flags_t flags = PARAMETER_FLAG_DEFAULT);
     
     /** See also declareParameter(std::string const &, int *)... */
-    StringParameter * declareParameter(std::string const & name, std::string * instance);
+    StringParameter * declareParameter(std::string const & name,
+				       std::string * instance,
+				       parameter_flags_t flags = PARAMETER_FLAG_DEFAULT);
     
     /** See also declareParameter(std::string const &, int *)... */
-    RealParameter * declareParameter(std::string const & name, double * real);
+    RealParameter * declareParameter(std::string const & name,
+				     double * real,
+				     parameter_flags_t flags = PARAMETER_FLAG_DEFAULT);
 
     /** See also declareParameter(std::string const &, int *)... */
-    VectorParameter * declareParameter(std::string const & name, Vector * vector);
+    VectorParameter * declareParameter(std::string const & name,
+				       Vector * vector,
+				       parameter_flags_t flags = PARAMETER_FLAG_DEFAULT);
 
     /** See also declareParameter(std::string const &, int *)... */
-    MatrixParameter * declareParameter(std::string const & name, Matrix * matrix);
+    MatrixParameter * declareParameter(std::string const & name,
+				       Matrix * matrix,
+				       parameter_flags_t flags = PARAMETER_FLAG_DEFAULT);
     
   private:
     parameter_lookup_t parameter_lookup_;
