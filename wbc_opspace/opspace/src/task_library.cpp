@@ -1133,9 +1133,9 @@ namespace opspace {
     actual_z_ = ee_transform.linear().block(0, 2, 3, 1);
 
     actual_.resize(9);
-    actual_.block(0, 0, 3, 1) = goal_x_;
-    actual_.block(3, 0, 3, 1) = goal_y_;
-    actual_.block(6, 0, 3, 1) = goal_z_;
+    actual_.block(0, 0, 3, 1) = actual_x_;
+    actual_.block(3, 0, 3, 1) = actual_y_;
+    actual_.block(6, 0, 3, 1) = actual_z_;
     
     velocity_ = jacobian_ * model.getState().velocity_;
     
