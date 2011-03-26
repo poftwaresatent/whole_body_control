@@ -519,8 +519,9 @@ namespace opspace {
   
   
   void ParameterLog::
-  update()
+  update(long long timestamp_)
   {
+    timestamp.push_back(timestamp_);
     for (size_t ii(0); ii < intlog.size(); ++ii) {
       intlog[ii].log.push_back(*intlog[ii].parameter->getInteger());
     }
@@ -565,7 +566,7 @@ namespace opspace {
 	       << "# type: integer\n"
 	       << "# size: " << nn << "\n";
 	    for (size_t jj(0); jj < nn; ++jj) {
-	      os << log.log[jj] << "\n";
+	      os << timestamp[jj] << "   " << log.log[jj] << "\n";
 	    }
 	  }
 	}
@@ -594,7 +595,7 @@ namespace opspace {
 	       << "# type: string\n"
 	       << "# size: " << nn << "\n";
 	    for (size_t jj(0); jj < nn; ++jj) {
-	      os << log.log[jj] << "\n";
+	      os << timestamp[jj] << "   " << log.log[jj] << "\n";
 	    }
 	  }
 	}
@@ -623,7 +624,7 @@ namespace opspace {
 	       << "# type: real\n"
 	       << "# size: " << nn << "\n";
 	    for (size_t jj(0); jj < nn; ++jj) {
-	      os << log.log[jj] << "\n";
+	      os << timestamp[jj] << "   " << log.log[jj] << "\n";
 	    }
 	  }
 	}
@@ -652,6 +653,7 @@ namespace opspace {
 	       << "# type: vector\n"
 	       << "# size: " << nn << "\n";
 	    for (size_t jj(0); jj < nn; ++jj) {
+	      os << timestamp[jj] << "   ";
 	      jspace::pretty_print(log.log[jj], os, "", "");
 	    }
 	  }
@@ -680,10 +682,10 @@ namespace opspace {
 	       << "# parameter: " << log.parameter->name_ << "\n"
 	       << "# type: matrix\n"
 	       << "# size: " << nn << "\n"
-	       << "# line format: nrows ncols row_0 row_1 ...\n";
+	       << "# line format: tstamp nrows ncols row_0 row_1 ...\n";
 	    for (size_t jj(0); jj < nn; ++jj) {
 	      Matrix const & mx(log.log[jj]);
-	      os << mx.rows() << "  " << mx.cols();
+	      os << timestamp[jj] << "   " << mx.rows() << "  " << mx.cols();
 	      for (int kk(0); kk < mx.rows(); ++kk) {
 		os << "   ";
 		for (int ll(0); ll < mx.cols(); ++ll) {

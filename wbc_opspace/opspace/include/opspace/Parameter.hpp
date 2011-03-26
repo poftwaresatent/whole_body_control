@@ -307,10 +307,11 @@ namespace opspace {
     
     ParameterLog(std::string const & name, parameter_lookup_t const & parameter_lookup);
     
-    void update();
+    void update(long long timestamp);
     void writeFiles(std::string const & prefix, std::ostream * progress) const;
     
     std::string const name;
+    std::vector<long long> timestamp;
     std::vector<log_s<IntegerParameter, int> > intlog;
     std::vector<log_s<StringParameter, std::string> > strlog;
     std::vector<log_s<RealParameter, double> > reallog;

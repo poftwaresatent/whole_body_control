@@ -71,7 +71,7 @@ namespace opspace {
     
     inline Vector const & getCommand() const { return gamma_; }
     
-    void maybeWriteLogFiles();
+    void qhlog(Behavior & behavior, long long timestamp);
     
     
   protected:

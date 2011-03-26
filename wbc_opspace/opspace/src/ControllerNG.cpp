@@ -52,7 +52,7 @@ namespace opspace {
     : name_(name),
       fallback_(false),
       loglen_(-1),
-      logsubsample_(10),
+      logsubsample_(-1),
       logprefix_(""),
       logcount_(-1)
   {
@@ -171,28 +171,6 @@ namespace opspace {
       return computeFallback(model, true, gamma);
     }
     
-    if (0 == logcount_) {
-      // initialize logging
-      log_.clear();
-      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("ctrl_" + name_,
-							       getParameterTable())));
-      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("skill_" + behavior.getName(),
-							       behavior.getParameterTable())));
-      for (size_t ii(0); ii < tasks->size(); ++ii) {
-	std::ostringstream nm;
-	nm << "task_" << ii << "_" << (*tasks)[ii]->getName();
-	log_.push_back(shared_ptr<ParameterLog>(new ParameterLog(nm.str(),
-								 (*tasks)[ii]->getParameterTable())));
-      }
-    }
-    else if ((0 < loglen_) && (loglen_ == logcount_)) {
-      logcount_ = -2;
-    }
-    
-    if (0 <= logcount_) {
-      ++logcount_;
-    }
-    
     //////////////////////////////////////////////////
     // the magic nullspace sauce...
     
@@ -281,14 +259,6 @@ namespace opspace {
     jpos_ = model.getState().position_;
     jvel_ = model.getState().velocity_;
     gamma_ = gamma;
-    if (0 < logcount_) {
-      if ((logsubsample_ <= 0)
-	  || (0 == (logcount_ % logsubsample_))) {
-	for (size_t ii(0); ii < log_.size(); ++ii) {
-	  log_[ii]->update();
-	}
-      }
-    }
     
     return st;
   }
@@ -302,7 +272,8 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "Singular values of tasks in ControllerNG: `" << name_ << "'\n";
+    os << prefix << "log count: " << logcount_ << "\n"
+       << prefix << "singular values\n";
     for (size_t ii(0); ii < sv_lstar_.size(); ++ii) {
       os << prefix << "  J* " << ii << "\n";
       pretty_print(sv_jstar_[ii], os, "", prefix + "    ");
@@ -317,8 +288,41 @@ namespace opspace {
   
   
   void ControllerNG::
-  maybeWriteLogFiles()
+  qhlog(Behavior & behavior, long long timestamp)
   {
+    if (0 == logcount_) {
+      // initialize logging
+      log_.clear();
+      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("ctrl_" + name_,
+							       getParameterTable())));
+      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("skill_" + behavior.getName(),
+							       behavior.getParameterTable())));
+      Behavior::task_table_t const * tasks(behavior.getTaskTable());
+      if (tasks) {
+	for (size_t ii(0); ii < tasks->size(); ++ii) {
+	  std::ostringstream nm;
+	  nm << "task_" << ii << "_" << (*tasks)[ii]->getName();
+	  log_.push_back(shared_ptr<ParameterLog>(new ParameterLog(nm.str(),
+								   (*tasks)[ii]->getParameterTable())));
+	}
+      }
+    }
+    else if ((0 < loglen_) && (loglen_ == logcount_)) {
+      logcount_ = -2;
+    }
+    if (0 <= logcount_) {
+      ++logcount_;
+    }
+    
+    if (0 < logcount_) {
+      if ((logsubsample_ <= 0)
+	  || (0 == (logcount_ % logsubsample_))) {
+	for (size_t ii(0); ii < log_.size(); ++ii) {
+	  log_[ii]->update(timestamp);
+	}
+      }
+    }
+    
     if (-2 == logcount_) {
       for (size_t ii(0); ii < log_.size(); ++ii) {
 	log_[ii]->writeFiles(logprefix_, &std::cerr);
