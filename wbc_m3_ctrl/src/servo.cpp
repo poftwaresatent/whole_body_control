@@ -223,6 +223,9 @@ namespace {
   {
   public:
     shared_ptr<Behavior> skill;    
+    bool shutmedownlaterplease;
+    
+    Servo() : shutmedownlaterplease(false) {}
     
     virtual int init(jspace::State const & state) {
       if (skill) {
@@ -273,6 +276,10 @@ namespace {
 	warnx("Servo::update(): controller->computeCommand() failed: %s", status.errstr.c_str());
 	return -2;
       }
+
+      if (shutmedownlaterplease) {
+	fprintf(stderr, "please shut me down once logs are written etc\n");
+      }
       
       return 0;
     }
@@ -289,10 +296,8 @@ namespace {
 			 long long desired_ns,
 			 long long actual_ns)
     {
-      if (iteration > 3) {
-	warnx("Servo::slowdown(): I'm afraid I can't let you do that");
-	return -1;
-	
+      if (iteration  > 1000) {
+	shutmedownlaterplease = true;
       }
       return 0;
     }
@@ -333,14 +338,16 @@ int main(int argc, char ** argv)
   }
   
   warnx("started servo RT thread");
-  ros::Time t0(ros::Time::now());
+  ros::Time dbg_t0(ros::Time::now());
+  ros::Time dump_t0(ros::Time::now());
   ros::Duration dbg_dt(0.1);
+  ros::Duration dump_dt(0.1);
   
   while (ros::ok()) {
+    ros::Time t1(ros::Time::now());
     if (verbose) {
-      ros::Time t1(ros::Time::now());
-      if (t1 - t0 > dbg_dt) {
-	t0 = t1;
+      if (t1 - dbg_t0 > dbg_dt) {
+	dbg_t0 = t1;
 	servo.skill->dbg(cout, "\n\n**************************************************", "");
 	controller->dbg(cout, "--------------------------------------------------", "");
 	cout << "--------------------------------------------------\n";
@@ -352,6 +359,11 @@ int main(int argc, char ** argv)
 	model->getGravity(gravity);
 	jspace::pretty_print(gravity, cout, "gravity", "  ");
       }
+    }
+    if (t1 - dump_t0 > dump_dt) {
+      dump_t0 = t1;
+      cout << "maybeWriteLogFiles()...\n";
+      controller->maybeWriteLogFiles();
     }
     ros::spinOnce();
     usleep(10000);		// 100Hz-ish
