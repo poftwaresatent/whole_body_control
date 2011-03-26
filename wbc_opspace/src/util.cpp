@@ -66,9 +66,6 @@ namespace wbc_opspace {
     if ( ! factory) {
       throw runtime_error("null factory");
     }
-    if ( ! controller) {
-      throw runtime_error("null controller");
-    }
     factory_ = factory;
     controller_ = controller;
     set_param_ = node.advertiseService("set_param",
@@ -140,6 +137,10 @@ namespace wbc_opspace {
     }
     
     if ("servo" == com_type) {
+      if ( ! controller_) {
+	errstr = "no controller registered";
+	return 0;
+      }
       // ignore com_name for now...
       errstr = "trying servo parameters...";
       return controller_->lookupParameter(param_name);
@@ -333,7 +334,7 @@ namespace wbc_opspace {
       return true;
     }
     
-    {
+    if (controller_) {
       parameter_lookup_t const & params(controller_->getParameterTable());
       for (parameter_lookup_t::const_iterator ip(params.begin()); ip != params.end(); ++ip) {
 	OpspaceParameter msg;

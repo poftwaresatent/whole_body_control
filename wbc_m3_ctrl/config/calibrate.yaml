@@ -3,12 +3,12 @@
     name: pid
     sigma_threshold: 0.0001
     dt_seconds: 0.002
-    kp: [ 50.0 ]
-    ki: [  1.0 ]
-    kd: [  5.0 ]
+    kp: [ 10.0 ]
+    ki: [  0.0 ]
+    kd: [  0.0 ]
     maxvel: [ 10.0 ]
-    limitpos: [ 0.17 ]
-    limitvel: [ 0.17 ]
+    limitpos: [ 0.5 ]
+    limitvel: [ 0.2 ]
 
 - behaviors:
   - type: opspace::GenericBehavior
