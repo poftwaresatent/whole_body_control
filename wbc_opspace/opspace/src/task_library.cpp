@@ -1087,6 +1087,7 @@ namespace opspace {
     declareParameter("kp", &kp_, PARAMETER_FLAG_NOLOG);
     declareParameter("kd", &kd_, PARAMETER_FLAG_NOLOG);
     declareParameter("maxvel", &maxvel_, PARAMETER_FLAG_NOLOG);
+    declareParameter("eepos", &eepos_);
   }
   
   
@@ -1118,10 +1119,11 @@ namespace opspace {
     jspace::Transform ee_transform;
     model.computeGlobalFrame(ee_node, Vector::Zero(3), ee_transform);
     Matrix Jfull;
+    eepos_ = ee_transform.translation();
     if ( ! model.computeJacobian(ee_node,
-				 ee_transform.translation()[0],
-				 ee_transform.translation()[1],
-				 ee_transform.translation()[2],
+				 eepos_[0],
+				 eepos_[1],
+				 eepos_[2],
 				 Jfull)) {
       return 0;
     }

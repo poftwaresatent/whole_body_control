@@ -439,6 +439,7 @@ namespace opspace {
     double kp_;
     double kd_;
     double maxvel_;
+    Vector eepos_;		// just for logging...
   };
 
   
