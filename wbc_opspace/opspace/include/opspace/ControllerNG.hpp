@@ -77,8 +77,7 @@ namespace opspace {
   protected:
     std::string const name_;
     boost::shared_ptr<Task> fallback_task_;
-    std::vector<Vector> sv_lstar_; // stored only for dbg()
-    std::vector<Vector> sv_jstar_; // stored only for dbg()
+    ////    std::vector<Vector> sv_lstar_; // stored only for dbg()
     bool fallback_;
     std::string fallback_reason_;
     
@@ -86,6 +85,7 @@ namespace opspace {
     int loglen_;		// <= 0 means disabled
     int logsubsample_;
     std::string logprefix_;
+    std::vector<Vector> sv_jstar_;
     
     // -1 means off, 0 means init, -2 means maybeWriteLogFiles() will
     // actually write them (this gets set when ==loglen_)

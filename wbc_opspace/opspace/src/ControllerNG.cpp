@@ -188,8 +188,25 @@ namespace opspace {
     Matrix nstar(Matrix::Identity(ndof, ndof));
     int first_active_task_index(0); // because tasks can have empty Jacobian
     
-    sv_lstar_.resize(tasks->size());
-    sv_jstar_.resize(tasks->size());
+    ////    sv_lstar_.resize(tasks->size());
+    if (sv_jstar_.empty()) {
+      //##################################################
+      //##################################################
+      //##################################################
+      //##################################################
+      // quick hack, will break as soon as we switch behavior at
+      // runtime, but there's no duplicate-detection behind
+      // declareParameter() so it's a bit tricky to declare them on
+      // the fly...
+      //##################################################
+      //##################################################
+      //##################################################
+      //##################################################
+      sv_jstar_.resize(tasks->size());
+      for (size_t ii(0); ii < tasks->size(); ++ii) {
+	declareParameter("sv_jstar-" + (*tasks)[ii]->getName(), &(sv_jstar_[ii]));
+      }
+    }
     
     for (size_t ii(0); ii < tasks->size(); ++ii) {
       
@@ -199,7 +216,7 @@ namespace opspace {
       // skip inactive tasks at beginning of table
       if ((0 == jac.rows()) || (0 == jac.cols())) {
 	++first_active_task_index;
-	sv_lstar_[ii].resize(0);
+	////	sv_lstar_[ii].resize(0);
 	sv_jstar_[ii].resize(0);
 	continue;
       }
@@ -224,7 +241,7 @@ namespace opspace {
       Matrix lstar;
       pseudoInverse(jstar * ainv * jstar.transpose(),
 		    task->getSigmaThreshold(),
-		    lstar, &sv_lstar_[ii]);
+		    lstar, 0);////&sv_lstar_[ii]);
       Vector pstar;
       pstar = lstar * jstar * ainv * grav; // same would go for coriolis-centrifugal...
       
@@ -273,13 +290,8 @@ namespace opspace {
       os << title << "\n";
     }
     os << prefix << "log count: " << logcount_ << "\n"
-       << prefix << "singular values\n";
-    for (size_t ii(0); ii < sv_lstar_.size(); ++ii) {
-      os << prefix << "  J* " << ii << "\n";
-      pretty_print(sv_jstar_[ii], os, "", prefix + "    ");
-      os << prefix << "  L* " << ii << "\n";
-      pretty_print(sv_lstar_[ii], os, "", prefix + "    ");
-    }
+       << prefix << "parameters\n";
+    dump(os, "", prefix + "  ");
     if (fallback_) {
       os << prefix << "# FALLBACK MODE ENABLED ##########################\n"
 	 << prefix << "# reason: " << fallback_reason_ << "\n";
