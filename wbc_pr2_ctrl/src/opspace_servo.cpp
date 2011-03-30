@@ -354,7 +354,7 @@ int main(int argc, char*argv[])
     }
     
   }
-  
+
   for (size_t ii(10); ros::ok() && (ii > 0); --ii) {
     if (10 == ii) {
       cerr << "waiting 10 seconds for node shutdown...";
