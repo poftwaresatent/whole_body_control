@@ -71,15 +71,23 @@ static char const * opspace_fallback_str =
   "      posture: posture_instance\n";
 
 
-static jspace::State jspace_state;
+static jspace::State pump_state;
+static jspace::State servo_state;
+static vector<int> pump_to_servo_id;
+
+static MQRobotAPI robot(true);
+
 static scoped_ptr<jspace::Model> jspace_model;
-static size_t ndof;
+static size_t pump_ndof;
+static size_t servo_ndof;
 static shared_ptr<opspace::Factory> factory;
 static shared_ptr<ControllerNG> controller;
 static wbc_opspace::ParamCallbacks param_callbacks;
 
 // I think this needs to stick around because otherwise it deletes the TAO nodes
 static scoped_ptr<jspace::ros::Model> jspace_ros_model;
+
+static bool update_model_from_pump();
 
 
 int main(int argc, char*argv[])
@@ -153,9 +161,7 @@ int main(int argc, char*argv[])
     pump_info = srv.response;
   }
   
-  static bool const unlink_mqueue(true);
-  MQRobotAPI robot(unlink_mqueue);
-  size_t const pump_ndof(pump_info.joint_name.size());
+  pump_ndof = pump_info.joint_name.size();
   ROS_INFO ("initializing MQRobotAPI: %zu DOF  wr: %s  rd: %s",
 	    pump_ndof,
 	    pump_info.mq_name_servo_to_pump.c_str(), 
@@ -192,7 +198,7 @@ int main(int argc, char*argv[])
     exit(EXIT_FAILURE);
   }
   
-  ndof = jspace_model->getNDOF();
+  servo_ndof = jspace_model->getNDOF();
   
   XmlRpc::XmlRpcValue gc_links_value;
   std::string const gc_links_param_name("/wbc_pr2_ctrl/gravity_compensated_links");
@@ -224,8 +230,26 @@ int main(int argc, char*argv[])
     }
   }
   
-  ROS_INFO ("initializing joint state with %zu DOF", ndof);
-  jspace_state.init(ndof, ndof, 0);
+  ROS_INFO ("initializing joint states with %zu DOF (pump) and %zu DOF (servo) and mapping between them",
+	    pump_ndof, servo_ndof);
+  pump_state.init(pump_ndof, pump_ndof, pump_ndof);
+  servo_state.init(servo_ndof, servo_ndof, servo_ndof);
+  pump_to_servo_id.clear();
+  for (size_t ii(0); ii < pump_ndof; ++ii) {
+    std::string const & jointname(pump_info.joint_name[ii]);
+    taoDNode const * node(jspace_model->getNodeByJointName(jointname));
+    if ( ! node) {
+      ROS_ERROR ("pumped joint `%s' is not in jspace::Model", jointname.c_str());
+      errx (EXIT_FAILURE, "pumped joint `%s' is not in jspace::Model", jointname.c_str());
+    }
+    int const id(node->getID());
+    if (0 > id) {
+      ROS_ERROR ("pumped joint `%s' is root node of jspace::Model", jointname.c_str());
+      errx (EXIT_FAILURE, "pumped joint `%s' is root node of jspace::Model", jointname.c_str());
+    }
+    ROS_INFO ("  pump ID: %zu  servo ID: %d  joint %s", ii, id, jointname.c_str());
+    pump_to_servo_id.push_back(id);
+  }
   
   ROS_INFO ("parsing opspace tasks and behaviors");
   shared_ptr<Behavior> behavior; // for now, just use the first one we encounter
@@ -258,11 +282,10 @@ int main(int argc, char*argv[])
   }
   
   ROS_INFO ("initializing state, model, tasks, behaviors, ...");
-  if ( ! robot.readState(jspace_state)) {
-    ROS_ERROR ("robot.readState() failed");
+  if ( ! update_model_from_pump()) {
+    ROS_ERROR ("update_model_from_pump() failed");
     exit(EXIT_FAILURE);
   }
-  jspace_model->update(jspace_state);
   controller.reset(new ControllerNG("opspace_servo"));
   jspace::Status status;
   status = controller->init(*jspace_model);
@@ -286,13 +309,14 @@ int main(int argc, char*argv[])
   }
   
   ROS_INFO ("entering control loop");
-  jspace::Vector tau(ndof);
-  ros::Time t0(ros::Time::now());
-  ros::Duration dbg_dt(0.2);
+  jspace::Vector servo_tau(jspace::Vector::Zero(servo_ndof));
+  jspace::Vector pump_tau(jspace::Vector::Zero(pump_ndof));
+  ros::WallTime t0(ros::WallTime::now());
+  ros::WallDuration dbg_dt(0.2);
   while (ros::ok()) {
     
     // Compute torque command.
-    status = controller->computeCommand(*jspace_model, *behavior, tau);
+    status = controller->computeCommand(*jspace_model, *behavior, servo_tau);
     if ( ! status) {
       ROS_ERROR ("controller->computeCommand() failed: %s", status.errstr.c_str());
       ros::shutdown();
@@ -300,7 +324,10 @@ int main(int argc, char*argv[])
     }
     
     // Send it to the robot.
-    status = robot.writeCommand(tau);
+    for (size_t ii(0); ii < pump_ndof; ++ii) {
+      pump_tau[ii] = servo_tau[pump_to_servo_id[ii]];
+    }
+    status = robot.writeCommand(pump_tau);
     if ( ! status) {
       ROS_ERROR ("robot.writeCommand() failed: %s", status.errstr.c_str());
       ros::shutdown();
@@ -308,7 +335,7 @@ int main(int argc, char*argv[])
     }
     
     if (verbose) {
-      ros::Time t1(ros::Time::now());
+      ros::WallTime t1(ros::WallTime::now());
       if (t1 - t0 > dbg_dt) {
 	t0 = t1;
 	behavior->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
@@ -320,12 +347,11 @@ int main(int argc, char*argv[])
     ros::spinOnce();
     
     // Read the robot state and update the model
-    if ( ! robot.readState(jspace_state)) {
-      ROS_ERROR ("robot.readState() failed");
+    if ( ! update_model_from_pump()) {
+      ROS_ERROR ("update_model_from_pump() failed");
       ros::shutdown();
       break;
     }
-    jspace_model->update(jspace_state);
     
   }
   
@@ -342,4 +368,39 @@ int main(int argc, char*argv[])
   else {
     cerr << "done\n";
   }
+}
+
+
+bool update_model_from_pump()
+{  
+  if ( ! robot.readState(pump_state)) {
+    ROS_ERROR ("update_model_from_pump(): robot.readState() failed");
+    return false;
+  }
+  if ((pump_to_servo_id.size() != pump_state.position_.size())
+      || (pump_to_servo_id.size() != pump_state.velocity_.size())
+      || (pump_to_servo_id.size() != pump_state.force_.size())) {
+    ROS_ERROR ("update_model_from_pump(): pump_to_servo_id size %zu mismatch: pos %zu  vel %zu  force %zu",
+	       pump_to_servo_id.size(),
+	       pump_state.position_.size(),
+	       pump_state.velocity_.size(),
+	       pump_state.force_.size());
+    return false;
+  }
+  for (size_t ii(0); ii < pump_to_servo_id.size(); ++ii) {
+    int const servo_idx(pump_to_servo_id[ii]);
+    if (0 > servo_idx) {
+      ROS_ERROR ("update_model_from_pump(): pump idx %zu  servo idx %d < 0", ii, servo_idx);
+      return false;
+    }
+    if (servo_ndof <= servo_idx) {
+      ROS_ERROR ("update_model_from_pump(): pump idx %zu  servo idx %d >= NDOF of %zu", ii, servo_idx, servo_ndof);
+      return false;
+    }
+    servo_state.position_[servo_idx] = pump_state.position_[ii];
+    servo_state.velocity_[servo_idx] = pump_state.velocity_[ii];
+    servo_state.force_[servo_idx] = pump_state.force_[ii];
+  }
+  jspace_model->update(servo_state);
+  return true;
 }
