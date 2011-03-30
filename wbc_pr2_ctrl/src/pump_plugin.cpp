@@ -28,6 +28,7 @@
 #include <pr2_controller_interface/controller.h>
 #include <wbc_pr2_ctrl/PumpDebugState.h>
 #include <wbc_pr2_ctrl/PumpDebugCommand.h>
+#include <wbc_pr2_ctrl/PumpGetInfo.h>
 #include <pluginlib/class_list_macros.h>
 #include <jspace/tao_util.hpp>
 #include <wbc_urdf/Model.hpp>
@@ -61,6 +62,9 @@ public:
   virtual void update(void);
   virtual bool init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle &nn);
   
+  bool info_srv_cb(wbc_pr2_ctrl::PumpGetInfo::Request & request,
+		   wbc_pr2_ctrl::PumpGetInfo::Response & response);
+  
   std::vector<pr2_mechanism_model::JointState *> controlled_joint_;
   jspace::ros::Model model_;
   size_t ndof_;
@@ -75,8 +79,10 @@ public:
   
   ros::Publisher debug_state_pub_;
   ros::Publisher debug_command_pub_;
+  ros::ServiceServer info_srv_;
   wbc_pr2_ctrl::PumpDebugState debug_state_msg_;
   wbc_pr2_ctrl::PumpDebugCommand debug_command_msg_;
+  wbc_pr2_ctrl::PumpGetInfo::Response info_msg_;
   ros::WallTime debug_publish_time_;
   ros::WallDuration debug_publish_delay_;
 };
@@ -277,19 +283,26 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
     model_.initFromURDF(nn, robot->model_->robot_model_, n_tao_roots);
     
     controlled_joint_.clear();	// paranoid
+    info_msg_.joint_name.clear(); // dito
     for (size_t ii(0); ii < model_.tao_trees_[0]->info.size(); ++ii) {
-      pr2_mechanism_model::JointState * joint(robot->getJointState(model_.tao_trees_[0]->info[ii].joint_name));
+      std::string const & jointname(model_.tao_trees_[0]->info[ii].joint_name);
+      pr2_mechanism_model::JointState * joint(robot->getJointState(jointname));
       if ( ! joint) { // "never" happens because this is where the joint names come from in the first place...
-	throw runtime_error("weird, no joint called `" + model_.tao_trees_[0]->info[ii].joint_name
-			    + "' in the pr2_mechanism_model???");
+	throw runtime_error("weird, no joint called `" + jointname + "' in the pr2_mechanism_model???");
       }
+      info_msg_.joint_name.push_back(jointname);
       controlled_joint_.push_back(joint);
     }
     
     static bool const unlink_mqueue(true);
     ndof_ = controlled_joint_.size();
+    info_msg_.mq_name_servo_to_pump = "wbc_pr2_ctrl_s2p";
+    info_msg_.mq_name_pump_to_servo = "wbc_pr2_ctrl_p2s";
     mq_robot_api_ = new wbc_pr2_ctrl::MQRobotAPI(unlink_mqueue);
-    mq_robot_api_->init(mq_blocking_, "wbc_pr2_ctrl_r2s", "wbc_pr2_ctrl_s2r", ndof_, ndof_, ndof_, ndof_);
+    mq_robot_api_->init(mq_blocking_,
+			info_msg_.mq_name_pump_to_servo,
+			info_msg_.mq_name_servo_to_pump,
+			ndof_, ndof_, ndof_, ndof_);
     ready_to_send_ = true;
     
     command_history_ = new double[N_COMMAND_HISTORY * ndof_];
@@ -307,7 +320,17 @@ init(pr2_mechanism_model::RobotState * robot, ros::NodeHandle & nn)
   debug_state_pub_ = nn.advertise<wbc_pr2_ctrl::PumpDebugState>("debug_state", 100);
   debug_command_pub_ = nn.advertise<wbc_pr2_ctrl::PumpDebugCommand>("debug_command", 100);
   debug_publish_time_ = ros::WallTime::now() + debug_publish_delay_;
+  info_srv_ = nn.advertiseService("get_info", &PumpPlugin::info_srv_cb, this);
   
+  return true;
+}
+
+
+bool PumpPlugin::
+info_srv_cb(wbc_pr2_ctrl::PumpGetInfo::Request & request,
+	    wbc_pr2_ctrl::PumpGetInfo::Response & response)
+{
+  response = info_msg_;
   return true;
 }
 

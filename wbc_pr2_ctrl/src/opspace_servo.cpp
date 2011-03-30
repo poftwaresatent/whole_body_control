@@ -23,13 +23,17 @@
 
 #include <ros/ros.h>
 #include <wbc_pr2_ctrl/mq_robot_api.h>
+#include <wbc_pr2_ctrl/PumpGetInfo.h>
 #include <wbc_urdf/Model.hpp>
 #include <jspace/Model.hpp>
+#include <jspace/test/sai_util.hpp>
 #include <tao/dynamics/taoNode.h>
 #include <opspace/Behavior.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/ControllerNG.hpp>
 #include <wbc_opspace/util.h>
+#include <XmlRpcValue.h>
+#include <XmlRpcException.h>
 #include <boost/scoped_ptr.hpp>
 #include <boost/shared_ptr.hpp>
 #include <map>
@@ -62,18 +66,20 @@ static char const * opspace_fallback_str =
   "- behaviors:\n"
   "  - type: opspace::TPBehavior\n"
   "    name: tpb\n"
-  "    default:\n"
+  "    slots:\n"
   "      eepos: eepos_instance\n"
   "      posture: posture_instance\n";
 
 
 static jspace::State jspace_state;
-static scoped_ptr<jspace::ros::Model> jspace_ros_model;
 static scoped_ptr<jspace::Model> jspace_model;
 static size_t ndof;
 static shared_ptr<opspace::Factory> factory;
 static shared_ptr<ControllerNG> controller;
 static wbc_opspace::ParamCallbacks param_callbacks;
+
+// I think this needs to stick around because otherwise it deletes the TAO nodes
+static scoped_ptr<jspace::ros::Model> jspace_ros_model;
 
 
 int main(int argc, char*argv[])
@@ -89,6 +95,7 @@ int main(int argc, char*argv[])
   // parse options
   
   std::string opspace_filename("");
+  std::string tao_filename("");
   bool verbose(false);
   
   for (int ii(1); ii < argc; ++ii) {
@@ -106,6 +113,14 @@ int main(int argc, char*argv[])
 	opspace_filename = argv[ii];
  	break;
 	
+      case 't':
+ 	++ii;
+ 	if (ii >= argc) {
+	  errx(EXIT_FAILURE, "-t requires parameter");
+ 	}
+	tao_filename = argv[ii];
+ 	break;
+	
       case 'v':
 	verbose = true;
  	break;
@@ -115,48 +130,103 @@ int main(int argc, char*argv[])
       }
   }
   
-  static bool const unlink_mqueue(true);
-  MQRobotAPI robot(unlink_mqueue);
+  //////////////////////////////////////////////////
+  // initialize
   
-  ROS_INFO ("creating model via URDF conversion from ROS parameter server");
-  try {
-    
-    jspace_ros_model.reset(new jspace::ros::Model("/wbc_pr2_ctrl/"));
-    static const size_t n_tao_trees(2);
-    jspace_ros_model->initFromParam(nn, "/robot_description", n_tao_trees);
-    jspace_model.reset(new jspace::Model());
-    if (0 != jspace_model->init(jspace_ros_model->tao_trees_[0],
-				jspace_ros_model->tao_trees_[1],
-				&cerr)) {
-      throw std::runtime_error("jspace_model->init() failed");
+  PumpGetInfo::Response pump_info;
+  ROS_INFO ("retrieving info from (hopefully already running) pump plugin");
+  {
+    static char const * srvname("/wbc_pr2_ctrl_pump_plugin/get_info");
+    ros::ServiceClient client(nn.serviceClient<PumpGetInfo>(srvname));
+    PumpGetInfo srv;
+    if ( ! client.call(srv)) {
+      ROS_ERROR ("failed to call service `%s'", srvname);
+      errx(EXIT_FAILURE, "failed to call service `%s'", srvname);
     }
-    
-    ROS_INFO ("gravity compensation hack...");
-    std::vector<std::string>::const_iterator
-      gclink(jspace_ros_model->gravity_compensated_links_.begin());
-    for (/**/; gclink != jspace_ros_model->gravity_compensated_links_.end(); ++gclink) {
-      taoDNode const * node(jspace_model->getNodeByName(*gclink));
-      if ( ! node) {
-	throw std::runtime_error("gravity-compensated link " + *gclink
-				 + " is not part of the jspace::Model");
-      }
-      int const id(node->getID());
-      jspace_model->disableGravityCompensation(id, true);
-      ROS_INFO ("disabled gravity compensation for link %s (ID %d)", gclink->c_str(), id);
+    if (srv.response.joint_name.empty()) {
+      ROS_ERROR ("no joint names in reply from pump");
+      errx(EXIT_FAILURE, "no joint names in reply from pump");
     }
-    
-    ndof = jspace_model->getNDOF();
-    jspace_state.init(ndof, ndof, 0);
-    
-    ROS_INFO ("initializing MQRobotAPI with %zu degrees of freedom", ndof);
-    robot.init(true, "wbc_pr2_ctrl_s2r", "wbc_pr2_ctrl_r2s", ndof, ndof, ndof, ndof);
+    for (size_t ii(0); ii < srv.response.joint_name.size(); ++ii) {
+      ROS_INFO ("  %zu: %s", ii, srv.response.joint_name[ii].c_str());
+    }
+    pump_info = srv.response;
   }
   
+  static bool const unlink_mqueue(true);
+  MQRobotAPI robot(unlink_mqueue);
+  size_t const pump_ndof(pump_info.joint_name.size());
+  ROS_INFO ("initializing MQRobotAPI: %zu DOF  wr: %s  rd: %s",
+	    pump_ndof,
+	    pump_info.mq_name_servo_to_pump.c_str(), 
+	    pump_info.mq_name_pump_to_servo.c_str());
+  robot.init(true,
+	     pump_info.mq_name_servo_to_pump,
+	     pump_info.mq_name_pump_to_servo,
+	     pump_ndof, pump_ndof, pump_ndof, pump_ndof);
+  
+  try {
+    
+    if (tao_filename.empty()) {
+      ROS_INFO ("creating model via URDF conversion from ROS parameter server");
+      jspace_ros_model.reset(new jspace::ros::Model("/wbc_pr2_ctrl/"));
+      static const size_t n_tao_trees(2);
+      jspace_ros_model->initFromParam(nn, "/robot_description", n_tao_trees);
+      jspace_model.reset(new jspace::Model());
+      if (0 != jspace_model->init(jspace_ros_model->tao_trees_[0],
+				  jspace_ros_model->tao_trees_[1],
+				  &cerr)) {
+	throw std::runtime_error("jspace_model->init() failed");
+      }
+    }
+    
+    else {
+      ROS_INFO ("creating model from SAI XML file %s", tao_filename.c_str());
+      static bool const enable_coriolis_centrifugal(true);
+      jspace_model.reset(jspace::test::parse_sai_xml_file(tao_filename, enable_coriolis_centrifugal));
+    }
+    
+  }
   catch (std::exception const & ee) {
     ROS_ERROR ("EXCEPTION %s", ee.what());
     exit(EXIT_FAILURE);
   }
-
+  
+  ndof = jspace_model->getNDOF();
+  
+  XmlRpc::XmlRpcValue gc_links_value;
+  std::string const gc_links_param_name("/wbc_pr2_ctrl/gravity_compensated_links");
+  if ( ! nn.getParam(gc_links_param_name, gc_links_value)) {
+    ROS_INFO ("no parameter called `%s': skipping gravity compensation",
+	      gc_links_param_name.c_str());
+  }
+  else {
+    ROS_INFO ("switching off gravity compensation...");
+    try {
+      for (int ii(0); ii < gc_links_value.size(); ++ii) {
+	std::string const linkname(static_cast<std::string const &>(gc_links_value[ii]));
+	taoDNode const * node(jspace_model->getNodeByName(linkname));
+	if ( ! node) {
+	  ROS_WARN ("...gravity-compensated link `%s' is not part of the jspace::Model",
+		    linkname.c_str());
+	  continue;
+	}
+	int const id(node->getID());
+	jspace_model->disableGravityCompensation(id, true);
+	ROS_INFO ("...disabled gravity for link `%s' (ID %d)", linkname.c_str(), id);
+      }
+    }
+    catch (XmlRpc::XmlRpcException const & ee) {
+      ROS_ERROR ("XmlRpcException while reading gravity compensated links: %s",
+		 ee.getMessage().c_str());
+      errx(EXIT_FAILURE, "XmlRpcException while reading gravity compensated links: %s",
+	   ee.getMessage().c_str());
+    }
+  }
+  
+  ROS_INFO ("initializing joint state with %zu DOF", ndof);
+  jspace_state.init(ndof, ndof, 0);
+  
   ROS_INFO ("parsing opspace tasks and behaviors");
   shared_ptr<Behavior> behavior; // for now, just use the first one we encounter
   try {
