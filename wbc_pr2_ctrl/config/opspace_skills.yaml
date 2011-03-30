@@ -18,8 +18,13 @@
     maxvel: [ 1.6 ]
     maxacc: [ 3.2 ]
 - behaviors:
-  - type: opspace::TaskPostureTrjBehavior
+  - type: opspace::GenericBehavior
     name: task_posture
     slots:
-      eepos: eepos
-      posture: posture
+    - task: eepos
+    - task: posture
+#   - type: opspace::TaskPostureTrjBehavior
+#     name: task_posture
+#     slots:
+#       eepos: eepos
+#       posture: posture

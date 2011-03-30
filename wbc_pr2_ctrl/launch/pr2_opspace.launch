@@ -4,7 +4,7 @@
       pkg="wbc_pr2_ctrl"
       type="opspace_servo"
       name="opspace_servo"
-      args="-v -b $(find wbc_pr2_ctrl)/config/opspace_skills.yaml -t $(find wbc_pr2_ctrl)/config/tao_tree_pr2_arms_only.xml"
+      args="-v -b $(find wbc_pr2_ctrl)/config/opspace_skills.yaml -t $(find wbc_pr2_ctrl)/config/tao_tree_pr2_base_and_head.xml"
       output="screen">
   </node>
 </launch>

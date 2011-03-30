@@ -122,7 +122,7 @@
       </jointNode>
     </jointNode>
     <jointNode>
-      <ID>1</ID>
+      <ID>0</ID>
       <linkName>l_shoulder_pan_link</linkName>
       <jointName>l_shoulder_pan_joint</jointName>
       <type>R</type>
@@ -135,7 +135,7 @@
       <pos>0, 0.188, 0</pos>
       <rot>0, 0, 1, 0</rot>
       <jointNode>
-        <ID>0</ID>
+        <ID>1</ID>
         <linkName>l_shoulder_lift_link</linkName>
         <jointName>l_shoulder_lift_joint</jointName>
         <type>R</type>
