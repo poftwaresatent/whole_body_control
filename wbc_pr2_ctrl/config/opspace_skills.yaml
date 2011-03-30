@@ -20,6 +20,6 @@
 - behaviors:
   - type: opspace::TaskPostureTrjBehavior
     name: task_posture
-    default:
+    slots:
       eepos: eepos
       posture: posture
