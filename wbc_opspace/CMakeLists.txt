@@ -19,7 +19,7 @@ rosbuild_add_library (wbc_opspace
   opspace/src/Task.cpp
   opspace/src/Factory.cpp
   opspace/src/TypeIOTGCursor.cpp
-  opspace/src/ControllerNG.cpp
+  opspace/src/controller_library.cpp
   opspace/src/task_library.cpp
   opspace/src/behavior_library.cpp
   opspace/src/parse_yaml.cpp

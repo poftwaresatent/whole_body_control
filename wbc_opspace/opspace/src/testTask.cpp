@@ -36,7 +36,7 @@
 #include <gtest/gtest.h>
 #include <opspace/task_library.hpp>
 #include <opspace/behavior_library.hpp>
-#include <opspace/ControllerNG.hpp>
+#include <opspace/controller_library.hpp>
 #include <jspace/test/model_library.hpp>
 #include <err.h>
 

@@ -33,74 +33,25 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OPSPACE_CONTROLLER_NG_HPP
-#define OPSPACE_CONTROLLER_NG_HPP
+#ifndef OPSPACE_CONTROLLER_HPP
+#define OPSPACE_CONTROLLER_HPP
 
+#include <opspace/Parameter.hpp>
 #include <opspace/Behavior.hpp>
-#include <boost/shared_ptr.hpp>
 
 namespace opspace {
-  
-  
-  class ControllerNG
+    
+  class Controller
     : public ParameterReflection
   {
   public:
-    explicit ControllerNG(std::string const & name);
-    virtual ~ControllerNG() {}
+    virtual Status init(Model const & model) = 0;
     
-    std::string const & getName() const { return name_; }
-    
-    void setFallbackTask(boost::shared_ptr<Task> task);
-    
-    virtual Status init(Model const & model);
-
     virtual Status computeCommand(Model const & model,
 				  Behavior & behavior,
-				  Vector & gamma);
-    
-    virtual Status check(std::string const * param, std::string const & value) const;
-    
-    virtual void dbg(std::ostream & os,
-		     std::string const & title,
-		     std::string const & prefix) const;
-    
-    Status computeFallback(Model const & model,
-			   bool init_required,
-			   Vector & gamma);
-    
-    inline Vector const & getCommand() const { return gamma_; }
-    
-    void qhlog(Behavior & behavior, long long timestamp);
-    
-    
-  protected:
-    std::string const name_;
-    boost::shared_ptr<Task> fallback_task_;
-    ////    std::vector<Vector> sv_lstar_; // stored only for dbg()
-    bool fallback_;
-    std::string fallback_reason_;
-    
-    std::vector<boost::shared_ptr<ParameterLog> > log_;
-    int loglen_;		// <= 0 means disabled
-    int logsubsample_;
-    std::string logprefix_;
-    std::vector<Vector> sv_jstar_;
-    
-    // -1 means off, 0 means init, -2 means maybeWriteLogFiles() will
-    // actually write them (this gets set when ==loglen_)
-    mutable int logcount_;
-    
-    // for logging and debugging via Parameter tools, don't bother to
-    // implement check() methods because one day real soon now we'll
-    // be able to flag parameters as read-only and then the superclass
-    // can take care of signaling errors when someone writes to
-    // them...
-    Vector jpos_;
-    Vector jvel_;
-    Vector gamma_;
+				  Vector & gamma) = 0;
   };
-
+  
 }
 
-#endif // OPSPACE_CONTROLLER_NG_HPP
+#endif // OPSPACE_CONTROLLER_HPP

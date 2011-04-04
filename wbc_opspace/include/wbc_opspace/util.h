@@ -37,7 +37,7 @@
 #define WBC_OPSPACE_UTIL_H
 
 #include <opspace/Factory.hpp>
-#include <opspace/ControllerNG.hpp>
+#include <opspace/controller_library.hpp>
 #include <wbc_msgs/SetParameter.h>
 #include <wbc_msgs/GetParameter.h>
 #include <wbc_msgs/ListParameters.h>

@@ -12,7 +12,7 @@ add_library (opspace SHARED
   src/Task.cpp
   src/Factory.cpp
   src/TypeIOTGCursor.cpp
-  src/ControllerNG.cpp
+  src/controller_library.cpp
   src/task_library.cpp
   src/behavior_library.cpp
   src/parse_yaml.cpp
