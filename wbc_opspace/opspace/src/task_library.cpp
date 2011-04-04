@@ -400,7 +400,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "draft PID task: `" << name_ << "'\n";
+    os << prefix << "draft PID task: `" << instance_name_ << "'\n";
     pretty_print(errpos_, os, prefix + "  errpos", prefix + "    ");
     pretty_print(triggerpos_, os, prefix + "  triggerpos", prefix + "    ");
     pretty_print(ki_, os, prefix + "  ki", prefix + "    ");
@@ -751,7 +751,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "trajectory task: `" << name_ << "'\n";
+    os << prefix << "trajectory task: `" << instance_name_ << "'\n";
     if ( ! cursor_) {
       os << prefix << "  NOT INITIALIZED\n";
     }
@@ -1065,7 +1065,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "joint limit task: `" << name_ << "'\n";
+    os << prefix << "joint limit task: `" << instance_name_ << "'\n";
     if (cursor_.empty()) {
       os << prefix << "  NOT INITIALIZED\n";
     }
@@ -1177,7 +1177,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "orientation task: `" << name_ << "'\n";
+    os << prefix << "orientation task: `" << instance_name_ << "'\n";
     pretty_print(velocity_, os, prefix + "  velocity", prefix + "    ");
     pretty_print(goal_x_, os, prefix + "  goal_x", prefix + "    ");
     pretty_print(goal_y_, os, prefix + "  goal_y", prefix + "    ");

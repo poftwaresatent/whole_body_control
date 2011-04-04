@@ -44,7 +44,7 @@ namespace opspace {
   
   Behavior::
   Behavior(std::string const & name)
-    : name_(name)
+    : ParameterReflection("skill", name)
   {
   }
   
@@ -118,7 +118,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "behavior " << name_ << "\n";
+    os << prefix << "behavior " << instance_name_ << "\n";
     ParameterReflection::dump(os, prefix + "  parameters:", prefix + "    ");
     os << prefix << "  slots:\n";
     for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
@@ -148,7 +148,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "behavior " << name_ << "\n";
+    os << prefix << "behavior " << instance_name_ << "\n";
     ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
     for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
       for (size_t it(0); it < is->second->getNInstances(); ++it) {

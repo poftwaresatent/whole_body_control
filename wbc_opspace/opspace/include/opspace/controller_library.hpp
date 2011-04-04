@@ -49,8 +49,6 @@ namespace opspace {
     explicit ControllerNG(std::string const & name);
     virtual ~ControllerNG() {}
     
-    std::string const & getName() const { return name_; }
-    
     void setFallbackTask(boost::shared_ptr<Task> task);
     
     virtual Status init(Model const & model);
@@ -75,7 +73,6 @@ namespace opspace {
     
     
   protected:
-    std::string const name_;
     boost::shared_ptr<Task> fallback_task_;
     ////    std::vector<Vector> sv_lstar_; // stored only for dbg()
     bool fallback_;

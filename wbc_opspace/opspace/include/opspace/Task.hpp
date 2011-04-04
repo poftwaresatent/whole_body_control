@@ -127,12 +127,6 @@ namespace opspace {
     virtual Status update(Model const & model) = 0;
     
     /**
-       \todo Move into superclass, anything with parameters should
-       have a name: more consistent behavior for enumeration.
-    */
-    std::string const & getName() const { return name_; }
-    
-    /**
        \return The actual "position" of the robot in this task
        space. Reminder: actual_ must be set by subclasses in their
        update() method.
@@ -177,7 +171,6 @@ namespace opspace {
 		     std::string const & prefix) const;
     
   protected:
-    std::string const name_;
     Vector actual_;
     Vector command_;
     Matrix jacobian_;

@@ -38,6 +38,7 @@
 
 #include <jspace/Status.hpp>
 #include <jspace/wrap_eigen.hpp>
+#include <boost/shared_ptr.hpp>
 #include <map>
 
 
@@ -199,6 +200,9 @@ namespace opspace {
   class ParameterReflection
   {
   public:
+    ParameterReflection(std::string const & type_name,
+			std::string const & instance_name);
+    
     virtual ~ParameterReflection();
     
     /** Default implementation always returns succes. */
@@ -215,6 +219,9 @@ namespace opspace {
     
     /** Default implementation always returns succes. */
     virtual Status check(Matrix const * param, Matrix const & value) const;
+    
+    inline std::string const & getName() const { return instance_name_; }
+    inline std::string const & getTypeName() const { return type_name_; }
     
     /**
        \return A pointer to the Parameter subclass instance which
@@ -255,6 +262,9 @@ namespace opspace {
 		      std::string const & prefix) const;
     
   protected:
+    std::string const type_name_;
+    std::string const instance_name_;
+    
     /**
        Used by subclasse to make one of their fields accessible to the
        outside. The parameter then becomes available through the
@@ -293,8 +303,23 @@ namespace opspace {
   private:
     parameter_lookup_t parameter_lookup_;
   };
-
-
+  
+  
+  class ReflectionRegistry
+  {
+  public:
+    void add(boost::shared_ptr<ParameterReflection> instance);
+    
+    boost::shared_ptr<ParameterReflection> find(std::string const & type_name,
+						std::string const & instance_name);
+    
+  private:
+    typedef std::map<std::string, boost::shared_ptr<ParameterReflection> > instance_map_t;
+    typedef std::map<std::string, instance_map_t> type_map_t;
+    type_map_t type_map_;
+  };
+  
+  
   class ParameterLog
   {
   public:

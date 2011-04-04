@@ -319,7 +319,16 @@ namespace opspace {
        << pretty_string(*matrix_, prefix + "  ") << "\n";
   }
   
-
+  
+  ParameterReflection::
+  ParameterReflection(std::string const & type_name,
+		      std::string const & instance_name)
+    : type_name_(type_name),
+      instance_name_(instance_name)
+  {
+  }
+  
+  
   ParameterReflection::
   ~ParameterReflection()
   {
@@ -702,6 +711,31 @@ namespace opspace {
       }
     }
     
+  }
+  
+  
+  void ReflectionRegistry::
+  add(boost::shared_ptr<ParameterReflection> instance)
+  {
+    type_map_[instance->getTypeName()].insert(make_pair(instance->getName(), instance));
+  }
+  
+  
+  boost::shared_ptr<ParameterReflection> ReflectionRegistry::
+  find(std::string const & type_name,
+       std::string const & instance_name)
+  {
+    boost::shared_ptr<ParameterReflection> instance;
+    type_map_t::iterator it(type_map_.find(type_name));
+    if (type_map_.end() == it) {
+      return instance;
+    }
+    instance_map_t::iterator ii(it->second.find(instance_name));
+    if (it->second.end() == ii) {
+      return instance;
+    }
+    instance = ii->second;
+    return instance;
   }
   
 }

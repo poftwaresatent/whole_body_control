@@ -33,47 +33,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/Task.hpp><
-
-using namespace jspace;
+#include <opspace/Controller.hpp>
 
 namespace opspace {
   
-  
-  Task::
-  Task(std::string const & name)
-    : ParameterReflection("task", name),
-      sigma_threshold_(1.0e-2)
+  Controller::
+  Controller(std::string const & name)
+    : ParameterReflection("cntrl", name)
   {
-    declareParameter("sigma_threshold", &sigma_threshold_);
-    // these will become read-only, as soon as that is supported in
-    // the Parameter interface...
-    declareParameter("actual", &actual_);
-    declareParameter("command", &command_);
-    // overkill? declareParameter("jacobian", &jacobian_);
   }
-  
-  
-  void Task::
-  dump(std::ostream & os, std::string const & title, std::string const & prefix) const
-  {
-    if ( ! title.empty()) {
-      os << title << "\n";
-    }
-    os << prefix << "task: `" << instance_name_ << "'\n";
-    ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
-    pretty_print(actual_, os, prefix + "  actual:", prefix + "    ");
-    pretty_print(command_, os, prefix + "  command:", prefix + "    ");
-    pretty_print(jacobian_, os, prefix + "  Jacobian:", prefix + "    ");
-  }
-  
-  
-  void Task::
-  dbg(std::ostream & os, std::string const & title, std::string const & prefix) const
-  {
-    // too noisy...
-    // os << prefix << "task " << instance_name_ << "\n";
-    // ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
-  }
-  
+
 }
+

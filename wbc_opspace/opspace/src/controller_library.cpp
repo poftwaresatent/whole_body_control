@@ -49,7 +49,7 @@ namespace opspace {
   
   ControllerNG::
   ControllerNG(std::string const & name)
-    : name_(name),
+    : Controller(name),
       fallback_(false),
       loglen_(-1),
       logsubsample_(-1),
@@ -305,7 +305,7 @@ namespace opspace {
     if (0 == logcount_) {
       // initialize logging
       log_.clear();
-      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("ctrl_" + name_,
+      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("ctrl_" + instance_name_,
 							       getParameterTable())));
       log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("skill_" + behavior.getName(),
 							       behavior.getParameterTable())));

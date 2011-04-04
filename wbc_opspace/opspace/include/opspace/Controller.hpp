@@ -44,6 +44,9 @@ namespace opspace {
   class Controller
     : public ParameterReflection
   {
+  protected:
+    explicit Controller(std::string const & name);
+    
   public:
     virtual Status init(Model const & model) = 0;
     
