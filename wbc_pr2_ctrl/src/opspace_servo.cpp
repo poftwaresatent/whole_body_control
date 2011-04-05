@@ -28,7 +28,7 @@
 #include <jspace/Model.hpp>
 #include <jspace/test/sai_util.hpp>
 #include <tao/dynamics/taoNode.h>
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/controller_library.hpp>
 #include <wbc_opspace/util.h>
@@ -63,8 +63,8 @@ static char const * opspace_fallback_str =
   "    kd: [  20.0 ]\n"
   "    maxvel: [ 3.1416 ]\n"
   "    maxacc: [ 6.2832 ]\n"
-  "- behaviors:\n"
-  "  - type: opspace::TPBehavior\n"
+  "- skills:\n"
+  "  - type: opspace::TPSkill\n"
   "    name: tpb\n"
   "    slots:\n"
   "      eepos: eepos_instance\n"
@@ -252,13 +252,13 @@ int main(int argc, char*argv[])
     pump_to_servo_id.push_back(id);
   }
   
-  ROS_INFO ("parsing opspace tasks and behaviors");
-  shared_ptr<Behavior> behavior; // for now, just use the first one we encounter
+  ROS_INFO ("parsing opspace tasks and skills");
+  shared_ptr<Skill> skill; // for now, just use the first one we encounter
   try {
     
     Status st;
     if (opspace_filename.empty()) {
-      ROS_WARN ("no opspace_filename -- using fallback task/posture behavior");
+      ROS_WARN ("no opspace_filename -- using fallback task/posture skill");
       st = factory->parseString(opspace_fallback_str);
     }
     else {
@@ -266,23 +266,23 @@ int main(int argc, char*argv[])
       st = factory->parseFile(opspace_filename);
     }
     if ( ! st) {
-      throw runtime_error("failed to parse opspace tasks and behaviors: " + st.errstr);
+      throw runtime_error("failed to parse opspace tasks and skills: " + st.errstr);
     }
-    factory->dump(cout, "*** dump of opspace task/behavior factory", "* ");
+    factory->dump(cout, "*** dump of opspace task/skill factory", "* ");
     if (factory->getTaskTable().empty()) {
       throw runtime_error("empty opspace task table");
     }
-    if (factory->getBehaviorTable().empty()) {
-      throw runtime_error("empty opspace behavior table");
+    if (factory->getSkillTable().empty()) {
+      throw runtime_error("empty opspace skill table");
     }
-    behavior = factory->getBehaviorTable()[0]; // XXXX to do: allow selection at runtime
+    skill = factory->getSkillTable()[0]; // XXXX to do: allow selection at runtime
   }
   catch (std::exception const & ee) {
     ROS_ERROR ("EXCEPTION %s", ee.what());
     exit(EXIT_FAILURE);
   }
   
-  ROS_INFO ("initializing state, model, tasks, behaviors, ...");
+  ROS_INFO ("initializing state, model, tasks, skills, ...");
   if ( ! update_model_from_pump()) {
     ROS_ERROR ("update_model_from_pump() failed");
     exit(EXIT_FAILURE);
@@ -294,9 +294,9 @@ int main(int argc, char*argv[])
     ROS_ERROR ("controller->init() failed: %s", status.errstr.c_str());
     exit(EXIT_FAILURE);
   }
-  status = behavior->init(*jspace_model);
+  status = skill->init(*jspace_model);
   if ( ! status) {
-    ROS_ERROR ("behavior->init() failed: %s", status.errstr.c_str());
+    ROS_ERROR ("skill->init() failed: %s", status.errstr.c_str());
     exit(EXIT_FAILURE);
   }
   
@@ -319,7 +319,7 @@ int main(int argc, char*argv[])
   while (ros::ok()) {
     
     // Compute torque command.
-    status = controller->computeCommand(*jspace_model, *behavior, servo_tau);
+    status = controller->computeCommand(*jspace_model, *skill, servo_tau);
     if ( ! status) {
       ROS_ERROR ("controller->computeCommand() failed: %s", status.errstr.c_str());
       ros::shutdown();
@@ -341,7 +341,7 @@ int main(int argc, char*argv[])
       ros::WallTime t1(ros::WallTime::now());
       if (t1 - t0 > dbg_dt) {
 	t0 = t1;
-	behavior->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
+	skill->dbg(cout, "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~", "");
 	controller->dbg(cout, "--------------------------------------------------", "");
       }
     }
