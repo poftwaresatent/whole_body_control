@@ -17,13 +17,13 @@
     kd: [  20.0 ]
     maxvel: [ 1.6 ]
     maxacc: [ 3.2 ]
-- behaviors:
-  - type: opspace::GenericBehavior
+- skills:
+  - type: opspace::GenericSkill
     name: task_posture
     slots:
     - task: eepos
     - task: posture
-#   - type: opspace::TaskPostureTrjBehavior
+#   - type: opspace::TaskPostureTrjSkill
 #     name: task_posture
 #     slots:
 #       eepos: eepos
