@@ -36,8 +36,7 @@
 #ifndef WBC_OPSPACE_UTIL_H
 #define WBC_OPSPACE_UTIL_H
 
-#include <opspace/Factory.hpp>
-#include <opspace/controller_library.hpp>
+#include <opspace/Parameter.hpp>
 #include <wbc_msgs/SetParameter.h>
 #include <wbc_msgs/GetParameter.h>
 #include <wbc_msgs/ListParameters.h>
@@ -54,8 +53,7 @@ namespace wbc_opspace {
     ParamCallbacks();
     
     void init(ros::NodeHandle node,
-	      boost::shared_ptr<opspace::Factory> factory,
-	      boost::shared_ptr<opspace::ControllerNG> controller,
+	      boost::shared_ptr<opspace::ReflectionRegistry> registry,
 	      size_t input_queue_size,
 	      size_t output_queue_size)
       throw(std::runtime_error);
@@ -98,9 +96,8 @@ namespace wbc_opspace {
     ros::Subscriber vector_sub_;
     ros::Subscriber matrix_sub_;
     ros::Publisher channel_feedback_;
-
-    boost::shared_ptr<opspace::Factory> factory_;
-    boost::shared_ptr<opspace::ControllerNG> controller_;
+    
+    boost::shared_ptr<opspace::ReflectionRegistry> registry_;
     
     std::map<int, opspace::StringParameter *> strings_;
     std::map<int, opspace::IntegerParameter *> integers_;

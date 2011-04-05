@@ -54,20 +54,16 @@ namespace wbc_opspace {
   
   void ParamCallbacks::
   init(ros::NodeHandle node,
-       boost::shared_ptr<opspace::Factory> factory,
-       boost::shared_ptr<opspace::ControllerNG> controller,
+       boost::shared_ptr<opspace::ReflectionRegistry> registry,
        size_t input_queue_size,
        size_t output_queue_size)
     throw(std::runtime_error)
   {
-    if (factory_) {
+    if (registry_) {
       throw runtime_error("already initialized");
     }
-    if ( ! factory) {
-      throw runtime_error("null factory");
-    }
-    factory_ = factory;
-    controller_ = controller;
+    registry_ = registry;
+    
     set_param_ = node.advertiseService("set_param",
 				       &::wbc_opspace::ParamCallbacks::setParam,
 				       this);
@@ -111,43 +107,15 @@ namespace wbc_opspace {
 	    std::string const & param_name,
 	    std::string & errstr)
   {
-    if ( ! factory_) {
+    if ( ! registry_) {
       errstr = "not initialized";
       return 0;
     }
-    
-    if ("task" == com_type) {
-      shared_ptr<Task> task(factory_->findTask(com_name));
-      if ( ! task) {
-	errstr = "no such task";
-	return 0;
-      }
-      errstr = "trying task parameters...";
-      return task->lookupParameter(param_name);
+    opspace::Parameter * param(registry_->lookupParameter(com_type, com_name, param_name));
+    if ( ! param) {
+      errstr = com_type + "/" + com_name + "/" + param_name + " not found";
     }
-    
-    if ("skill" == com_type) {
-      shared_ptr<Behavior> skill(factory_->findBehavior(com_name));
-      if ( ! skill) {
-	errstr = "no such skill";
-	return 0;
-      }
-      errstr = "trying skill parameters...";
-      return skill->lookupParameter(param_name);
-    }
-    
-    if ("servo" == com_type) {
-      if ( ! controller_) {
-	errstr = "no controller registered";
-	return 0;
-      }
-      // ignore com_name for now...
-      errstr = "trying servo parameters...";
-      return controller_->lookupParameter(param_name);
-    }
-    
-    errstr = "invalid com_type (use task, skill, or servo)";
-    return 0;
+    return param;
   }
   
   
@@ -328,47 +296,20 @@ namespace wbc_opspace {
   listParams(wbc_msgs::ListParameters::Request & request,
 	     wbc_msgs::ListParameters::Response & response)
   {
-    if ( ! factory_) {
+    if ( ! registry_) {
       response.ok = false;
       response.errstr = "not initialized";
       return true;
     }
     
-    if (controller_) {
-      parameter_lookup_t const & params(controller_->getParameterTable());
-      for (parameter_lookup_t::const_iterator ip(params.begin()); ip != params.end(); ++ip) {
-	OpspaceParameter msg;
-	if (param_to_msg(ip->second, msg)) { // should "never" fail though...
-	  response.com_type.push_back("servo");
-	  response.com_name.push_back("");
-	  response.param.push_back(msg);
-	}
-      }
-    }
-    
-    Factory::behavior_table_t const & behaviors(factory_->getBehaviorTable());
-    for (size_t ii(0); ii < behaviors.size(); ++ii) {
-      parameter_lookup_t const & params(behaviors[ii]->getParameterTable());
-      for (parameter_lookup_t::const_iterator ip(params.begin()); ip != params.end(); ++ip) {
-	OpspaceParameter msg;
-	if (param_to_msg(ip->second, msg)) { // should "never" fail though...
-	  response.com_type.push_back("skill");
-	  response.com_name.push_back(behaviors[ii]->getName());
-	  response.param.push_back(msg);
-	}
-      }
-    }
-    
-    Factory::task_table_t const & tasks(factory_->getTaskTable());
-    for (size_t ii(0); ii < tasks.size(); ++ii) {
-      parameter_lookup_t const & params(tasks[ii]->getParameterTable());
-      for (parameter_lookup_t::const_iterator ip(params.begin()); ip != params.end(); ++ip) {
-	OpspaceParameter msg;
-	if (param_to_msg(ip->second, msg)) { // should "never" fail though...
-	  response.com_type.push_back("task");
-	  response.com_name.push_back(tasks[ii]->getName());
-	  response.param.push_back(msg);
-	}
+    ReflectionRegistry::enumeration_t enumeration;
+    registry_->enumerate(enumeration);
+    for (size_t ii(0); ii < enumeration.size(); ++ii) {
+      OpspaceParameter msg;
+      if (param_to_msg(enumeration[ii].parameter, msg)) { // should "never" fail though...
+	response.com_type.push_back(enumeration[ii].type_name);
+	response.com_name.push_back(enumeration[ii].instance_name);
+	response.param.push_back(msg);
       }
     }
     
