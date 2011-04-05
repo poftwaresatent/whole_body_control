@@ -46,7 +46,7 @@ namespace opspace {
   using jspace::Status;
   
   class Task;
-  class Behavior;
+  class Skill;
   class ReflectionRegistry;
   
   /**
@@ -54,35 +54,35 @@ namespace opspace {
   */
   Task * createTask(std::string const & type, std::string const & name);
   
-  Behavior * createBehavior(std::string const & type, std::string const & name);
+  Skill * createSkill(std::string const & type, std::string const & name);
   
   
   /**
-     Utility for creating Task and Behavior instances based on type
+     Utility for creating Task and Skill instances based on type
      names. For the moment, we use a hardcoded mapping from type names
      to subclasses, but it will be really easy to extend this with
      some sort of plugin approach.
      
      The idea is to call the parseFoo() methods to feed it with task
-     and behavior specifications, and then retrieve them using
-     getTaskTable() and/or getBehaviorTable().
+     and skill specifications, and then retrieve them using
+     getTaskTable() and/or getSkillTable().
      
      The YAML format is quite simple: you specify a list of
      dictionaries. When the key is `tasks', then it parses a list of
-     tasks. Similarly, it parses behaviors when the dictionary key is
-     `behaviors'. You can mix and match, but beware that tasks
-     referenced by a behavior must be defined before they can be used.
+     tasks. Similarly, it parses skills when the dictionary key is
+     `skills'. You can mix and match, but beware that tasks
+     referenced by a skill must be defined before they can be used.
      
      For tasks, the specification is again a list of
      dictionaries. Each one specifies a task. The required dictionary
      keys are `type' and `name'. All the others get looked up via
      Task::lookupParameter() and directly specify task parameters.
      
-     Behaviors are very similar, except that dictionary values are
+     Skills are very similar, except that dictionary values are
      handled differently depending on whether they are lists or
      dictionaries: if they are dictionaries, they are treated as state
      definitions which define which task goes where in the slots
-     provided by the behavior. Otherwise, they are treated as
+     provided by the skill. Otherwise, they are treated as
      parameter definitions.
      
      An example task YAML file is:
@@ -102,8 +102,8 @@ namespace opspace {
          kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]
          maxvel: [ 3.1416 ]
          maxacc: [ 6.2832 ]
-     - behaviors:
-       - type: opspace::TPBehavior
+     - skills:
+       - type: opspace::TPSkill
          name: task_posture
 	 # dictionaries define task slots
 	 default:
@@ -117,7 +117,7 @@ namespace opspace {
   {
   public:
     typedef std::vector<boost::shared_ptr<Task> > task_table_t;
-    typedef std::vector<boost::shared_ptr<Behavior> > behavior_table_t;
+    typedef std::vector<boost::shared_ptr<Skill> > skill_table_t;
     
     /**
        If you pass a non-zero dbg parameter, the Factory will
@@ -151,24 +151,24 @@ namespace opspace {
     task_table_t const & getTaskTable() const;
     
     /**
-       The behavior table contains pointers to all behavior instances
+       The skill table contains pointers to all skill instances
        ever created by this Factory, in the order that they were
        encountered in the YAML documents.
     */
-    behavior_table_t const & getBehaviorTable() const;
+    skill_table_t const & getSkillTable() const;
     
     boost::shared_ptr<Task> findTask(std::string const & name) const;
-    boost::shared_ptr<Behavior> findBehavior(std::string const & name) const;
+    boost::shared_ptr<Skill> findSkill(std::string const & name) const;
     
     /**
        Create a ReflectionRegistry and populate it with the currently
-       registered task and behavior instances.
+       registered task and skill instances.
     */
     ReflectionRegistry * createRegistry();
     
     /**
        Write a human-readable (hopefully, anyway) description of all
-       behaviors and tasks contained in the tables.
+       skills and tasks contained in the tables.
     */
     void dump(std::ostream & os,
 	      std::string const & title,
@@ -177,7 +177,7 @@ namespace opspace {
   protected:
     std::ostream * dbg_;
     task_table_t task_table_;
-    behavior_table_t behavior_table_;
+    skill_table_t skill_table_;
   };
   
 }

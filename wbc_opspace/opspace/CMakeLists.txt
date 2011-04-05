@@ -15,9 +15,9 @@ add_library (opspace SHARED
   src/Controller.cpp
   src/controller_library.cpp
   src/task_library.cpp
-  src/behavior_library.cpp
+  src/skill_library.cpp
   src/parse_yaml.cpp
-  src/Behavior.cpp
+  src/Skill.cpp
   )
 target_link_libraries (opspace jspace reflexxes_otg yaml-cpp)
 

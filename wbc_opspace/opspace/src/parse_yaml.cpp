@@ -36,7 +36,7 @@
 #include <opspace/parse_yaml.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/Task.hpp>
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 #include <stdexcept>
 
 using jspace::pretty_print;
@@ -71,12 +71,12 @@ namespace opspace {
   }
   
   
-  BehaviorParser::
-  BehaviorParser(Factory const & factory, std::ostream * optional_dbg_os)
+  SkillParser::
+  SkillParser(Factory const & factory, std::ostream * optional_dbg_os)
     : Parser(factory, optional_dbg_os),
       type("void"),
       name(""),
-      behavior(0)
+      skill(0)
   {
   }
   
@@ -92,13 +92,13 @@ namespace opspace {
   }
   
   
-  BehaviorTableParser::
-  BehaviorTableParser(Factory const & factory,
-		      Factory::behavior_table_t & behavior_table_,
+  SkillTableParser::
+  SkillTableParser(Factory const & factory,
+		      Factory::skill_table_t & skill_table_,
 		      std::ostream * optional_dbg_os)
     : Parser(factory, optional_dbg_os),
-      behavior_parser(factory, optional_dbg_os),
-      behavior_table(behavior_table_)
+      skill_parser(factory, optional_dbg_os),
+      skill_table(skill_table_)
   {
   }
   
@@ -268,11 +268,11 @@ namespace opspace {
   }
   
   
-  void operator >> (YAML::Node const & node, BehaviorParser & parser)
+  void operator >> (YAML::Node const & node, SkillParser & parser)
   {
-    parser.behavior = 0;		// in case type or name is undefined
+    parser.skill = 0;		// in case type or name is undefined
     if (parser.dbg) {
-      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, behavior_parser_s &)\n"
+      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, skill_parser_s &)\n"
 		  << "  reading type and name\n";
     }
     node["type"] >> parser.type;
@@ -281,9 +281,9 @@ namespace opspace {
     if (parser.dbg) {
       *parser.dbg << "  type = " << parser.type << "  name = " << parser.name << "\n";
     }
-    parser.behavior = createBehavior(parser.type, parser.name);
-    if ( ! parser.behavior) {
-      throw std::runtime_error("createBehavior(`" + parser.type + "', `" + parser.name + "') failed");
+    parser.skill = createSkill(parser.type, parser.name);
+    if ( ! parser.skill) {
+      throw std::runtime_error("createSkill(`" + parser.type + "', `" + parser.name + "') failed");
     }
     
     if (parser.dbg) {
@@ -333,28 +333,28 @@ namespace opspace {
 				     + " but should be a map or a list");
 	  }
 	  
-	  shared_ptr<TaskSlotAPI> slot(parser.behavior->lookupSlot(slot_name));
+	  shared_ptr<TaskSlotAPI> slot(parser.skill->lookupSlot(slot_name));
 	  if ( ! slot) {
-	    throw std::runtime_error("behavior `" + parser.name + "' has no slot `"
+	    throw std::runtime_error("skill `" + parser.name + "' has no slot `"
 				     + slot_name + "'");
 	  }
 	  
 	  shared_ptr<Task> task(parser.factory.findTask(task_name));
 	  if ( ! task) {
-	    throw std::runtime_error("no task instance `" + task_name + "' for behavior `"
+	    throw std::runtime_error("no task instance `" + task_name + "' for skill `"
 				     + parser.name + "' slot `" + slot_name + "'");
 	  }
 	  
 	  Status const st(slot->assign(task));
 	  if ( ! st) {
 	    throw std::runtime_error("oops assigning task instance `" + task_name
-				     + "' to behavior `" + parser.name
+				     + "' to skill `" + parser.name
 				     + "' slot `" + slot_name + "': " + st.errstr);
 	  }
 	  
 	  if (parser.dbg) {
 	    *parser.dbg << "  assigned task instance `" << task_name
-			<< "' to slot `" << slot_name << "' in behavior `"
+			<< "' to slot `" << slot_name << "' in skill `"
 			<< parser.name << "'\n";
 	  }
 	}
@@ -363,7 +363,7 @@ namespace opspace {
       else {
 	// assume it's a parameter
 	Parameter const * param(parse_parameter("skill", parser.name,
-						*parser.behavior, key, it.second()));
+						*parser.skill, key, it.second()));
 	if (parser.dbg) {
 	  param->dump(*parser.dbg, "    ");
 	}
@@ -386,22 +386,22 @@ namespace opspace {
   }
   
   
-  void operator >> (YAML::Node const & node, BehaviorTableParser & parser)
+  void operator >> (YAML::Node const & node, SkillTableParser & parser)
   {
     if (parser.dbg) {
-      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, BehaviorTableParser &)\n"
+      *parser.dbg << "DEBUG opspace::operator>>(YAML::Node &, SkillTableParser &)\n"
 		  << "  parsing " << node.size() << " nodes\n";
     }
     for (size_t ii(0); ii < node.size(); ++ii) {
       YAML::Node const & entry(node[ii]);
-      entry >> parser.behavior_parser;
-      if ( ! parser.behavior_parser.behavior) {
-	throw std::runtime_error("failed to create behavior instance");
+      entry >> parser.skill_parser;
+      if ( ! parser.skill_parser.skill) {
+	throw std::runtime_error("failed to create skill instance");
       }
       if (parser.dbg) {
-	parser.behavior_parser.behavior->dump(*parser.dbg, "  adding to table: behavior", "    ");
+	parser.skill_parser.skill->dump(*parser.dbg, "  adding to table: skill", "    ");
       }
-      parser.behavior_table.push_back(shared_ptr<Behavior>(parser.behavior_parser.behavior));
+      parser.skill_table.push_back(shared_ptr<Skill>(parser.skill_parser.skill));
     }
   }
   

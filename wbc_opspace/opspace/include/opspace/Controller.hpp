@@ -37,7 +37,7 @@
 #define OPSPACE_CONTROLLER_HPP
 
 #include <opspace/Parameter.hpp>
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 
 namespace opspace {
     
@@ -51,7 +51,7 @@ namespace opspace {
     virtual Status init(Model const & model) = 0;
     
     virtual Status computeCommand(Model const & model,
-				  Behavior & behavior,
+				  Skill & skill,
 				  Vector & gamma) = 0;
   };
   

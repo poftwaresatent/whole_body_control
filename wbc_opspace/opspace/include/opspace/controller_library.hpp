@@ -54,7 +54,7 @@ namespace opspace {
     virtual Status init(Model const & model);
 
     virtual Status computeCommand(Model const & model,
-				  Behavior & behavior,
+				  Skill & skill,
 				  Vector & gamma);
     
     virtual Status check(std::string const * param, std::string const & value) const;
@@ -69,7 +69,7 @@ namespace opspace {
     
     inline Vector const & getCommand() const { return gamma_; }
     
-    void qhlog(Behavior & behavior, long long timestamp);
+    void qhlog(Skill & skill, long long timestamp);
     
     
   protected:

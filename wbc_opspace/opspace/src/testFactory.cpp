@@ -34,7 +34,7 @@
  */
 
 #include <gtest/gtest.h>
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/parse_yaml.hpp>
 #include <stdexcept>
@@ -80,7 +80,7 @@ TEST (parse, tasks_only)
     st = factory.parseString(yaml_string);
     EXPECT_TRUE (st.ok) << st.errstr;
     EXPECT_FALSE (factory.getTaskTable().empty()) << "task table should not be empty";
-    EXPECT_TRUE (factory.getBehaviorTable().empty()) << "behaviors table should be empty";
+    EXPECT_TRUE (factory.getSkillTable().empty()) << "skill table should be empty";
     factory.dump(cout, "*** dump of factory", "* ");
   }
   catch (YAML::Exception const & ee) {
@@ -92,7 +92,7 @@ TEST (parse, tasks_only)
 }
 
 
-TEST (parse, tasks_and_behaviors)
+TEST (parse, tasks_and_skills)
 {
   static char * const yaml_string =
     "- tasks:\n"
@@ -120,8 +120,8 @@ TEST (parse, tasks_and_behaviors)
     "    kd: [  40.0,  40.0,  40.0,  20.0,  20.0,  20.0,  20.0 ]\n"
     "    maxvel: [ 3.1416 ]\n"
     "    maxacc: [ 6.2832 ]\n"
-    "- behaviors:\n"
-    "  - type: opspace::TPBehavior\n"
+    "- skills:\n"
+    "  - type: opspace::TPSkill\n"
     "    name: tpb\n"
     "    default:\n"
     "      eepos: eepos_instance\n"
@@ -133,7 +133,7 @@ TEST (parse, tasks_and_behaviors)
     st = factory.parseString(yaml_string);
     EXPECT_TRUE (st.ok) << st.errstr;
     EXPECT_FALSE (factory.getTaskTable().empty()) << "task table should not be empty";
-    EXPECT_FALSE (factory.getBehaviorTable().empty()) << "behaviors table should not be empty";
+    EXPECT_FALSE (factory.getSkillTable().empty()) << "skills table should not be empty";
     factory.dump(cout, "*** dump of factory", "* ");
   }
   catch (YAML::Exception const & ee) {

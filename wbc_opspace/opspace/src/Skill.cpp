@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 #include <opspace/task_library.hpp>
 
 using boost::shared_ptr;
@@ -42,20 +42,20 @@ using boost::shared_ptr;
 namespace opspace {
   
   
-  Behavior::
-  Behavior(std::string const & name)
+  Skill::
+  Skill(std::string const & name)
     : ParameterReflection("skill", name)
   {
   }
   
   
-  Behavior::
-  ~Behavior()
+  Skill::
+  ~Skill()
   {
   }
   
   
-  Status Behavior::
+  Status Skill::
   init(Model const & model)
   {
     bool ok(true);
@@ -98,7 +98,7 @@ namespace opspace {
   }
   
   
-  boost::shared_ptr<TaskSlotAPI> Behavior::
+  boost::shared_ptr<TaskSlotAPI> Skill::
   lookupSlot(std::string const & name)
   {
     shared_ptr<TaskSlotAPI> slot;
@@ -110,7 +110,7 @@ namespace opspace {
   }
   
   
-  void Behavior::
+  void Skill::
   dump(std::ostream & os,
        std::string const & title,
        std::string const & prefix) const
@@ -118,7 +118,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "behavior " << instance_name_ << "\n";
+    os << prefix << "skill " << instance_name_ << "\n";
     ParameterReflection::dump(os, prefix + "  parameters:", prefix + "    ");
     os << prefix << "  slots:\n";
     for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
@@ -140,7 +140,7 @@ namespace opspace {
   }
   
   
-  void Behavior::
+  void Skill::
   dbg(std::ostream & os,
       std::string const & title,
       std::string const & prefix) const
@@ -148,7 +148,7 @@ namespace opspace {
     if ( ! title.empty()) {
       os << title << "\n";
     }
-    os << prefix << "behavior " << instance_name_ << "\n";
+    os << prefix << "skill " << instance_name_ << "\n";
     ParameterReflection::dump(os, prefix + "  parameters", prefix + "    ");
     for (slot_map_t::const_iterator is(slot_map_.begin()); is != slot_map_.end(); ++is) {
       for (size_t it(0); it < is->second->getNInstances(); ++it) {

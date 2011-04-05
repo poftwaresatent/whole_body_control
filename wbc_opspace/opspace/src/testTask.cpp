@@ -35,7 +35,7 @@
 
 #include <gtest/gtest.h>
 #include <opspace/task_library.hpp>
-#include <opspace/behavior_library.hpp>
+#include <opspace/skill_library.hpp>
 #include <opspace/controller_library.hpp>
 #include <jspace/test/model_library.hpp>
 #include <err.h>
@@ -113,7 +113,7 @@ static shared_ptr<Task> create_sel_jp_task(string const & name, Vector const & s
 }
 
 
-static void append_odd_even_tasks(GenericBehavior gb, size_t ndof)
+static void append_odd_even_tasks(GenericSkill gb, size_t ndof)
 {
   vector<shared_ptr<Task> > task;
   Vector sel_odd(Vector::Zero(ndof));
@@ -134,7 +134,7 @@ static void append_odd_even_tasks(GenericBehavior gb, size_t ndof)
 }
 
 
-static void append_odd_full_tasks(GenericBehavior gb, size_t ndof)
+static void append_odd_full_tasks(GenericSkill gb, size_t ndof)
 {
   vector<shared_ptr<Task> > task;
   Vector sel_odd(Vector::Zero(ndof));
@@ -156,7 +156,7 @@ TEST (controller, odd_even)
   Vector gamma_jpos;
   
   vector<shared_ptr<ControllerNG> > ctrl;
-  vector<shared_ptr<GenericBehavior> > gb;
+  vector<shared_ptr<GenericSkill> > gb;
   vector<Vector> gamma;
 
   try {
@@ -175,14 +175,14 @@ TEST (controller, odd_even)
     gamma_jpos = aa * jpos->getCommand() + gg;
     
     ctrl.push_back(shared_ptr<ControllerNG>(new ControllerNG("blah")));
-    gb.push_back(shared_ptr<GenericBehavior>(new GenericBehavior("blah")));
+    gb.push_back(shared_ptr<GenericSkill>(new GenericSkill("blah")));
     gamma.push_back(Vector::Zero(puma->getNDOF()));
     
     for (size_t ii(0); ii < ctrl.size(); ++ii) {
       
       append_odd_even_tasks(*gb[ii], puma->getNDOF());
       st = gb[ii]->init(*puma);
-      EXPECT_TRUE (st.ok) << "failed to init generic behavior #"
+      EXPECT_TRUE (st.ok) << "failed to init generic skill #"
 			  << ii << ": " << st.errstr;
       st = ctrl[ii]->init(*puma);
       EXPECT_TRUE (st.ok) << "failed to init controller #"
@@ -214,7 +214,7 @@ TEST (controller, odd_full)
   Vector gamma_jpos;
   
   vector<shared_ptr<ControllerNG> > ctrl;
-  vector<shared_ptr<GenericBehavior> > gb;
+  vector<shared_ptr<GenericSkill> > gb;
   vector<Vector> gamma;
 
   try {
@@ -233,14 +233,14 @@ TEST (controller, odd_full)
     gamma_jpos = aa * jpos->getCommand() + gg;
     
     ctrl.push_back(shared_ptr<ControllerNG>(new ControllerNG("blah")));
-    gb.push_back(shared_ptr<GenericBehavior>(new GenericBehavior("blah")));
+    gb.push_back(shared_ptr<GenericSkill>(new GenericSkill("blah")));
     gamma.push_back(Vector::Zero(puma->getNDOF()));
     
     for (size_t ii(0); ii < ctrl.size(); ++ii) {
       
       append_odd_full_tasks(*gb[ii], puma->getNDOF());
       st = gb[ii]->init(*puma);
-      EXPECT_TRUE (st.ok) << "failed to init generic behavior #"
+      EXPECT_TRUE (st.ok) << "failed to init generic skill #"
 			  << ii << ": " << st.errstr;
       st = ctrl[ii]->init(*puma);
       EXPECT_TRUE (st.ok) << "failed to init controller #"
@@ -330,7 +330,7 @@ TEST (task, jlimit)
     ASSERT_TRUE (st.ok) << "failed to set maxacc: " << st.errstr;
     
     ControllerNG ctrl("ctrl");
-    GenericBehavior gb("gb");
+    GenericSkill gb("gb");
     gb.appendTask(jlimit);
     
     State state(ndof, ndof, 0);
@@ -338,7 +338,7 @@ TEST (task, jlimit)
     state.velocity_ = Vector::Zero(ndof);
     puma->update(state);
     st = gb.init(*puma);
-    EXPECT_TRUE (st.ok) << "failed to init generic behavior: " << st.errstr;
+    EXPECT_TRUE (st.ok) << "failed to init generic skill: " << st.errstr;
     st = ctrl.init(*puma);
     EXPECT_TRUE (st.ok) << "failed to init controller: " << st.errstr;
     Vector gamma;
@@ -354,7 +354,7 @@ TEST (task, jlimit)
       }
       puma->update(state);
       st = gb.update(*puma);
-      EXPECT_TRUE (st.ok) << "failed to update generic behavior: " << st.errstr;
+      EXPECT_TRUE (st.ok) << "failed to update generic skill: " << st.errstr;
       st = ctrl.computeCommand(*puma, gb, gamma);
       EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
     }

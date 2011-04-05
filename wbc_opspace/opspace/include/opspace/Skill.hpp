@@ -33,8 +33,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OPSPACE_BEHAVIOR_HPP
-#define OPSPACE_BEHAVIOR_HPP
+#ifndef OPSPACE_SKILL_HPP
+#define OPSPACE_SKILL_HPP
 
 #include <opspace/Task.hpp>
 #include <opspace/Parameter.hpp>
@@ -106,13 +106,13 @@ namespace opspace {
   };
   
   
-  class Behavior
+  class Skill
     : public ParameterReflection
   {
   public:
     typedef std::vector<Task *> task_table_t;
     
-    virtual ~Behavior();
+    virtual ~Skill();
     
     virtual Status update(Model const & model) = 0;
     virtual task_table_t const * getTaskTable() = 0;
@@ -133,7 +133,7 @@ namespace opspace {
 		     std::string const & prefix) const;
     
   protected:
-    Behavior(std::string const & name);
+    Skill(std::string const & name);
     
     template<typename task_subtype>
     boost::shared_ptr<TaskSlotAPI>
@@ -156,4 +156,4 @@ namespace opspace {
   
 }
 
-#endif // OPSPACE_BEHAVIOR_HPP
+#endif // OPSPACE_SKILL_HPP

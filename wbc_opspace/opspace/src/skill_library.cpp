@@ -33,7 +33,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <opspace/behavior_library.hpp>
+#include <opspace/skill_library.hpp>
 #include <opspace/task_library.hpp>
 
 using boost::shared_ptr;
@@ -42,18 +42,18 @@ using boost::shared_ptr;
 namespace opspace {
   
   
-  GenericBehavior::
-  GenericBehavior(std::string const & name)
-    : Behavior(name)
+  GenericSkill::
+  GenericSkill(std::string const & name)
+    : Skill(name)
   {
     slot_ = declareSlot<Task>("task");
   }
   
   
-  Status GenericBehavior::
+  Status GenericSkill::
   init(Model const & model)
   {
-    Status const st(Behavior::init(model));
+    Status const st(Skill::init(model));
     if ( ! st) {
       return st;
     }
@@ -64,7 +64,7 @@ namespace opspace {
   }
   
   
-  Status GenericBehavior::
+  Status GenericSkill::
   update(Model const & model)
   {
     Status st;
@@ -84,33 +84,33 @@ namespace opspace {
   }
   
   
-  Behavior::task_table_t const * GenericBehavior::
+  Skill::task_table_t const * GenericSkill::
   getTaskTable()
   {
     return &task_table_;
   }
   
   
-  void GenericBehavior::
+  void GenericSkill::
   appendTask(boost::shared_ptr<Task> task)
   {
     slot_->assign(task);
   }
   
   
-  TaskPostureBehavior::
-  TaskPostureBehavior(std::string const & name)
-    : Behavior(name)
+  TaskPostureSkill::
+  TaskPostureSkill(std::string const & name)
+    : Skill(name)
   {
     declareSlot("eepos", &eepos_);
     declareSlot("posture", &posture_);
   }
   
   
-  Status TaskPostureBehavior::
+  Status TaskPostureSkill::
   init(Model const & model)
   {
-    Status st(Behavior::init(model));
+    Status st(Skill::init(model));
     if ( ! st) {
       return st;
     }
@@ -120,7 +120,7 @@ namespace opspace {
   }
   
   
-  Status TaskPostureBehavior::
+  Status TaskPostureSkill::
   update(Model const & model)
   {
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
@@ -134,14 +134,14 @@ namespace opspace {
   }
   
   
-  Behavior::task_table_t const * TaskPostureBehavior::
+  Skill::task_table_t const * TaskPostureSkill::
   getTaskTable()
   {
     return &task_table_;
   }
   
   
-  Status TaskPostureBehavior::
+  Status TaskPostureSkill::
   checkJStarSV(Task const * task, Vector const & sv)
   {
     if (task == eepos_) {
@@ -157,19 +157,19 @@ namespace opspace {
   }
 
 
-  TaskPostureTrjBehavior::
-  TaskPostureTrjBehavior(std::string const & name)
-    : Behavior(name)
+  TaskPostureTrjSkill::
+  TaskPostureTrjSkill(std::string const & name)
+    : Skill(name)
   {
     declareSlot("eepos", &eepos_);
     declareSlot("posture", &posture_);
   }
   
   
-  Status TaskPostureTrjBehavior::
+  Status TaskPostureTrjSkill::
   init(Model const & model)
   {
-    Status st(Behavior::init(model));
+    Status st(Skill::init(model));
     if ( ! st) {
       return st;
     }
@@ -179,7 +179,7 @@ namespace opspace {
   }
   
   
-  Status TaskPostureTrjBehavior::
+  Status TaskPostureTrjSkill::
   update(Model const & model)
   {
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
@@ -193,14 +193,14 @@ namespace opspace {
   }
   
   
-  Behavior::task_table_t const * TaskPostureTrjBehavior::
+  Skill::task_table_t const * TaskPostureTrjSkill::
   getTaskTable()
   {
     return &task_table_;
   }
   
   
-  Status TaskPostureTrjBehavior::
+  Status TaskPostureTrjSkill::
   checkJStarSV(Task const * task, Vector const & sv)
   {
     if (task == eepos_) {
@@ -216,9 +216,9 @@ namespace opspace {
   }
   
   
-  HelloGoodbyeBehavior::
-  HelloGoodbyeBehavior(std::string const & name)
-    : Behavior(name),
+  HelloGoodbyeSkill::
+  HelloGoodbyeSkill(std::string const & name)
+    : Skill(name),
       state_(STATE_START),
       //      shake_eeori_(0),
       shake_eepos_task_(0),
@@ -251,10 +251,10 @@ namespace opspace {
   }
   
   
-  Status HelloGoodbyeBehavior::
+  Status HelloGoodbyeSkill::
   init(Model const & model)
   {
-    Status st(Behavior::init(model));
+    Status st(Skill::init(model));
     if ( ! st) {
       return st;
     }
@@ -311,7 +311,7 @@ namespace opspace {
   }
   
   
-  Status HelloGoodbyeBehavior::
+  Status HelloGoodbyeSkill::
   update(Model const & model)
   {
     Status st;
@@ -444,7 +444,7 @@ namespace opspace {
   }
   
   
-  Behavior::task_table_t const * HelloGoodbyeBehavior::
+  Skill::task_table_t const * HelloGoodbyeSkill::
   getTaskTable()
   {
     switch (state_) {
@@ -460,7 +460,7 @@ namespace opspace {
   }
   
   
-  Status HelloGoodbyeBehavior::
+  Status HelloGoodbyeSkill::
   checkJStarSV(Task const * task, Vector const & sv)
   {
     if (//(task == shake_eeori_)
@@ -480,12 +480,12 @@ namespace opspace {
   }
   
   
-  void HelloGoodbyeBehavior::
+  void HelloGoodbyeSkill::
   dbg(std::ostream & os,
       std::string const & title,
       std::string const & prefix) const
   {
-    Behavior::dbg(os, title, prefix);
+    Skill::dbg(os, title, prefix);
     os << prefix << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
     switch (state_) {
     case STATE_START:

@@ -140,7 +140,7 @@ namespace opspace {
   
   Status ControllerNG::
   computeCommand(Model const & model,
-		 Behavior & behavior,
+		 Skill & skill,
 		 Vector & gamma)
   {
     //////////////////////////////////////////////////
@@ -152,14 +152,14 @@ namespace opspace {
     }
     //////////////////////////////////////////////////
     
-    Status st(behavior.update(model));
+    Status st(skill.update(model));
     if ( ! st) {
       fallback_ = true;
-      fallback_reason_ = "behavior update failed: " + st.errstr;
+      fallback_reason_ = "skill update failed: " + st.errstr;
       return computeFallback(model, true, gamma);
     }
     
-    Behavior::task_table_t const * tasks(behavior.getTaskTable());
+    Skill::task_table_t const * tasks(skill.getTaskTable());
     if ( ! tasks) {
       fallback_ = true;
       fallback_reason_ = "null task table";
@@ -194,7 +194,7 @@ namespace opspace {
       //##################################################
       //##################################################
       //##################################################
-      // quick hack, will break as soon as we switch behavior at
+      // quick hack, will break as soon as we switch skill at
       // runtime, but there's no duplicate-detection behind
       // declareParameter() so it's a bit tricky to declare them on
       // the fly...
@@ -231,7 +231,7 @@ namespace opspace {
       
       Matrix jjt(jstar * jstar.transpose());
       sv_jstar_[ii] = Eigen::SVD<Matrix>(jjt).singularValues();
-      st = behavior.checkJStarSV(task, sv_jstar_[ii]);
+      st = skill.checkJStarSV(task, sv_jstar_[ii]);
       if ( ! st) {
 	fallback_ = true;
 	fallback_reason_ = "checkJStarSV failed: " + st.errstr;
@@ -300,16 +300,16 @@ namespace opspace {
   
   
   void ControllerNG::
-  qhlog(Behavior & behavior, long long timestamp)
+  qhlog(Skill & skill, long long timestamp)
   {
     if (0 == logcount_) {
       // initialize logging
       log_.clear();
       log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("ctrl_" + instance_name_,
 							       getParameterTable())));
-      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("skill_" + behavior.getName(),
-							       behavior.getParameterTable())));
-      Behavior::task_table_t const * tasks(behavior.getTaskTable());
+      log_.push_back(shared_ptr<ParameterLog>(new ParameterLog("skill_" + skill.getName(),
+							       skill.getParameterTable())));
+      Skill::task_table_t const * tasks(skill.getTaskTable());
       if (tasks) {
 	for (size_t ii(0); ii < tasks->size(); ++ii) {
 	  std::ostringstream nm;

@@ -34,9 +34,9 @@
  */
 
 #include <opspace/Factory.hpp>
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 #include <opspace/task_library.hpp>
-#include <opspace/behavior_library.hpp>
+#include <opspace/skill_library.hpp>
 #include <opspace/parse_yaml.hpp>
 #include <fstream>
 #include <stdexcept>
@@ -110,7 +110,7 @@ namespace opspace {
       YAML::Parser parser(yaml_istream);
       YAML::Node doc;
       TaskTableParser task_table_parser(*this, task_table_, dbg_);
-      BehaviorTableParser behavior_table_parser(*this, behavior_table_, dbg_);
+      SkillTableParser skill_table_parser(*this, skill_table_, dbg_);
       
       parser.GetNextDocument(doc); // <sigh>this'll have merge conflicts again</sigh>
       //while (parser.GetNextDocument(doc)) {
@@ -122,8 +122,11 @@ namespace opspace {
 	    if ("tasks" == key) {
 	      idict.second() >> task_table_parser;
 	    }
+	    else if ("skills" == key) {
+	      idict.second() >> skill_table_parser;
+	    }
 	    else if ("behaviors" == key) {
-	      idict.second() >> behavior_table_parser;
+	      throw std::runtime_error("deprecated key `behaviors' (use `skills' instead)");
 	    }
 	    else {
 	      throw std::runtime_error("invalid key `" + key + "'");
@@ -158,10 +161,10 @@ namespace opspace {
   }
   
   
-  Factory::behavior_table_t const & Factory::
-  getBehaviorTable() const
+  Factory::skill_table_t const & Factory::
+  getSkillTable() const
   {
-    return behavior_table_;
+    return skill_table_;
   }
   
   
@@ -178,9 +181,9 @@ namespace opspace {
 	 it != task_table_.end(); ++it) {
       (*it)->dump(os, "", prefix + "    ");
     }
-    os << prefix << "  behaviors:\n";
-    for (behavior_table_t::const_iterator it(behavior_table_.begin());
-	 it != behavior_table_.end(); ++it) {
+    os << prefix << "  skills:\n";
+    for (skill_table_t::const_iterator it(skill_table_.begin());
+	 it != skill_table_.end(); ++it) {
       (*it)->dump(os, "", prefix + "    ");
     }
   }
@@ -199,32 +202,32 @@ namespace opspace {
   }
 
   
-  boost::shared_ptr<Behavior> Factory::
-  findBehavior(std::string const & name)
+  boost::shared_ptr<Skill> Factory::
+  findSkill(std::string const & name)
     const
   {
-    for (size_t ii(0); ii < behavior_table_.size(); ++ii) {
-      if (name == behavior_table_[ii]->getName()) {
-	return behavior_table_[ii];
+    for (size_t ii(0); ii < skill_table_.size(); ++ii) {
+      if (name == skill_table_[ii]->getName()) {
+	return skill_table_[ii];
       }
     }
-    return boost::shared_ptr<Behavior>();
+    return boost::shared_ptr<Skill>();
   }
   
   
-  Behavior * createBehavior(std::string const & type, std::string const & name)
+  Skill * createSkill(std::string const & type, std::string const & name)
   {
-    if ("opspace::GenericBehavior" == type) {
-      return new opspace::GenericBehavior(name);
+    if ("opspace::GenericSkill" == type) {
+      return new opspace::GenericSkill(name);
     }
-    if ("opspace::TaskPostureBehavior" == type) {
-      return new opspace::TaskPostureBehavior(name);
+    if ("opspace::TaskPostureSkill" == type) {
+      return new opspace::TaskPostureSkill(name);
     }
-    if ("opspace::TaskPostureTrjBehavior" == type) {
-      return new opspace::TaskPostureTrjBehavior(name);
+    if ("opspace::TaskPostureTrjSkill" == type) {
+      return new opspace::TaskPostureTrjSkill(name);
     }
-    if ("opspace::HelloGoodbyeBehavior" == type) {
-      return new opspace::HelloGoodbyeBehavior(name);
+    if ("opspace::HelloGoodbyeSkill" == type) {
+      return new opspace::HelloGoodbyeSkill(name);
     }
     return 0;
   }
@@ -237,8 +240,8 @@ namespace opspace {
     for (size_t ii(0); ii < task_table_.size(); ++ii) {
       reg->add(task_table_[ii]);
     }
-    for (size_t ii(0); ii < behavior_table_.size(); ++ii) {
-      reg->add(behavior_table_[ii]);
+    for (size_t ii(0); ii < skill_table_.size(); ++ii) {
+      reg->add(skill_table_[ii]);
     }
     return reg;
   }

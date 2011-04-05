@@ -43,10 +43,6 @@
 namespace opspace {
 
   using jspace::Vector;
-  // class Task;
-  // class Parameter;
-  // class Factory;
-  // class Behavior;
   
   
   class Parser
@@ -80,23 +76,23 @@ namespace opspace {
   };
   
   
-  class BehaviorParser
+  class SkillParser
     : public Parser
   {
   public:
-    BehaviorParser(Factory const & factory, std::ostream * optional_dbg_os = 0);
+    SkillParser(Factory const & factory, std::ostream * optional_dbg_os = 0);
     
     std::string type;
     std::string name;
     
     /** After successfully parsing a YAML node, this contains the
-	pointer to the freshly created behavior. If something goes
-	wrong, behavior will be zero.
+	pointer to the freshly created skill. If something goes
+	wrong, skill will be zero.
 	
 	\note You are responsible for eventually deleting this
-	Behavior instance.
+	Skill instance.
     */
-    Behavior * behavior;
+    Skill * skill;
   };
   
   
@@ -113,16 +109,16 @@ namespace opspace {
   };
   
   
-  class BehaviorTableParser
+  class SkillTableParser
     : public Parser
   {
   public:
-    BehaviorTableParser(Factory const & factory,
-			Factory::behavior_table_t & behavior_table,
+    SkillTableParser(Factory const & factory,
+			Factory::skill_table_t & skill_table,
 			std::ostream * optional_dbg_os = 0);
     
-    BehaviorParser behavior_parser;    
-    Factory::behavior_table_t & behavior_table;
+    SkillParser skill_parser;    
+    Factory::skill_table_t & skill_table;
   };  
   
   
@@ -130,11 +126,11 @@ namespace opspace {
   
   void operator >> (YAML::Node const & node, TaskParser & parser);
   
-  void operator >> (YAML::Node const & node, BehaviorParser & parser);
+  void operator >> (YAML::Node const & node, SkillParser & parser);
   
   void operator >> (YAML::Node const & node, TaskTableParser & parser);
   
-  void operator >> (YAML::Node const & node, BehaviorTableParser & parser);
+  void operator >> (YAML::Node const & node, SkillTableParser & parser);
   
 }
 

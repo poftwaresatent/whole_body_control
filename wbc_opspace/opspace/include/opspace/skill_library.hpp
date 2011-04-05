@@ -33,20 +33,20 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OPSPACE_BEHAVIOR_LIBRARY_HPP
-#define OPSPACE_BEHAVIOR_LIBRARY_HPP
+#ifndef OPSPACE_SKILL_LIBRARY_HPP
+#define OPSPACE_SKILL_LIBRARY_HPP
 
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 #include <opspace/task_library.hpp>
 
 namespace opspace {
   
   
-  class GenericBehavior
-    : public Behavior
+  class GenericSkill
+    : public Skill
   {
   public:
-    GenericBehavior(std::string const & name);
+    GenericSkill(std::string const & name);
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
@@ -60,11 +60,11 @@ namespace opspace {
   };
   
   
-  class TaskPostureBehavior
-    : public Behavior
+  class TaskPostureSkill
+    : public Skill
   {
   public:
-    TaskPostureBehavior(std::string const & name);
+    TaskPostureSkill(std::string const & name);
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
@@ -78,11 +78,11 @@ namespace opspace {
   };
   
   
-  class TaskPostureTrjBehavior
-    : public Behavior
+  class TaskPostureTrjSkill
+    : public Skill
   {
   public:
-    TaskPostureTrjBehavior(std::string const & name);
+    TaskPostureTrjSkill(std::string const & name);
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
@@ -96,11 +96,11 @@ namespace opspace {
   };
 
 
-  class HelloGoodbyeBehavior
-    : public Behavior
+  class HelloGoodbyeSkill
+    : public Skill
   {
   public:
-    HelloGoodbyeBehavior(std::string const & name);
+    HelloGoodbyeSkill(std::string const & name);
     
     virtual Status init(Model const & model);
     virtual Status update(Model const & model);
@@ -153,4 +153,4 @@ namespace opspace {
   
 }
 
-#endif // OPSPACE_BEHAVIOR_LIBRARY_HPP
+#endif // OPSPACE_SKILL_LIBRARY_HPP
