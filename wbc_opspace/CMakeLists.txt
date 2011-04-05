@@ -22,9 +22,9 @@ rosbuild_add_library (wbc_opspace
   opspace/src/Controller.cpp
   opspace/src/controller_library.cpp
   opspace/src/task_library.cpp
-  opspace/src/behavior_library.cpp
+  opspace/src/skill_library.cpp
   opspace/src/parse_yaml.cpp
-  opspace/src/Behavior.cpp
+  opspace/src/Skill.cpp
   src/util.cpp
   )
 
