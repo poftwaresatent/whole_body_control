@@ -230,5 +230,17 @@ namespace opspace {
   }
   
   
-
+  ReflectionRegistry * Factory::
+  createRegistry()
+  {
+    ReflectionRegistry * reg(new ReflectionRegistry());
+    for (size_t ii(0); ii < task_table_.size(); ++ii) {
+      reg->add(task_table_[ii]);
+    }
+    for (size_t ii(0); ii < behavior_table_.size(); ++ii) {
+      reg->add(behavior_table_[ii]);
+    }
+    return reg;
+  }
+  
 }

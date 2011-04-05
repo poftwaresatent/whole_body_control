@@ -47,6 +47,7 @@ namespace opspace {
   
   class Task;
   class Behavior;
+  class ReflectionRegistry;
   
   /**
      \todo Replace this with some sort of plugin-based approach.
@@ -158,6 +159,12 @@ namespace opspace {
     
     boost::shared_ptr<Task> findTask(std::string const & name) const;
     boost::shared_ptr<Behavior> findBehavior(std::string const & name) const;
+    
+    /**
+       Create a ReflectionRegistry and populate it with the currently
+       registered task and behavior instances.
+    */
+    ReflectionRegistry * createRegistry();
     
     /**
        Write a human-readable (hopefully, anyway) description of all

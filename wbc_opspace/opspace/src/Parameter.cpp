@@ -738,4 +738,79 @@ namespace opspace {
     return instance;
   }
   
+  
+  void ReflectionRegistry::
+  enumerate(enumeration_t & enumeration)
+  {
+    enumeration_entry_s entry;
+    for (type_map_t::iterator it(type_map_.begin()); type_map_.end() != it; ++it) {
+      entry.type_name = it->first;
+      for (instance_map_t::iterator ii(it->second.begin()); it->second.end() != ii; ++ii) {
+	entry.instance_name = ii->first;
+	parameter_lookup_t const & pt(ii->second->getParameterTable());
+	for (parameter_lookup_t::const_iterator ip(pt.begin()); pt.end() != ip; ++ip) {
+	  entry.parameter_name = ip->first;
+	  entry.parameter = ip->second;
+	  enumeration.push_back(entry);
+	}
+      }
+    }
+  }
+  
+  
+  Parameter * ReflectionRegistry::
+  lookupParameter(std::string const & type_name,
+		  std::string const & instance_name,
+		  std::string const & parameter_name)
+  {
+    boost::shared_ptr<ParameterReflection> ref(find(type_name, instance_name));
+    if ( ! ref) {
+      return 0;
+    }
+    return ref->lookupParameter(parameter_name);
+  }
+  
+  
+  Parameter const * ReflectionRegistry::
+  lookupParameter(std::string const & type_name,
+		  std::string const & instance_name,
+		  std::string const & parameter_name) const
+  {
+    boost::shared_ptr<ParameterReflection const>
+      ref(const_cast<ReflectionRegistry*>(this)->find(type_name, instance_name));
+    if ( ! ref) {
+      return 0;
+    }
+    return ref->lookupParameter(parameter_name);
+  }
+  
+  
+  Parameter * ReflectionRegistry::
+  lookupParameter(std::string const & type_name,
+		  std::string const & instance_name,
+		  std::string const & parameter_name,
+		  parameter_type_t parameter_type)
+  {
+    boost::shared_ptr<ParameterReflection> ref(find(type_name, instance_name));
+    if ( ! ref) {
+      return 0;
+    }
+    return ref->lookupParameter(parameter_name, parameter_type);
+  }
+  
+  
+  Parameter const * ReflectionRegistry::
+  lookupParameter(std::string const & type_name,
+		  std::string const & instance_name,
+		  std::string const & parameter_name,
+		  parameter_type_t parameter_type) const
+  {
+    boost::shared_ptr<ParameterReflection const>
+      ref(const_cast<ReflectionRegistry*>(this)->find(type_name, instance_name));
+    if ( ! ref) {
+      return 0;
+    }
+    return ref->lookupParameter(parameter_name, parameter_type);
+  }
+
 }

@@ -308,10 +308,37 @@ namespace opspace {
   class ReflectionRegistry
   {
   public:
+    struct enumeration_entry_s {
+      std::string type_name, instance_name, parameter_name;
+      Parameter * parameter;
+    };
+    typedef std::vector<enumeration_entry_s> enumeration_t;
+    
+    
     void add(boost::shared_ptr<ParameterReflection> instance);
     
     boost::shared_ptr<ParameterReflection> find(std::string const & type_name,
 						std::string const & instance_name);
+    
+    void enumerate(enumeration_t & enumeration);
+
+    Parameter * lookupParameter(std::string const & type_name,
+				std::string const & instance_name,
+				std::string const & parameter_name);
+    
+    Parameter const * lookupParameter(std::string const & type_name,
+				      std::string const & instance_name,
+				      std::string const & parameter_name) const;
+    
+    Parameter * lookupParameter(std::string const & type_name,
+				std::string const & instance_name,
+				std::string const & parameter_name,
+				parameter_type_t parameter_type);
+    
+    Parameter const * lookupParameter(std::string const & type_name,
+				      std::string const & instance_name,
+				      std::string const & parameter_name,
+				      parameter_type_t parameter_type) const;
     
   private:
     typedef std::map<std::string, boost::shared_ptr<ParameterReflection> > instance_map_t;
