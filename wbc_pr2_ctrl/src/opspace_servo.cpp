@@ -30,7 +30,7 @@
 #include <tao/dynamics/taoNode.h>
 #include <opspace/Behavior.hpp>
 #include <opspace/Factory.hpp>
-#include <opspace/ControllerNG.hpp>
+#include <opspace/controller_library.hpp>
 #include <wbc_opspace/util.h>
 #include <XmlRpcValue.h>
 #include <XmlRpcException.h>
@@ -81,6 +81,7 @@ static scoped_ptr<jspace::Model> jspace_model;
 static size_t pump_ndof;
 static size_t servo_ndof;
 static shared_ptr<opspace::Factory> factory;
+static shared_ptr<opspace::ReflectionRegistry> registry;
 static shared_ptr<ControllerNG> controller;
 static wbc_opspace::ParamCallbacks param_callbacks;
 
@@ -300,8 +301,10 @@ int main(int argc, char*argv[])
   }
   
   ROS_INFO ("starting services");
+  registry.reset(factory->createRegistry());
+  registry->add(controller);	// one day this will come from factory, too
   try {
-    param_callbacks.init(nn, factory, controller, 1, 100);
+    param_callbacks.init(nn, registry, 1, 100);
   }
   catch (std::exception const & ee) {
     ROS_ERROR ("EXCEPTION %s", ee.what());
