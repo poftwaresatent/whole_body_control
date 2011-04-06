@@ -82,7 +82,7 @@ static size_t pump_ndof;
 static size_t servo_ndof;
 static shared_ptr<opspace::Factory> factory;
 static shared_ptr<opspace::ReflectionRegistry> registry;
-static shared_ptr<ControllerNG> controller;
+static shared_ptr<opspace::Controller> controller;
 static wbc_opspace::ParamCallbacks param_callbacks;
 
 // I think this needs to stick around because otherwise it deletes the TAO nodes
@@ -287,7 +287,8 @@ int main(int argc, char*argv[])
     ROS_ERROR ("update_model_from_pump() failed");
     exit(EXIT_FAILURE);
   }
-  controller.reset(new ControllerNG("opspace_servo"));
+  controller.reset(new ControllerNG(""));
+  ////  controller.reset(new ClassicTaskPostureController(""));
   jspace::Status status;
   status = controller->init(*jspace_model);
   if ( ! status) {

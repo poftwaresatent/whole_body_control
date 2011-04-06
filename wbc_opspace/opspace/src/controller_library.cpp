@@ -120,6 +120,9 @@ namespace opspace {
     gamma_ = jac.transpose() * fstar_ + nullspace_ * posture->getCommand() + grav;
     gamma = gamma_;
     
+    jpos_ = model.getState().position_;
+    jvel_ = model.getState().velocity_;
+    
     return st;
   }
   
@@ -133,7 +136,7 @@ namespace opspace {
       os << title << "\n";
     }
     pretty_print(jpos_, os, prefix + "jpos", prefix + "  ");
-    pretty_print(jvel_, os, prefix + "jpos", prefix + "  ");
+    pretty_print(jvel_, os, prefix + "jvel", prefix + "  ");
     pretty_print(fstar_, os, prefix + "fstar", prefix + "  ");
     pretty_print(lambda_, os, prefix + "lambda", prefix + "  ");
     pretty_print(jbar_, os, prefix + "jbar", prefix + "  ");
