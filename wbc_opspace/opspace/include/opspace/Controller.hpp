@@ -53,6 +53,10 @@ namespace opspace {
     virtual Status computeCommand(Model const & model,
 				  Skill & skill,
 				  Vector & gamma) = 0;
+    
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const {}
   };
   
 }

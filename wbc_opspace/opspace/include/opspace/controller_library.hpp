@@ -42,12 +42,38 @@
 namespace opspace {
   
   
+  class ClassicTaskPostureController
+    : public Controller
+  {
+  public:
+    explicit ClassicTaskPostureController(std::string const & name);
+    
+    virtual Status init(Model const & model);
+    
+    virtual Status computeCommand(Model const & model,
+				  Skill & skill,
+				  Vector & gamma);
+
+    virtual void dbg(std::ostream & os,
+		     std::string const & title,
+		     std::string const & prefix) const;
+    
+  protected:
+    Vector jpos_;
+    Vector jvel_;
+    Vector gamma_;
+    Vector fstar_;
+    Matrix lambda_;
+    Matrix jbar_;
+    Matrix nullspace_;
+  };
+  
+  
   class ControllerNG
     : public Controller
   {
   public:
     explicit ControllerNG(std::string const & name);
-    virtual ~ControllerNG() {}
     
     void setFallbackTask(boost::shared_ptr<Task> task);
     
