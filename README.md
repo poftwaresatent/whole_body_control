@@ -132,39 +132,33 @@ YAML file, and lets us modify goals, gains, and other parameters while
 the controller is running. These are all quite nifty features which we
 are excited to share with the community.
 
-Launch PR2 in Gazebo
---------------------
+**1. Launch PR2 in Gazebo**
 
     roscd wbc_pr2_ctrl/launch
     roslaunch pr2_gazebo.launch
 
-Launch the WBC pump plugin
---------------------------
+**2. Launch the WBC pump plugin**
 
     roscd wbc_pr2_ctrl/launch
     roslaunch pr2_pump_plugin.launch
 
-Launch the WBC opspace controller
----------------------------------
+**3. Launch the WBC opspace controller**
 
     roscd wbc_pr2_ctrl/launch
     roslaunch pr2_opspace.launch
 
-List services and messages
---------------------------
+**4. List services and messages**
 
     rostopic list | fgrep opspace
     rosservice list | fgrep opspace
 
-Get and set end-effector trajectory goal using service
-------------------------------------------------------
+**5. Get and set end-effector trajectory goal using service**
 
     rosservice call /opspace_servo/get_param '{ com_type: task, com_name: eepos, param_name: trjgoal }'
     rosservice call /opspace_servo/set_param '{ com_type: task, com_name: eepos, param: { name: trjgoal, type: 4, realval: [0.6, 0.1, 1.0] } }'
     rosservice call /opspace_servo/set_param '{ com_type: task, com_name: eepos, param: { name: trjgoal, type: 4, realval: [0.7, -0.1, 0.8] } }'
 
-Set end-effector trajectory goal using message (param channel)
---------------------------------------------------------------
+**6. Set end-effector trajectory goal using message (param channel)**
 
     rosservice call /opspace_servo/open_channel '{ com_type: task, com_name: eepos, param_name: trjgoal }'
     (note the channel_id in the reply, it will probably be 0)
