@@ -106,8 +106,75 @@ Stack Contents
 
 [reflexxes]: http://www.reflexxes.net/
 
+
+
+Run the PR2 Task / Nullspace-Posture Example in Gazebo
+======================================================
+
+After successfully installing ROS and building the
+`whole_body_control` stack, in particular the `wbc_pr2_ctrl` package,
+you can run the following example of whole-body operational space
+control. It is a "minimal" example in the sense that it contains two
+tasks (a Cartesian end-effector position and a joint-space posture)
+and that their interaction is hardcoded (you cannot easily change the
+task hierarchy at runtime). Nevertheless, this is a complete example
+of **dynamically consistent nullspace projection** techniques, which are
+the foundations for the power and expressiveness of the whole-body
+controller.
+
+This example is implemented in the
+`wbc_pr2_ctrl/src/opspace_servo.cpp` file. You can also use that as-is
+for real-time execution on the physical PR2. The `opspace_servo` uses
+the freshly designed and implemented **runtime configuration and
+parameter reflection** capabilities of the UT Austin opspace library,
+which allows changing the tasks and skills at startup time using a
+YAML file, and lets us modify goals, gains, and other parameters while
+the controller is running. These are all quite nifty features which we
+are excited to share with the community.
+
+Launch PR2 in Gazebo
+--------------------
+
+    roscd wbc_pr2_ctrl/launch
+    roslaunch pr2_gazebo.launch
+
+Launch the WBC pump plugin
+--------------------------
+
+    roscd wbc_pr2_ctrl/launch
+    roslaunch pr2_pump_plugin.launch
+
+Launch the WBC opspace controller
+---------------------------------
+
+    roscd wbc_pr2_ctrl/launch
+    roslaunch pr2_opspace.launch
+
+List services and messages
+--------------------------
+
+    rostopic list | fgrep opspace
+    rosservice list | fgrep opspace
+
+Get and set end-effector trajectory goal using service
+------------------------------------------------------
+
+    rosservice call /opspace_servo/get_param '{ com_type: task, com_name: eepos, param_name: trjgoal }'
+    rosservice call /opspace_servo/set_param '{ com_type: task, com_name: eepos, param: { name: trjgoal, type: 4, realval: [0.6, 0.1, 1.0] } }'
+    rosservice call /opspace_servo/set_param '{ com_type: task, com_name: eepos, param: { name: trjgoal, type: 4, realval: [0.7, -0.1, 0.8] } }'
+
+Set end-effector trajectory goal using message (param channel)
+--------------------------------------------------------------
+
+    rosservice call /opspace_servo/open_channel '{ com_type: task, com_name: eepos, param_name: trjgoal }'
+    (note the channel_id in the reply, it will probably be 0)
+    rostopic pub -1 /opspace_servo/vector_channel wbc_msgs/VectorChannel '{ channel_id: 0, value: [0.5, -0.1, 0.8] }'
+    rostopic pub -1 /opspace_servo/vector_channel wbc_msgs/VectorChannel '{ channel_id: 0, value: [0.5, 0.1, 0.8] }'
+
+
+
 Some Notes About git-subtree
-----------------------------
+============================
 
 We've stopped using `git-submodule` for the `wbc_core/src` directory
 and have replaced it with an in-tree copy via [git-subtree][]. This
@@ -169,41 +236,3 @@ WBC][utaustin-wbc].
 
     Again, this assumes you have properly installed
     `git-subtree`. Otherwise, say "`/path/to/git-subtree.sh`" instead.
-
-
-Run the PR2 Task / Nullspace-Posture Example in Gazebo
-------------------------------------------------------
-
-After successfully installing ROS and building the
-`whole_body_control` stack, in particular the `wbc_pr2_ctrl` package,
-you can run the following example of whole-body operational space
-control. It is a "minimal" example in the sense that it contains two
-tasks (a Cartesian end-effector position and a joint-space posture)
-and that their interaction is hardcoded (you cannot easily change the
-task hierarchy at runtime). Nevertheless, this is a complete example
-of **dynamically consistent nullspace projection** techniques, which are
-the foundations for the power and expressiveness of the whole-body
-controller.
-
-This example is implemented in the `wbc_pr2_ctrl/src/wbc_plugin.cpp`
-file. Please note that this implementation is **not intended for
-real-time** execution on the physical PR2: it produces very verbose
-console output and uses a somewhat ad-hoc approach for integrating a
-ROS service server into the plugin to allow modifying goals and gains
-while the controller is running.
-
-- terminal 1:
-  - roscd wbc_pr2_ctrl/launch
-  - roslaunch pr2_gazebo.launch
-
-- terminal 2:
-  - roscd wbc_pr2_ctrl/launch
-  - roslaunch pr2_wbc_plugin.launch
-
-- terminal 3:
-  - roscd wbc_pr2_ctrl/scripts
-  - ./task_posture_gui.py
-  - Click "initialize"
-  - Change some values
-  - Click on the "Set FOO_BAR" buttons
-  - See what happens, pause Gazebo to read the debug output.
