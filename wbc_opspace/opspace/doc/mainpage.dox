@@ -21,10 +21,10 @@
    - http://stanford-wbc.sf.net/
    
    The best place to start reading the API documentation is probably
-   opspace::Task and opspace::Controller. For working on a tutorial
+   opspace::Task, opspace::Skill, and opspace::Controller. We are working on a tutorial
    etc, but it's not ready yet. Also note that the whole_body_control
-   stack for ROS wil (soon anyway) contain an operational-space
-   controller plugin for PR2, based on the code here. So maybe chcek
+   stack for ROS contains an operational-space
+   controller for PR2, based on the code here. So maybe chcek
    that out instead.
    
    - https://github.com/poftwaresatent/whole_body_control

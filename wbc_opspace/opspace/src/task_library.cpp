@@ -413,7 +413,8 @@ namespace opspace {
   CartPosTask(std::string const & name)
     : PDTask(name, PDTask::SATURATION_NORM),
       end_effector_name_(""),
-      control_point_(Vector::Zero(3))
+      control_point_(Vector::Zero(3)),
+      end_effector_node_(0)
   {
     declareParameter("end_effector", &end_effector_name_, PARAMETER_FLAG_NOLOG);
     declareParameter("control_point", &control_point_, PARAMETER_FLAG_NOLOG);

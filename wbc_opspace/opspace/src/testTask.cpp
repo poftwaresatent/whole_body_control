@@ -343,7 +343,7 @@ TEST (task, jlimit)
     EXPECT_TRUE (st.ok) << "failed to init controller: " << st.errstr;
     Vector gamma;
     st = ctrl.computeCommand(*puma, gb, gamma);
-    EXPECT_TRUE (st.ok) << "failed to computeCommand: " << st.errstr;
+    EXPECT_FALSE (st.ok) << "computeCommand should have failed due to empty Jacobians";
     
     for (size_t ii(0); ii < ndof; ++ii) {
       if (0 == ii % 2) {

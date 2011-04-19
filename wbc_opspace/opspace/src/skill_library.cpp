@@ -57,8 +57,10 @@ namespace opspace {
     if ( ! st) {
       return st;
     }
-    for (size_t ii(0); ii < slot_->getNInstances(); ++ii) {
-      task_table_.push_back(slot_->getInstance(ii).get());
+    if (task_table_.empty()) {
+      for (size_t ii(0); ii < slot_->getNInstances(); ++ii) {
+	task_table_.push_back(slot_->getInstance(ii).get());
+      }
     }
     return st;
   }
