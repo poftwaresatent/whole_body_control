@@ -36,8 +36,10 @@
 #include <wbc_m3_ctrl/rt_util.h>
 
 #include <ros/ros.h>
+#include <jspace/Model.hpp>
 #include <jspace/test/sai_util.hpp>
 #include <opspace/Factory.hpp>
+#include <opspace/Task.hpp>
 #include <wbc_opspace/util.h>
 #include <boost/scoped_ptr.hpp>
 #include <err.h>
@@ -53,6 +55,7 @@ using namespace std;
 static bool verbose(false);
 static scoped_ptr<jspace::Model> model;
 static shared_ptr<Factory> factory;
+static shared_ptr<opspace::ReflectionRegistry> registry;
 static long long servo_rate;
 static shared_ptr<ParamCallbacks> param_cbs;
 
@@ -292,7 +295,8 @@ int main(int argc, char ** argv)
     if (verbose) {
       warnx("initializing param callbacks");
     }
-    param_cbs->init(node, factory, boost::shared_ptr<opspace::ControllerNG>(), 1, 100);
+    registry.reset(factory->createRegistry());
+    param_cbs->init(node, registry, 1, 100);
     
     if (verbose) {
       warnx("starting servo with %lld Hz", servo_rate);

@@ -45,9 +45,9 @@
 
 #include <ros/ros.h>
 #include <jspace/test/sai_util.hpp>
-#include <opspace/Behavior.hpp>
+#include <opspace/Skill.hpp>
 #include <opspace/Factory.hpp>
-#include <opspace/ControllerNG.hpp>
+#include <opspace/controller_library.hpp>
 #include <wbc_opspace/util.h>
 #include <boost/scoped_ptr.hpp>
 #include <err.h>
@@ -77,8 +77,8 @@ static char const * opspace_fallback_str =
   "    kd: [  10.0 ]\n"
   "    maxvel: [ 3.1416 ]\n"
   "    maxacc: [ 6.2832 ]\n"
-  "- behaviors:\n"
-  "  - type: opspace::TPBehavior\n"
+  "- skills:\n"
+  "  - type: opspace::TPSkill\n"
   "    name: task_posture\n"
   "    default:\n"
   "      eepos: eepos\n"
@@ -88,6 +88,7 @@ static char const * opspace_fallback_str =
 static bool verbose(false);
 static scoped_ptr<jspace::Model> model;
 static shared_ptr<Factory> factory;
+static shared_ptr<opspace::ReflectionRegistry> registry;
 static long long servo_rate;
 static long long actual_servo_rate;
 static shared_ptr<ParamCallbacks> param_cbs;
@@ -231,14 +232,14 @@ namespace {
     : public RTUtil
   {
   public:
-    shared_ptr<Behavior> skill;    
+    shared_ptr<Skill> skill;    
     
     virtual int init(jspace::State const & state) {
       if (skill) {
 	warnx("Servo::init(): already initialized");
 	return -1;
       }
-      if (factory->getBehaviorTable().empty()) {
+      if (factory->getSkillTable().empty()) {
 	warnx("Servo::init(): empty skill table");
 	return -2;
       }
@@ -255,7 +256,7 @@ namespace {
 	return -4;
       }
       
-      skill = factory->getBehaviorTable()[0]; // XXXX to do: allow selection at runtime
+      skill = factory->getSkillTable()[0]; // XXXX to do: allow selection at runtime
       status = skill->init(*model);
       if ( ! status) {
 	warnx("Servo::init(): skill->init() failed: %s", status.errstr.c_str());
@@ -326,7 +327,9 @@ int main(int argc, char ** argv)
     if (verbose) {
       warnx("initializing param callbacks");
     }
-    param_cbs->init(node, factory, controller, 1, 100);
+    registry.reset(factory->createRegistry());
+    registry->add(controller);
+    param_cbs->init(node, registry, 1, 100);
     
     if (verbose) {
       warnx("starting servo with %lld Hz", servo_rate);
