@@ -23,8 +23,8 @@
     kd: [ 3.0 ]
     maxvel: [ 10.0 ]
 
-- behaviors:
-  - type: opspace::GenericBehavior
+- skills:
+  - type: opspace::GenericSkill
     name: exp
     slots:
     - task: eeori

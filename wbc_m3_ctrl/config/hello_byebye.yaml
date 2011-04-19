@@ -43,8 +43,8 @@
     maxvel: [ 1.0 ]
     maxacc: [ 6.0 ]
 
-- behaviors:
-  - type: opspace::HelloGoodbyeBehavior
+- skills:
+  - type: opspace::HelloGoodbyeSkill
     name: hello_goodbye
     slots:
       # shake_orientation: eeori_shake
