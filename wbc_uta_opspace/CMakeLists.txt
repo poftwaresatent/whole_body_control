@@ -9,7 +9,7 @@ rosbuild_init ()
 
 set (LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
-rosbuild_add_library(uta_opspace
+rosbuild_add_library (wbc_uta_opspace
   uta_opspace/strutil.cpp
   uta_opspace/ControllerNG.cpp
   uta_opspace/HelloGoodbyeSkill.cpp
