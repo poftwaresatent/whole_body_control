@@ -84,4 +84,6 @@ rosbuild_add_library (wbc_core
   stanford_wbc/opspace/src/Parameter.cpp
   stanford_wbc/opspace/src/TypeIOTGCursor.cpp
   stanford_wbc/opspace/src/Controller.cpp
+  
+  src/opspace_param_callbacks.cpp
   )

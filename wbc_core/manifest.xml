@@ -7,8 +7,10 @@
   <license>LGPLv3</license>
   <review status="3rdparty" notes=""/>
   <url>http://stanford-wbc.sourceforge.net/</url>
+  <depend package="roscpp"/>
   <depend package="eigen"/>
   <depend package="yaml_cpp"/>
+  <depend package="wbc_msgs"/>
   <export>
     <!-- See comments in CMakeLists.txt for further comments on
 	 wbc_tinyxml weirdness -->
