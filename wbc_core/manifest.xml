@@ -8,11 +8,15 @@
   <review status="3rdparty" notes=""/>
   <url>http://stanford-wbc.sourceforge.net/</url>
   <depend package="eigen"/>
+  <depend package="yaml_cpp"/>
   <export>
     <!-- See comments in CMakeLists.txt for further comments on
 	 wbc_tinyxml weirdness -->
-    <cpp cflags="-I${prefix}/src/jspace -I${prefix}/src/tao
-		 -DTIXML_USE_STL -I${prefix}/src/wbc_tinyxml"
+    <cpp cflags="-I${prefix}/stanford_wbc/jspace
+		 -I${prefix}/stanford_wbc/tao
+		 -I${prefix}/stanford_wbc/opspace/include
+		 -I${prefix}/stanford_wbc/3rdparty/reflexxes_otg/include
+		 -DTIXML_USE_STL -I${prefix}/stanford_wbc/3rdparty/wbc_tinyxml"
 	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_core" />
   </export>
   <platform os="ubuntu" version="9.04"/>
