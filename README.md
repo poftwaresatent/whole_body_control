@@ -1,42 +1,46 @@
 Whole-Body Control ROS Stack
 ============================
 
-The integration of Stanford-WBC in ROS started in late 2009, as part
-of a project at the [Stanford Robotics and AI Lab][manips] which was
-supported by [Willow Garage][WG]. The aim of this project was to
-perform whole-body control in [PR2][], and as a result one of the main
-outcomes has been to open-source the core Stanford-WBC codebase. In
-the meantime, we have added support for the [Meka Robot][meka] at the
-[Human-Centered Robotics Group][hcrl] of the University of Texas at
-Austin. The long term objective is to provide an easy to reuse
-framework for creating new compliant whole-body behavior by composing
-existing ones and adding new custom tasks, for any mobile manipulator
-that can be used with torque control.
+The Whole-Body Control framework developed at the [Stanford Robotics
+and AI Lab][manips] provides advanced control for human-centered
+robotics and mobile manipulation.  This project provides a framework
+for developing robot behaviors that use operational-space hierarchical
+task decompositions, based on the work of many contributors over many
+years, under the guidance of and in collaboration with [Oussama
+Khatib][]: most notably [Jaeheung Park][], K. C. Chang, Diego Ruspini,
+[Roy Featherstone][], Bob Holmberg, [Francois Conti][], [Roland
+Philippsen][] and [Luis Sentis][].
 
-In late 2010 we finalized a first release on PR2 that enables
-compliant control of operational tasks in the end effectors while
-controlling compliant postures in the null-space of the task. In early
-2011 we achieved first results with heuristics to take into account
-motor torque limitations, integrate motion of the mobile base, and
-other PR2-specific characteristics.
+The integration of Stanford-WBC as a PR2-specific plugin in ROS
+started in late 2009, as part of a project at the [Stanford Robotics
+and AI Lab][manips] which was supported by [Willow Garage][WG]. The
+aim of this project was to perform whole-body control in [PR2][]: in
+late 2010 we finalized a first release on PR2 that enables compliant
+control of operational tasks in the end effectors while controlling
+compliant postures in the null-space of the task. In early 2011 we
+achieved first results with heuristics to take into account motor
+torque limitations, integrate motion of the mobile base, and other
+PR2-specific characteristics.
+
+In the meantime, we have added support for the [Meka Robot][meka] at
+the [Human-Centered Robotics Group (HCRL)][hcrl] of the University of
+Texas at Austin. The long term objective of HCRL's developments within
+ROS is to provide an easy to reuse framework for creating new
+compliant whole-body behavior by composing existing ones and adding
+new custom tasks, for any mobile manipulator that can be used with
+torque control.
 
 [manips]: http://cs.stanford.edu/groups/manips/
+[Oussama Khatib]: http://cs.stanford.edu/groups/manips/people/oussama-khatib
+[Jaeheung Park]: http://plaza4.snu.ac.kr/~park73/wiki/index.php5/People
+[Roy Featherstone]: http://users.cecs.anu.edu.au/~roy/
+[Francois Conti]: http://cs.stanford.edu/groups/manips/people/francois-conti
+[Roland Philippsen]: http://cs.stanford.edu/groups/manips/people/roland-philippsen
+[Luis Sentis]: http://www.me.utexas.edu/directory/faculty/sentis/luis/
 [WG]: http://www.willowgarage.com/
 [PR2]: http://www.willowgarage.com/pages/pr2/overview
 [meka]: http://mekabot.com/
 [hcrl]: http://www.me.utexas.edu/~hcrl/
-
-Contributors
-------------
-
-The driving forces behind these developments are Luis Sentis for the
-theoretical foundations and Roland Philippsen for the software. The
-wealth of experience of Oussama Khatib has repeatedly fed into this
-project, especially during its early stages, and Josh Petersen worked
-on many PR2-specific experiments. The project relies on many
-third-party sources and we are grateful for all their contributors who
-produce the high-quality open-source code that allows us to focus on
-our core goals.
 
 
 
@@ -70,14 +74,12 @@ Stack Contents
 
 [stanford_wbc]: https://github.com/poftwaresatent/stanford_wbc
 
-- `wbc_opspace` is a ROS wrapper around the core
-  [utaustin_wbc_opspace][] library, which provides operational space
-  utilities that build on top of stanford_wbc and is likewise kept
-  ROS-independent. Inspired by preliminary work done at Stanford, it
-  has been completely redesigned and rewritten from scratch at the
-  University of Texas at Austin.
+- `wbc_uta_opspace` is a ROS wrapper around the operational space
+  extensions, developed at UT Austin, to the core Stanford_WBC
+  operational space library. It is taken from the ROS-independent code
+  base in the [UT Austin Whole-Body Control project][utaustin-wbc].
 
-[utaustin_wbc_opspace]: https://github.com/poftwaresatent/utaustin_wbc_opspace
+[utaustin-wbc]: https://github.com/poftwaresatent/utaustin-wbc
 
 - `wbc_urdf` contains code for converting rigid body dynamic models
   from [URDF][] descriptions to the representation used by
@@ -96,15 +98,6 @@ Stack Contents
   bindings in the form of messages and service.
 
 [RTAI]: http://www.rtai.org/
-
-- `reflexxes_otg` is a library for online generation of
-   acceleration-bounded trajectories, developed by [Reflexxes
-   GmbH][reflexxes].  It is used for our current (December 2010)
-   development efforts on handling motor torque limitations.  The idea
-   is to limit task accelerations, such that the resulting joint
-   torques stay within bounds.
-
-[reflexxes]: http://www.reflexxes.net/
 
 
 
@@ -164,69 +157,3 @@ are excited to share with the community.
     (note the channel_id in the reply, it will probably be 0)
     rostopic pub -1 /opspace_servo/vector_channel wbc_msgs/VectorChannel '{ channel_id: 0, value: [0.5, -0.1, 0.8] }'
     rostopic pub -1 /opspace_servo/vector_channel wbc_msgs/VectorChannel '{ channel_id: 0, value: [0.5, 0.1, 0.8] }'
-
-
-
-Some Notes About git-subtree
-============================
-
-We've stopped using `git-submodule` for the `wbc_core/src` directory
-and have replaced it with an in-tree copy via [git-subtree][]. This
-should make it possible to merge changes across projects that use the
-upstream [Stanford WBC][stanford-wbc] codebase. Similarly, the
-`wbc_opspace/opspace` directory is an in-tree copy of [UT Austin
-WBC][utaustin-wbc].
-
-Here are the instructions for [Stanford WBC][stanford-wbc]. Adapt the
-URLs and paths when pushing/pulling upstream [UT Autsin
-WBC][utaustin-wbc].
-
-[git-subtree]: https://github.com/apenwarr/git-subtree
-[stanford-wbc]: https://github.com/poftwaresatent/stanford_wbc
-[utaustin-wbc]: https://github.com/poftwaresatent/utaustin_wbc_opspace
-
-- **Do not mix** commits to `wbc_core/src` with commits to other
-  locations of the `whole_body_control` stack. Well, this is not a
-  super strict requirement, but it avoids confusing spurious
-  commits upstream...
-
-- In order to **pull updates** from upstream, follow these steps:
-
-  1. If you don't have it yet, check out (and optionally "install")
-     [git-subtree][].
-
-  2. If you don't yet have the upstream remote in your clone, add it
-     like this (adapt the URL to suit your needs, in this example we
-     use read-only access):
-
-            git remote add stanford_wbc git://github.com/poftwaresatent/stanford_wbc.git
-
-  3. Fetch the upstream changes and merge them into `wbc_core/src`
-     using `git-subtree`:
-
-            git fetch stanford_wbc
-            git subtree merge -P wbc_core/src stanford_wbc/master
-
-     Here we assume you have `git-subtree` properly
-     installed. Otherwise, replace "`git subtree`" with
-     "`/path/to/git-subtree.sh`" in the command above.
-
-- In order to **push changes** upstream, follow these steps:
-
-  1. If you don't have it yet, check out (and optionally "install")
-     [git-subtree][]
-
-  2. If you don't yet have the upstream remote in your clone, add it
-     like this (here we'll need write access, so maybe adapt the URL
-     to point to a fork):
-
-            git remote add stanford_wbc git@github.com:poftwaresatent/stanford_wbc.git
-
-  3. Use a temporary branch to split out the changes and push them upstream:
-
-            git subtree split -P wbc_core/src -b foo
-            git push stanford_wbc foo:master
-            git branch -D foo
-
-    Again, this assumes you have properly installed
-    `git-subtree`. Otherwise, say "`/path/to/git-subtree.sh`" instead.
