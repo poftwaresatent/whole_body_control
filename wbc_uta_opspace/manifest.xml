@@ -1,0 +1,16 @@
+<package>
+  <description brief="ROS wrapper for the UT Austin operational space control library.">
+  </description>
+  <author></author>
+  <license>LGPLv3</license>
+  <review status="unreviewed" notes=""/>
+  <url>https://github.org/poftwaresatent/utaustin-wbc</url>
+  <depend package="wbc_core"/>
+  <export>
+    <cpp cflags="-I${prefix}/"
+	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -luta_opspace" />
+  </export>
+  <platform os="ubuntu" version="9.04"/>
+  <platform os="ubuntu" version="9.10"/>
+  <platform os="ubuntu" version="10.04"/>
+</package>
