@@ -45,30 +45,3 @@ wbc_pr2_ctrl:
    r_forearm_roll_joint:   { kp: 500, kd:  6 }
    r_wrist_flex_joint:     { kp: 400, kd:  4 }
    r_wrist_roll_joint:     { kp: 400, kd:  4 }
-opspace_planar_controller:
-  q1_name: l_shoulder_pan_link
-  q1_inverted: n
-  l1_length: 0.4
-  q2_name: l_elbow_flex_link
-  q2_inverted: n
-  l2_length: 0.321
-  op_kp: 25
-  op_kd: 10
-  op_vmax: 0.1
-opspace_task_posture_controller:
-  dt_seconds:     0.002
-  end_effector:   l_wrist_roll_link
-  control_point:  [ 0.25, 0.0, 0.0 ]
-  task_goal:      [ 0.5, 0.0, 1.0 ]
-  task_kp:        [ 100.0, 100.0, 100.0 ]
-  task_kd:        [ 20.0, 20.0, 20.0 ]
-  task_maxvel:    [ 0.6, 0.6, 0.6 ]
-  task_maxacc:    [ 1.2, 1.2, 1.2 ]
-  posture_goal:   [ 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 ]
-  posture_kp:     [ 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0, 100.0 ]
-  posture_kd:     [ 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0, 20.0 ]
-  posture_maxvel: [ 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2 ]
-  posture_maxacc: [ 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4, 2.4 ]
-wbc_pr2_ctrl_task_posture_otg_plugin:
-  end_effector_name: l_wrist_roll_link
-  debug_output: off

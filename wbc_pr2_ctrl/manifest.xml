@@ -15,11 +15,10 @@
   <license>LGPLv3</license>
   <review status="unreviewed" notes=""/>
   <url>http://stanford-wbc.sourceforge.net/</url>
-  <depend package="reflexxes_otg"/>
   <depend package="wbc_core"/>
   <depend package="wbc_urdf"/>
   <depend package="wbc_msgs"/>
-  <depend package="wbc_opspace"/>
+  <depend package="wbc_uta_opspace"/>
   <depend package="rosconsole"/>
   <depend package="pr2_controller_interface"/>
   <depend package="pluginlib"/>

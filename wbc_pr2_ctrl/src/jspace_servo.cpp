@@ -23,7 +23,6 @@
 
 #include <ros/ros.h>
 #include <wbc_pr2_ctrl/mq_robot_api.h>
-#include <wbc_pr2_ctrl/opspace_planar_controller.h>
 #include <wbc_pr2_ctrl/ControllerState.h>
 #include <wbc_pr2_ctrl/SetGoal.h>
 #include <wbc_pr2_ctrl/SetGains.h>
@@ -246,15 +245,9 @@ int main(int argc, char*argv[])
       
       controller->getGoal(dbg_goal);
       controller->getActual(dbg_actual);
-      OpspacePlanarController const * opc(dynamic_cast<OpspacePlanarController const *>(controller));
-      if (opc) {
-	opc->getDebug(dbg_velocity, state_msg.ext_name, dbg_ext);
-      }
-      else {
-	dbg_velocity = jspace_state.velocity_;
-	state_msg.ext_name.clear();
-	dbg_ext.resize(0);
-      }
+      dbg_velocity = jspace_state.velocity_;
+      state_msg.ext_name.clear();
+      dbg_ext.resize(0);
       jspace::convert(dbg_goal, state_msg.goal);
       jspace::convert(dbg_actual, state_msg.position);
       jspace::convert(dbg_velocity, state_msg.velocity);
@@ -594,25 +587,6 @@ void load_controllers() {
 					     jspace::COMP_MASS_INERTIA,
 					     initial_kp, initial_kd));
   controller_lib.insert(make_pair("j_goal_Abg", ctrl));
-  
-  ctrl.reset(OpspacePlanarController::create("/opspace_planar_controller", initial_kp, initial_kd));
-  if ( ! ctrl) {
-    ROS_WARN ("failed to create planar controller from `/opspace_planar_controller', falling back on defaults");
-    double const op_kp(25);
-    double const op_kd(10);
-    double const op_vmax(0.1);
-    std::string const q1_name("l_shoulder_lift_link");
-    bool const q1_inverted(false);
-    double const l1_length(0.4);
-    std::string q2_name("l_elbow_flex_link");
-    bool const q2_inverted(false);
-    double const l2_length(0.321);
-    ctrl.reset(new OpspacePlanarController(q1_name, q1_inverted, l1_length,
-					   q2_name, q1_inverted, l2_length,
-					   op_kp, op_kd, op_vmax,
-					   initial_kp, initial_kd));
-  }
-  controller_lib.insert(make_pair("op_planar", ctrl));
 }
 
 

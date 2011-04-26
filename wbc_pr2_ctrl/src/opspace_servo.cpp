@@ -30,8 +30,8 @@
 #include <tao/dynamics/taoNode.h>
 #include <opspace/Skill.hpp>
 #include <opspace/Factory.hpp>
-#include <opspace/controller_library.hpp>
-#include <wbc_opspace/util.h>
+#include <wbc_core/opspace_param_callbacks.hpp>
+#include <uta_opspace/ControllerNG.hpp>
 #include <XmlRpcValue.h>
 #include <XmlRpcException.h>
 #include <boost/scoped_ptr.hpp>
@@ -83,7 +83,7 @@ static size_t servo_ndof;
 static shared_ptr<opspace::Factory> factory;
 static shared_ptr<opspace::ReflectionRegistry> registry;
 static shared_ptr<opspace::Controller> controller;
-static wbc_opspace::ParamCallbacks param_callbacks;
+static wbc_core_opspace::ParamCallbacks param_callbacks;
 
 // I think this needs to stick around because otherwise it deletes the TAO nodes
 static scoped_ptr<jspace::ros::Model> jspace_ros_model;
@@ -287,7 +287,7 @@ int main(int argc, char*argv[])
     ROS_ERROR ("update_model_from_pump() failed");
     exit(EXIT_FAILURE);
   }
-  controller.reset(new ControllerNG(""));
+  controller.reset(new uta_opspace::ControllerNG(""));
   ////  controller.reset(new ClassicTaskPostureController(""));
   jspace::Status status;
   status = controller->init(*jspace_model);

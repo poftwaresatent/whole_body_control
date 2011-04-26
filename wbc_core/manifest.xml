@@ -14,7 +14,8 @@
   <export>
     <!-- See comments in CMakeLists.txt for further comments on
 	 wbc_tinyxml weirdness -->
-    <cpp cflags="-I${prefix}/stanford_wbc/jspace
+    <cpp cflags="-I${prefix}/include
+		 -I${prefix}/stanford_wbc/jspace
 		 -I${prefix}/stanford_wbc/tao
 		 -I${prefix}/stanford_wbc/opspace/include
 		 -I${prefix}/stanford_wbc/3rdparty/reflexxes_otg/include
