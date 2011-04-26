@@ -10,7 +10,7 @@
   <url>https://github.com/poftwaresatent/utaustin-wbc</url>
   <depend package="roscpp"/>
   <depend package="std_msgs"/>
-  <depend package="wbc_opspace"/>
+  <depend package="wbc_uta_opspace"/>
   <!-- <export> -->
   <!--   <cpp cflags="-I${prefix}/include" -->
   <!-- 	 lflags="-Wl,-rpath,${prefix}/lib -L${prefix}/lib -lwbc_m3_ctrl" /> -->
