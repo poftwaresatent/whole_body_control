@@ -40,14 +40,14 @@
 #include <jspace/test/sai_util.hpp>
 #include <opspace/Factory.hpp>
 #include <opspace/Task.hpp>
-#include <wbc_opspace/util.h>
+#include <wbc_core/opspace_param_callbacks.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <err.h>
 #include <signal.h>
 
 using namespace wbc_m3_ctrl;
 using namespace opspace;
-using namespace wbc_opspace;
+using namespace wbc_core_opspace;
 using namespace boost;
 using namespace std;
 

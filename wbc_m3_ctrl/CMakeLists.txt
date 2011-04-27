@@ -36,7 +36,6 @@ if (HAVE_M3)
     src/rt_util.cpp
     src/udp_util.cpp
     )
-  target_link_libraries (wbc_m3_ctrl wbc_opspace)
   
   rosbuild_add_executable (test_rt_util src/test_rt_util.cpp)
   target_link_libraries (test_rt_util wbc_m3_ctrl)

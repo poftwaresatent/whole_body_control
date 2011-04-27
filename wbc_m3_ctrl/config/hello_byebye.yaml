@@ -44,7 +44,7 @@
     maxacc: [ 6.0 ]
 
 - skills:
-  - type: opspace::HelloGoodbyeSkill
+  - type: uta_opspace::HelloGoodbyeSkill
     name: hello_goodbye
     slots:
       # shake_orientation: eeori_shake

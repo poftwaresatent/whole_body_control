@@ -47,15 +47,17 @@
 #include <jspace/test/sai_util.hpp>
 #include <opspace/Skill.hpp>
 #include <opspace/Factory.hpp>
-#include <opspace/controller_library.hpp>
-#include <wbc_opspace/util.h>
+#include <uta_opspace/ControllerNG.hpp>
+#include <uta_opspace/HelloGoodbyeSkill.hpp>
+#include <wbc_core/opspace_param_callbacks.hpp>
 #include <boost/scoped_ptr.hpp>
 #include <err.h>
 #include <signal.h>
 
 using namespace wbc_m3_ctrl;
 using namespace opspace;
-using namespace wbc_opspace;
+using namespace wbc_core_opspace;
+using namespace uta_opspace;
 using namespace boost;
 using namespace std;
 
@@ -315,6 +317,11 @@ int main(int argc, char ** argv)
   if (0 != sigaction(SIGINT, &sa, 0)) {
     err(EXIT_FAILURE, "sigaction");
   }
+  
+  // Before we attempt to read any tasks and skills from the YAML
+  // file, we need to inform the static type registry about custom
+  // additions such as the HelloGoodbyeSkill.
+  Factory::addSkillType<uta_opspace::HelloGoodbyeSkill>("uta_opspace::HelloGoodbyeSkill");
   
   ros::init(argc, argv, "wbc_m3_ctrl_servo", ros::init_options::NoSigintHandler);
   parse_options(argc, argv);
