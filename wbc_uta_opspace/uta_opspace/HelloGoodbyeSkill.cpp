@@ -35,35 +35,43 @@ namespace uta_opspace {
   HelloGoodbyeSkill::
   HelloGoodbyeSkill(std::string const & name)
     : Skill(name),
-      state_(STATE_START),
-      //      shake_eeori_(0),
+      state_(STATE_INIT),
+      init_jpos_task_(0),
       shake_eepos_task_(0),
       shake_posture_task_(0),
       wave_eepos_task_(0),
       wave_posture_task_(0),
+      init_jpos_goal_(0),
       shake_eepos_goal_(0),
       wave_eepos_goal_(0),
-      wave_posture_goal_(0),
-      shake_position_(Vector::Zero(3)),
-      shake_posture_(Vector::Zero(7)), // XXXX hardcoded for dreamer
-      shake_distance_(0.0),
-      shake_distance_threshold_(0.08),
-      shake_count_(0),
-      shake_count_threshold_(700),
-      wave_position_left_(Vector::Zero(3)),
-      wave_position_right_(Vector::Zero(3)),
-      wave_posture_(Vector::Zero(7)), // XXXX hardcoded for dreamer
-      wave_distance_left_(0.0),
-      wave_distance_right_(0.0),
-      wave_distance_threshold_(0.1),
-      wave_count_(0),
-      wave_count_threshold_(6)
+      init_jdist_threshold_(-1),
+      shake_distance_threshold_(-1),
+      shake_count_threshold_(-1),
+      wave_distance_threshold_(-1),
+      wave_count_threshold_(-1)
   {
-    //    declareSlot("shake", "orientation", &shake_eeori_);
+    declareSlot("init_jpos", &init_jpos_task_);
+    declareParameter("init_jpos", &init_jpos_);
+    declareParameter("init_jdist", &init_jdist_, opspace::PARAMETER_FLAG_READONLY);
+    declareParameter("init_jdist_threshold", &init_jdist_threshold_);
+    
     declareSlot("shake_position", &shake_eepos_task_);
     declareSlot("shake_posture", &shake_posture_task_);
+    declareParameter("shake_position", &shake_position_);
+    declareParameter("shake_distance", &shake_distance_, opspace::PARAMETER_FLAG_READONLY);
+    declareParameter("shake_distance_threshold", &shake_distance_threshold_);
+    declareParameter("shake_count", &shake_count_, opspace::PARAMETER_FLAG_READONLY);
+    declareParameter("shake_count_threshold", &shake_count_threshold_);
+
     declareSlot("wave_position", &wave_eepos_task_);
     declareSlot("wave_posture", &wave_posture_task_);
+    declareParameter("wave_position_left", &wave_position_left_);
+    declareParameter("wave_position_right", &wave_position_right_);
+    declareParameter("wave_distance_left", &wave_distance_left_, opspace::PARAMETER_FLAG_READONLY);
+    declareParameter("wave_distance_right", &wave_distance_right_, opspace::PARAMETER_FLAG_READONLY);
+    declareParameter("wave_distance_threshold", &wave_distance_threshold_);
+    declareParameter("wave_count", &wave_count_, opspace::PARAMETER_FLAG_READONLY);
+    declareParameter("wave_count_threshold", &wave_count_threshold_);
   }
   
   
@@ -75,19 +83,22 @@ namespace uta_opspace {
       return st;
     }
     
+    //////////////////////////////////////////////////
+    // init parameter channels
+    
     // XXXX to do: could read the name of the parameter from a
     // parameter (also for other tasks)
-    shake_eepos_goal_ = shake_eepos_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
-    if ( ! shake_eepos_goal_) {
+    init_jpos_goal_ = init_jpos_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
+    if ( ! init_jpos_goal_) {
       st.ok = false;
       st.errstr = "no appropriate goal parameter in shake position task";
       return st;
     }
     
-    shake_posture_goal_ = shake_posture_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
-    if ( ! shake_posture_goal_) {
+    shake_eepos_goal_ = shake_eepos_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
+    if ( ! shake_eepos_goal_) {
       st.ok = false;
-      st.errstr = "no appropriate goal parameter in shake posture task";
+      st.errstr = "no appropriate goal parameter in shake position task";
       return st;
     }
     
@@ -98,31 +109,80 @@ namespace uta_opspace {
       return st;
     }
     
-    wave_posture_goal_ = wave_posture_task_->lookupParameter("trjgoal", PARAMETER_TYPE_VECTOR);
-    if ( ! wave_posture_goal_) {
-      st.ok = false;
-      st.errstr = "no appropriate goal parameter in wave position task";
-      return st;
-    }
+    //////////////////////////////////////////////////
+    // init task tables
     
-    //    shake_.push_back(shake_eeori_);
+    init_task_table_.push_back(init_jpos_task_);
+    
     shake_task_table_.push_back(shake_eepos_task_);
     shake_task_table_.push_back(shake_posture_task_);
+    
     wave_task_table_.push_back(wave_eepos_task_);
     wave_task_table_.push_back(wave_posture_task_);
     
-    state_ = STATE_START;
-    shake_position_ = shake_eepos_task_->getActual();
-    shake_posture_ = shake_posture_task_->getActual();
-    if (7 != shake_posture_.rows()) {
+    //////////////////////////////////////////////////
+    // check / initialize task parameters
+    
+    if (7 != init_jpos_.rows()) {
       st.ok = false;
-      st.errstr = "shake posture is not 7 dimensional";
+      st.errstr = "invalid or missing init_jpos parameter";
       return st;
     }
-    wave_position_left_ <<  0.30, -0.07, 0.17;
-    wave_position_right_ << 0.29, -0.33, 0.20;
-    wave_posture_ <<        1.24, 0.06, -0.53, 1.87, -0.10, -0.24, 0.14;
     
+    if (0 > init_jdist_threshold_) {
+      init_jdist_threshold_ = 10.0 * M_PI / 180.0;
+    }
+    
+    if (3 != shake_position_.rows()) {
+      st.ok = false;
+      st.errstr = "invalid or missing shake_position parameter";
+      return st;
+    }
+    
+    if (0 > shake_distance_threshold_) {
+      shake_distance_threshold_ = 0.08;
+    }
+    
+    if (0 > shake_count_threshold_) {
+      shake_count_threshold_ = 700; // number of ticks in timeout
+    }
+    
+    if (3 != wave_position_left_.rows()) {
+      st.ok = false;
+      st.errstr = "invalid or missing wave_position_left parameter";
+      return st;
+    }
+    
+    if (3 != wave_position_right_.rows()) {
+      st.ok = false;
+      st.errstr = "invalid or missing wave_position_right parameter";
+      return st;
+    }
+    
+    if (0 > wave_distance_threshold_) {
+      wave_distance_threshold_ = 0.12;
+    }
+    
+    if (0 > wave_count_threshold_) {
+      wave_count_threshold_ = 6; // number of times we switch waving direction
+    }
+
+    //////////////////////////////////////////////////
+    // set those goals which we need at the very beginning, others get
+    // filled in as we transition through the state machine... for
+    // which we need lazy init flags.
+    
+    st = init_jpos_goal_->set(init_jpos_);
+    if ( ! st) {
+      return st;
+    }
+    
+    shake_needs_init_ = true;
+    
+    //////////////////////////////////////////////////
+    // ready to rock
+    
+    state_ = STATE_INIT;
     return st;
   }
   
@@ -132,6 +192,12 @@ namespace uta_opspace {
   {
     Status st;
     
+    for (size_t ii(0); ii < init_task_table_.size(); ++ii) {
+      st = init_task_table_[ii]->update(model);
+      if ( ! st) {
+	return st;
+      }
+    }
     for (size_t ii(0); ii < shake_task_table_.size(); ++ii) {
       st = shake_task_table_[ii]->update(model);
       if ( ! st) {
@@ -145,6 +211,14 @@ namespace uta_opspace {
       }
     }
     
+    Vector const init_delta(init_jpos_ - init_jpos_task_->getActual());
+    init_jdist_ = 0;
+    for (int ii(0); ii < init_delta.rows(); ++ii) {
+      double const dd(fabs(init_delta[ii]));
+      if (dd > init_jdist_) {
+	init_jdist_ = dd;
+      }
+    }
     Vector const shake_delta(shake_position_ - shake_eepos_task_->getActual());
     shake_distance_ = shake_delta.norm();
     Vector const wave_delta_left(wave_position_left_ - wave_eepos_task_->getActual());
@@ -153,6 +227,25 @@ namespace uta_opspace {
     wave_distance_right_ = wave_delta_right.norm();
     
     switch (state_) {
+      
+    case STATE_INIT:
+      if (init_jdist_ <= init_jdist_threshold_) {
+	if (shake_needs_init_) {
+	  for (size_t ii(0); ii < shake_task_table_.size(); ++ii) {
+	    st = shake_task_table_[ii]->init(model);
+	    if ( ! st) {
+	      return st;
+	    }
+	  }
+	  st = shake_eepos_goal_->set(shake_position_);
+	  if ( ! st) {
+	    return st;
+	  }
+	  shake_needs_init_ = false;
+	}
+	state_ = STATE_START;
+      }
+      break;
       
     case STATE_START:
       if (shake_distance_ > shake_distance_threshold_) {
@@ -168,20 +261,21 @@ namespace uta_opspace {
       else {
 	++shake_count_;
 	if (shake_count_ > shake_count_threshold_) {
-	  st = wave_eepos_goal_->set(wave_position_left_);
-	  if ( ! st) {
-	    st.ok = false;
-	    st.errstr = "failed to set position goal for wave (left): " + st.errstr;
-	    return st;
+	  // always re-init the wave trajectory start point
+	  for (size_t ii(0); ii < wave_task_table_.size(); ++ii) {
+	    st = wave_task_table_[ii]->init(model);
+	    if ( ! st) {
+	      return st;
+	    }
 	  }
-	  st = wave_posture_goal_->set(wave_posture_);
+	  st = wave_eepos_goal_->set(wave_position_right_);
 	  if ( ! st) {
 	    st.ok = false;
-	    st.errstr = "failed to set posture goal for wave: " + st.errstr;
+	    st.errstr = "failed to set position goal for wave (right): " + st.errstr;
 	    return st;
 	  }
 	  wave_count_ = 0;
-	  state_ = STATE_WAVE_LEFT;
+	  state_ = STATE_WAVE_RIGHT;
 	}
       }
       break;
@@ -194,12 +288,6 @@ namespace uta_opspace {
 	  if ( ! st) {
 	    st.ok = false;
 	    st.errstr = "failed to set position goal for shake (return from left): " + st.errstr;
-	    return st;
-	  }
-	  st = shake_posture_goal_->set(shake_posture_);
-	  if ( ! st) {
-	    st.ok = false;
-	    st.errstr = "failed to set posture goal for shake (return from left): " + st.errstr;
 	    return st;
 	  }
 	  state_ = STATE_RETURN;
@@ -224,12 +312,6 @@ namespace uta_opspace {
 	  if ( ! st) {
 	    st.ok = false;
 	    st.errstr = "failed to set position goal for shake (return from right): " + st.errstr;
-	    return st;
-	  }
-	  st = shake_posture_goal_->set(shake_posture_);
-	  if ( ! st) {
-	    st.ok = false;
-	    st.errstr = "failed to set posture goal for shake (return from right): " + st.errstr;
 	    return st;
 	  }
 	  state_ = STATE_RETURN;
@@ -264,6 +346,8 @@ namespace uta_opspace {
   getTaskTable()
   {
     switch (state_) {
+    case STATE_INIT:
+      return &init_task_table_;
     case STATE_START:
     case STATE_SHAKE:
     case STATE_RETURN:
@@ -304,28 +388,50 @@ namespace uta_opspace {
     Skill::dbg(os, title, prefix);
     os << prefix << "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%\n";
     switch (state_) {
+    case STATE_INIT:
+      os << prefix << "  INIT\n";
+      for (size_t ii(0); ii < init_task_table_.size(); ++ii) {
+	init_task_table_[ii]->dump(os, "", prefix + "  ");
+      }
+      os << prefix << "    init_jdist " << init_jdist_ << "\n";
+      break;
     case STATE_START:
-      os << prefix << "  START\n"
-	 << prefix << "    shake_distance " << shake_distance_ << "\n";
+      os << prefix << "  START\n";
+      for (size_t ii(0); ii < shake_task_table_.size(); ++ii) {
+	shake_task_table_[ii]->dump(os, "", prefix + "  ");
+      }
+      os << prefix << "    shake_distance " << shake_distance_ << "\n";
       break;
     case STATE_SHAKE:
-      os << prefix << "  SHAKE\n"
-	 << prefix << "    shake_distance " << shake_distance_ << "\n"
+      os << prefix << "  SHAKE\n";
+      for (size_t ii(0); ii < shake_task_table_.size(); ++ii) {
+	shake_task_table_[ii]->dump(os, "", prefix + "  ");
+      }
+      os << prefix << "    shake_distance " << shake_distance_ << "\n"
 	 << prefix << "    shake_count    " << shake_count_ << "\n";
       break;
     case STATE_WAVE_LEFT:
-      os << prefix << "  WAVE_LEFT\n"
-	 << prefix << "    wave_distance_left " << wave_distance_left_ << "\n"
+      os << prefix << "  WAVE_LEFT\n";
+      for (size_t ii(0); ii < wave_task_table_.size(); ++ii) {
+	wave_task_table_[ii]->dump(os, "", prefix + "  ");
+      }
+      os << prefix << "    wave_distance_left " << wave_distance_left_ << "\n"
 	 << prefix << "    wave_count         " << wave_count_ << "\n";
       break;
     case STATE_WAVE_RIGHT:
-      os << prefix << "  WAVE_RIGHT\n"
-	 << prefix << "    wave_distance_right " << wave_distance_right_ << "\n"
+      os << prefix << "  WAVE_RIGHT\n";
+      for (size_t ii(0); ii < wave_task_table_.size(); ++ii) {
+	wave_task_table_[ii]->dump(os, "", prefix + "  ");
+      }
+      os << prefix << "    wave_distance_right " << wave_distance_right_ << "\n"
 	 << prefix << "    wave_count          " << wave_count_ << "\n";
       break;
     case STATE_RETURN:
-      os << prefix << "  RETURN\n"
-	 << prefix << "    shake_distance " << shake_distance_ << "\n";
+      os << prefix << "  RETURN\n";
+      for (size_t ii(0); ii < shake_task_table_.size(); ++ii) {
+	shake_task_table_[ii]->dump(os, "", prefix + "  ");
+      }
+      os << prefix << "    shake_distance " << shake_distance_ << "\n";
       break;
     default:
       os << prefix << "  invalid state " << state_ << "\n";

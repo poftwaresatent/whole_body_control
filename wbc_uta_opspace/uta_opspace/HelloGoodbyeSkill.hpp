@@ -51,6 +51,7 @@ namespace uta_opspace {
     
   protected:
     enum {
+      STATE_INIT,
       STATE_START,
       STATE_SHAKE,
       STATE_WAVE_LEFT,
@@ -58,35 +59,40 @@ namespace uta_opspace {
       STATE_RETURN
     } state_;
     
+    JPosTrjTask * init_jpos_task_;
+    task_table_t init_task_table_;
+    
     //    OrientationTask * shake_eeori_;
     CartPosTrjTask * shake_eepos_task_;
     JPosTrjTask * shake_posture_task_;
     task_table_t shake_task_table_;
+    bool shake_needs_init_;
     
     CartPosTrjTask * wave_eepos_task_;
     JPosTrjTask * wave_posture_task_;
     task_table_t wave_task_table_;
     
+    Parameter * init_jpos_goal_;
     Parameter * shake_eepos_goal_;
-    Parameter * shake_posture_goal_;
     Parameter * wave_eepos_goal_;
-    Parameter * wave_posture_goal_;
+    
+    Vector init_jpos_;
+    double init_jdist_;
+    double init_jdist_threshold_;
     
     Vector shake_position_;
-    Vector shake_posture_;
     double shake_distance_;
     double shake_distance_threshold_;
-    size_t shake_count_;
-    size_t shake_count_threshold_;
+    int shake_count_;
+    int shake_count_threshold_;
     
     Vector wave_position_left_;
     Vector wave_position_right_;
-    Vector wave_posture_;
     double wave_distance_left_;
     double wave_distance_right_;
     double wave_distance_threshold_;
-    size_t wave_count_;
-    size_t wave_count_threshold_;
+    int wave_count_;
+    int wave_count_threshold_;
   };
   
 }

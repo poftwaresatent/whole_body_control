@@ -178,26 +178,6 @@ namespace uta_opspace {
     Matrix nstar(Matrix::Identity(ndof, ndof));
     int first_active_task_index(0); // because tasks can have empty Jacobian
     
-    ////    sv_lstar_.resize(tasks->size());
-    if (sv_jstar_.empty()) {
-      //##################################################
-      //##################################################
-      //##################################################
-      //##################################################
-      // quick hack, will break as soon as we switch skill at
-      // runtime, but there's no duplicate-detection behind
-      // declareParameter() so it's a bit tricky to declare them on
-      // the fly...
-      //##################################################
-      //##################################################
-      //##################################################
-      //##################################################
-      sv_jstar_.resize(tasks->size());
-      for (size_t ii(0); ii < tasks->size(); ++ii) {
-	declareParameter("sv_jstar-" + (*tasks)[ii]->getName(), &(sv_jstar_[ii]));
-      }
-    }
-    
     for (size_t ii(0); ii < tasks->size(); ++ii) {
       
       Task const * task((*tasks)[ii]);
@@ -209,8 +189,6 @@ namespace uta_opspace {
 	if (first_active_task_index >= tasks->size()) {
 	  return Status(false, "no active tasks (all Jacobians are empty)");
 	}
-	////	sv_lstar_[ii].resize(0);
-	sv_jstar_[ii].resize(0);
 	continue;
       }
       
@@ -223,9 +201,10 @@ namespace uta_opspace {
       }
       
       Matrix jjt(jstar * jstar.transpose());
+      Vector sv_jstar;
       
       if (1 == jjt.rows()) {	// work around limitations of Eigen2 SVD.
-	sv_jstar_[ii] = Vector::Ones(1, 1) * jjt.coeff(0, 0);
+	sv_jstar = Vector::Ones(1, 1) * jjt.coeff(0, 0);
       }
       else {
 	//////////////////////////////////////////////////
@@ -237,10 +216,10 @@ namespace uta_opspace {
 	// a task more than one in the hierarchy. This should not
 	// trigger a segfault, and/or it should be detected earlier, but
 	// this effect is a bit obscure for now.
-	sv_jstar_[ii] = Eigen::SVD<Matrix>(jjt).singularValues();
+	sv_jstar = Eigen::SVD<Matrix>(jjt).singularValues();
       }
       
-      st = skill.checkJStarSV(task, sv_jstar_[ii]);
+      st = skill.checkJStarSV(task, sv_jstar);
       if ( ! st) {
 	fallback_ = true;
 	fallback_reason_ = "checkJStarSV failed: " + st.errstr;

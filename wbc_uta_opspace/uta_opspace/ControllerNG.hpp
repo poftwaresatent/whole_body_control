@@ -73,7 +73,6 @@ namespace uta_opspace {
     int loglen_;		// <= 0 means disabled
     int logsubsample_;
     std::string logprefix_;
-    std::vector<Vector> sv_jstar_;
     
     // -1 means off, 0 means init, -2 means maybeWriteLogFiles() will
     // actually write them (this gets set when ==loglen_)
